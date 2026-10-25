@@ -1,5 +1,5 @@
 import type { CutParams } from "@gsender-next/cam-engine";
-import { AlertTriangle, Check, Pause, Play, XCircle } from "lucide-react";
+import { AlertTriangle, Check, Download, Pause, Play, XCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Issue, SidePanel, Stepper, VideoCard } from "../../components/ui";
@@ -136,6 +136,10 @@ export function PrepareStep({ ctx }: { ctx: JobCtx }) {
             <div className="sidepanel__hint">{errors.length ? "Fix the errors in Create to continue." : `Everything below is checked for your ${machineName(machine)}.`}</div>
             <button className="btn btn--primary btn--lg" disabled={!verified} onClick={() => nav("/position")}>
               Continue to Position →
+            </button>
+            <button className="btn btn--outline" disabled={!verified || !result?.gcode} onClick={() => result && downloadGcode(design.name, result.gcode)}>
+              <Download size={16} strokeWidth={1.75} />
+              Download G-code (.nc)
             </button>
           </>
         }
@@ -281,3 +285,12 @@ export function PrepareStep({ ctx }: { ctx: JobCtx }) {
 }
 
 const fmtN = (n: number) => String(Math.round(n * 10) / 10);
+
+/** Salva o G-code verificado como .nc, para abrir no gSender atual ou levar num pendrive até o gControl. */
+function downloadGcode(name: string, gcode: string) {
+  const file = `${name.trim().replace(/[^\w\-]+/g, "-").replace(/^-|-$/g, "") || "gsender-job"}.nc`;
+  const url = URL.createObjectURL(new Blob([gcode], { type: "text/plain" }));
+  const a = Object.assign(document.createElement("a"), { href: url, download: file });
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}

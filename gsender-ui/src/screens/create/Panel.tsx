@@ -213,7 +213,7 @@ function Chips(props: { material: string; thickness: number; bitId: string; onMa
   return (
     <div className="create-chips" ref={ref}>
       {chip("material", m.id, <Layers size={15} strokeWidth={1.6} color="var(--text-3)" />, "create-chip--material")}
-      {chip("thick", <span className="mono">{props.thickness} mm</span>, <MoveVertical size={15} strokeWidth={1.6} color="var(--text-3)" />, "create-chip--thick")}
+      {chip("thick", <span className="create-chip__thick mono"><b>{props.thickness}</b><small>mm</small></span>, <MoveVertical size={15} strokeWidth={1.6} color="var(--text-3)" />, "create-chip--thick")}
       {chip("bit", bit?.name ?? "Pick a bit", <span className="create-chip__bitdot" />, "create-chip--bit")}
       {open ? (
         <div className="popover create-chips__pop" role="listbox" aria-label={open === "material" ? "Material" : open === "thick" ? "Thickness" : "Bit"}>

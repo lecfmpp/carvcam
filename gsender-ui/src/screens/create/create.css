@@ -12,6 +12,7 @@
 .create-legend__pro { margin-top: 4px; padding-top: 8px; border-top: 1px solid var(--line); font-size: 11px; line-height: 1.6; color: var(--text-3); }
 
 /* ---------- quadro ---------- */
+.create-piece { position: absolute; inset: 0; filter: drop-shadow(0 18px 30px rgba(0, 0, 0, 0.45)); }
 .create-vector { position: absolute; inset: 0; width: 100%; height: 100%; }
 .create-overlay { position: absolute; inset: 0; touch-action: none; }
 .create-overlay--add { cursor: crosshair; }
@@ -46,12 +47,12 @@
 .create-panel__name:focus { outline: none; border-color: var(--text-3); }
 
 .create-chips { display: flex; gap: 8px; }
-.create-chip { height: 44px; display: flex; align-items: center; gap: 8px; padding: 0 10px 0 12px; border-radius: 10px; border: 1px solid var(--line-2); background: rgba(255, 255, 255, 0.04); color: var(--text); font: 500 14px var(--font); min-width: 0; }
+.create-chip { height: 44px; display: flex; align-items: center; gap: 6px; padding: 0 8px 0 10px; border-radius: 10px; border: 1px solid var(--line-2); background: rgba(255, 255, 255, 0.04); color: var(--text); font: 500 13px var(--font); min-width: 0; }
 .create-chip:hover { background: rgba(255, 255, 255, 0.07); }
 .create-chip__label { flex: 1; min-width: 0; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.create-chip--material { flex: 1.2; }
-.create-chip--thick { flex: 0.9; }
-.create-chip--bit { flex: 1.6; border-color: rgba(255, 91, 31, 0.4); background: rgba(255, 91, 31, 0.08); }
+.create-chip--material { flex: 1 1 0; }
+.create-chip--thick { flex: 0 0 82px; }
+.create-chip--bit { flex: 1.65 1 0; border-color: rgba(255, 91, 31, 0.4); background: rgba(255, 91, 31, 0.08); }
 .create-chip--bit:hover { background: rgba(255, 91, 31, 0.13); }
 .create-chip__bitdot { width: 6px; height: 16px; border-radius: 3px; background: var(--accent); flex: none; }
 .create-chips__pop { left: 20px; right: 20px; top: 104px; max-height: 420px; overflow-y: auto; }
@@ -128,7 +129,7 @@
 .create-ai__send:disabled { opacity: 0.5; }
 .create-ai__panel { position: absolute; left: 0; right: 0; bottom: 68px; max-height: min(520px, calc(100vh - 260px)); display: flex; flex-direction: column; border-radius: 16px; background: var(--surface-2); border: 1px solid var(--line-2); box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5); overflow: hidden; }
 .create-ai__head { display: flex; align-items: center; gap: 8px; padding: 14px 16px; border-bottom: 1px solid var(--line); font: 400 14px var(--font); }
-.create-ai__head .tiny { flex: 1; min-width: 0; }
+.create-ai__title { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .create-ai__x { width: 28px; height: 28px; border: 0; border-radius: 7px; background: transparent; color: var(--text-2); display: flex; align-items: center; justify-content: center; }
 .create-ai__x:hover { background: rgba(255, 255, 255, 0.08); }
 .create-ai__list { flex: 1; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
@@ -141,3 +142,9 @@
 .create-ai__key { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 16px; border-top: 1px solid var(--line); }
 .create-ai__key .btn--sm { display: inline-flex; align-items: center; gap: 6px; }
 .create-ai__keyform { display: flex; gap: 8px; width: 100%; }
+
+/* O quadro desenha a peça recortada; a sombra retangular do bloco não faz sentido aqui. */
+.create .stage__canvas > div > div:first-child { box-shadow: none !important; }
+.create-chip__thick { display: flex; flex-direction: column; line-height: 1.05; font-size: 13px; }
+.create-chip__thick b { font-weight: 600; }
+.create-chip__thick small { font-size: 11px; color: var(--text-2); }

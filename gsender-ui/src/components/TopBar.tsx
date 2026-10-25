@@ -136,7 +136,7 @@ export function MachineChip() {
     <div ref={ref} style={{ position: "relative" }}>
       <button className="machine-chip" aria-haspopup="true" aria-expanded={open} onClick={() => setOpen(!open)} title="Switch machine">
         <Monitor size={16} strokeWidth={1.5} color="var(--text-3)" />
-        {machineName(machine)} · {head.name.replace("Makita RT0701", "Makita")}
+        {machineName(machine)} · {head.name.replace("Makita RT0701", "Makita").replace("AutoSpin T1", "AutoSpin")}
         <ChevronDown size={14} color="var(--text-3)" />
       </button>
       {open ? <MachineSwitcher onClose={() => setOpen(false)} /> : null}

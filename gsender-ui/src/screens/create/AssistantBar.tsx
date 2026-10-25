@@ -70,8 +70,10 @@ export function AssistantBar(props: { inputRef: RefObject<HTMLInputElement>; iss
         <div className="create-ai__panel" role="dialog" aria-label="Assistant">
           <div className="create-ai__head">
             <Sparkles size={15} strokeWidth={1.6} color="var(--accent)" />
-            <span style={{ fontWeight: 600 }}>Assistant</span>
-            <span className="tiny muted">· Creates the design only. Carving always starts with you.</span>
+            <span className="create-ai__title">
+              <b>Assistant</b>
+              <span className="tiny muted">Creates the design only. Carving always starts with you.</span>
+            </span>
             <button className="create-ai__x" aria-label="Close assistant" onClick={() => setOpen(false)}>
               <X size={15} />
             </button>

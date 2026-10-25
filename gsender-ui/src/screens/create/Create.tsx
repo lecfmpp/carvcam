@@ -146,11 +146,13 @@ export default function Create() {
           const s = fitScale(api.size, block.largura, block.altura, { x: 260, y: 280 });
           return (
             <Board width={block.largura} height={block.altura} scale={s} zoom={api.zoom} showOrigin={false}>
-              {eng.sim ? (
-                <SimCanvas sim={eng.sim} thickness={block.espessura} material={material} scale={s} board={{ width: block.largura, height: block.altura }} />
-              ) : null}
-              {(!eng.sim || eng.busy || !sameBlock) && result ? <VectorPreview result={result} material={material} faded={!!eng.sim} /> : null}
-              {!result ? <div style={{ position: "absolute", inset: 0, background: material.face, borderRadius: 4 }} /> : null}
+              <div className="create-piece" style={pieceMask(result, bit?.d ?? 3.175)}>
+                {eng.sim ? (
+                  <SimCanvas sim={eng.sim} thickness={block.espessura} material={material} scale={s} board={{ width: block.largura, height: block.altura }} />
+                ) : null}
+                {(!eng.sim || eng.busy || !sameBlock) && result ? <VectorPreview result={result} material={material} faded={!!eng.sim} /> : null}
+                {!result ? <div style={{ position: "absolute", inset: m * s, background: material.face, borderRadius: 4 }} /> : null}
+              </div>
               <Overlay
                 spec={spec}
                 block={block}
@@ -219,11 +221,12 @@ function ToolRail({ tool, setTool }: { tool: Tool; setTool(t: Tool): void }) {
 function Legend({ spec, result, material, pro, bitD, flagged }: { spec: PlateSpecInput; result: GenerateResult | null; material: Material; pro: boolean; bitD?: number; flagged: number }) {
   const depths = [result?.layout.relevo?.profundidade ?? 0, ...(result?.layout.gravados.map((g) => g.profundidade) ?? [])].filter((d) => d > 0 && d < spec.espessura);
   const lowered = depths.length ? Math.max(...depths) : 0;
+  const sign = spec.tipo !== "letreiro";
   const rows: [string, React.CSSProperties][] = [
     ["Face, not cut", { background: material.face }],
-    [lowered ? `Lowered · ${fmt(lowered)} mm` : "Lowered", { background: material.recess }],
+    ...(sign ? ([[lowered ? `Lowered · ${fmt(lowered)} mm` : "Lowered", { background: material.recess }]] as [string, React.CSSProperties][]) : []),
     ["Cut through", { background: THROUGH_COLOR, borderColor: "rgba(255,255,255,.18)" }],
-    ["Holding tabs", { background: material.side }],
+    ...(sign ? ([["Holding tabs", { background: material.side }]] as [string, React.CSSProperties][]) : []),
     ["Material left", { background: "repeating-linear-gradient(135deg,#F2C14E 0 2px,transparent 2px 5px)", borderColor: "#F2C14E" }],
   ];
   return (
@@ -262,7 +265,6 @@ function VectorPreview({ result, material, faded }: { result: GenerateResult; ma
   return (
     <svg className="create-vector" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ opacity: faded ? 0.9 : 1 }} aria-hidden>
       <g transform={`translate(0 ${H}) scale(1 -1)`} fillRule="evenodd">
-        <rect x={0} y={0} width={W} height={H} fill={material.side} opacity={0.35} />
         <path d={pathOf(L.peca as Region)} fill={material.face} />
         {L.relevo ? <path d={pathOf(L.relevo.regiao as Region)} fill={material.recess} /> : null}
         {L.gravados.map((g, i) => (
@@ -274,6 +276,19 @@ function VectorPreview({ result, material, faded }: { result: GenerateResult; ma
       </g>
     </svg>
   );
+}
+
+/**
+ * Esconde a sobra de material fora do contorno: mostra a peça e a faixa do corte externo
+ * (com as abas), como ela vai sair da máquina.
+ */
+function pieceMask(result: GenerateResult | null, d: number): React.CSSProperties | undefined {
+  const L = result?.layout;
+  if (!L?.perfil) return undefined;
+  const { largura: W, altura: H } = L.bloco;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><g transform="translate(0 ${H}) scale(1 -1)"><path d="${pathOf(L.peca as Region)}" fill="#fff" stroke="#fff" stroke-width="${2 * d + 0.6}" stroke-linejoin="round"/></g></svg>`;
+  const url = `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+  return { maskImage: url, WebkitMaskImage: url, maskSize: "100% 100%", WebkitMaskSize: "100% 100%", maskRepeat: "no-repeat", WebkitMaskRepeat: "no-repeat" };
 }
 
 // ------------------------------------------------------------------ interactive overlay
@@ -324,7 +339,11 @@ function Overlay(p: OverlayProps) {
     if (p.tool !== "select" || e.button !== 0) return;
     e.stopPropagation();
     p.setSel(id);
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    } catch {
+      /* ponteiro sintético: o arrasto segue pelos eventos do quadro */
+    }
     setDrag({ id, x0: e.clientX, y0: e.clientY, dx: 0, dy: 0 });
   };
   const move = (e: RPointerEvent) => {
