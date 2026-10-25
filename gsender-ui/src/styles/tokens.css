@@ -1,0 +1,39 @@
+/* Design tokens, "Calm Precision" (handoff do Claude Design). */
+:root {
+  --graphite: #111214;
+  --surface: #1a1b1e;
+  --surface-2: #222327;
+  --glass: rgba(26, 27, 30, 0.78);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --line: rgba(255, 255, 255, 0.06);
+  --line-2: rgba(255, 255, 255, 0.14);
+
+  --text: #f5f3ef;
+  --text-2: #c9c6c0;
+  --text-3: #a4a29d;
+  --text-4: #8c8a85;
+
+  --accent: #ff5b1f;
+  --accent-hover: #ff6e38;
+
+  --ready: #5eddb0;
+  --ready-text: #7fe8c2;
+  --running: #6ea8ff;
+  --running-text: #9cc2ff;
+  --paused: #f2c14e;
+  --alarm: #f26b5e;
+  --alarm-text: #ff8f84;
+
+  --radius-panel: 14px;
+  --radius-control: 10px;
+  --blur: blur(20px);
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --t-fast: 180ms;
+  --t: 240ms;
+
+  --font: "Geist Sans", Geist, system-ui, sans-serif;
+  --mono: "Geist Mono", ui-monospace, monospace;
+
+  --header-h: 64px;
+  --panel-w: 402px;
+}

@@ -7,3 +7,4 @@ export type { Aviso, RefElemento, Correcao } from "./avisos.js";
 export type { Layout, ElementoCorte, FontMap } from "./layout.js";
 export * from "./schema.js";
 export * as sienci from "./catalog/sienci/index.js";
+export { parseLines, toSegments, type Segment } from "./gcode.js";
