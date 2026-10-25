@@ -116,3 +116,55 @@ CRITÉRIOS DE ACEITE
 - Todas as funções listadas em "O que o gSender faz hoje" têm um lugar no novo design.
 
 Comece pelo mapa de fluxo e pelos wireframes das 4 etapas. Mostre-os antes de partir para alta fidelidade.
+
+---
+
+MUDANÇAS APÓS O MOTOR DE CAM (atualize o design com isto)
+
+O motor que transforma a placa em G-code já existe. Ele mudou algumas premissas do fluxo. Ajuste o design assim:
+
+1. MATERIAL, ESPESSURA E FRESA SOBEM PARA A ETAPA CRIAR
+Se uma peça pode ser cortada depende da fresa e do material: uma letra fina pode ser possível com fresa de 1/16" e impossível com 1/8"; uma profundidade de 3 mm não serve numa placa de 3 mm. Por isso:
+- Mostre material, espessura e fresa como chips no topo do painel de Criar, já com padrões (MDF 15 mm, fresa reta 1/8"), editáveis ali mesmo.
+- Trocar qualquer chip revalida o modelo na hora.
+
+2. CRIAR VIRA CONVERSA + EDITOR DE PARÂMETROS
+A IA não desenha livremente: ela preenche campos. O usuário refina conversando ou mexendo nos mesmos controles:
+- Placa: largura, altura, borda (reta, arredondada, chanfrada) e raio, moldura
+- Textos (até 6): conteúdo, fonte, tamanho da letra, modo (relevo, gravado, vazado), profundidade, posição (automática ou arrastando na prévia)
+- Ícones: coração, estrela, casa, folha (tamanho, posição, modo)
+- Furos e rasgo para pendurar
+- Tipo: placa ou letreiro recortado
+Fontes disponíveis: Archivo Black (grossa, a mais fácil de cortar), Pacifico (cursiva, letras ligadas) e Bebas Neue (condensada). O seletor de fonte é visual e indica qual é mais fácil de cortar.
+
+3. AVISOS VIRAM UM COMPONENTE CENTRAL
+Toda mudança devolve avisos em português, com sugestão. Desenhe dois níveis:
+- Erro: bloqueia o botão "Continuar". Tem botão "Aplicar sugestão". Exemplos: "O texto não cabe na placa → reduzir para 18 mm"; "Os traços de 'desde 2024' são mais finos que a fresa de 3,17 mm → aumentar o texto ou usar fresa 1/16""; "O furo de 2 mm é menor que a fresa".
+- Aviso: deixa seguir e destaca na prévia onde vai sobrar material. Exemplos: "Cerca de 4% da folha não será cortada"; "Os miolos do 'o' vão se soltar no vazado"; "Peças pequenas sem aba: prenda com fita dupla-face".
+Desenhe também como a IA comenta esses avisos na conversa ("Vou reduzir o texto para 18 mm. Ok?").
+
+4. A PRÉVIA MOSTRA O CORTE REAL
+A prévia é a simulação do que a fresa vai fazer, não um modelo idealizado: fundo rebaixado, furos atravessando, abas de fixação, cantos internos arredondados pelo raio da fresa e áreas que a fresa não alcança. Desenhe:
+- Vista de cima com legenda de profundidade (face intacta, rebaixado, atravessou)
+- Vista 3D da peça simulada
+- Destaque das áreas com aviso
+
+5. PREPARAR FICA MAIS ENXUTO
+Sobram:
+- Preset de velocidade: Rápido / Equilibrado / Detalhado (mostra RPM e avanço só no modo Pro)
+- Abas de fixação: quantidade e altura
+- Segunda fresa opcional (ex.: gravar com 1/16", recortar com 1/8")
+- Resumo: tempo estimado, lista de operações (rebaixo, furos, recorte), tamanho do bloco necessário e selo "G-code verificado ✓"
+
+6. POSICIONAR: ZERO SEMPRE NO MESMO LUGAR
+O zero do trabalho é o canto inferior esquerdo do bloco, na face de cima. Ilustre isso claramente. Mostre o tamanho mínimo do bloco (a placa mais 10 mm de margem de cada lado quando há recorte).
+
+7. CORTAR: TROCA DE FRESA E ABAS
+- Se o projeto usa duas fresas, o corte pausa no meio: desenhe a tela "Troque para a fresa 1/8"" com ilustração e botão "Pronto, continuar" (com novo zero de altura da fresa).
+- No fim, um estado "Peça pronta: corte as abas e lixe as bordas" com ilustração.
+
+8. NOVOS ESTADOS PARA O PROTÓTIPO
+Inclua no protótipo navegável:
+- Criar com erro bloqueando, depois "Aplicar sugestão" resolvendo
+- Troca de fresa no meio do corte
+- Letreiro recortado (tipo "letreiro") com letras cursivas ligadas
