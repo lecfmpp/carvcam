@@ -1,10 +1,10 @@
-import type { GenerateResult, PlateSpecInput, RefElemento } from "@gsender-next/cam-engine";
+import { parseSvg, SvgInvalido, type GenerateResult, type PlateSpecInput, type RefElemento } from "@gsender-next/cam-engine";
 
 /**
  * Elementos da tela Create sobre a especificação do motor:
- * textos (t:i), formas (f:i), ícones (i:i) e o grupo de furos/rasgo (holes).
+ * textos (t:i), formas (f:i), ícones (i:i), desenhos SVG importados (s:i) e o grupo de furos/rasgo (holes).
  */
-export type ElementId = `t:${number}` | `f:${number}` | `i:${number}` | "holes";
+export type ElementId = `t:${number}` | `f:${number}` | `i:${number}` | `s:${number}` | "holes";
 
 export interface Box {
   /** Centro e tamanho em mm, coordenadas da peça (origem no canto inferior esquerdo da placa). */
@@ -17,6 +17,7 @@ export interface Box {
 export type Texto = NonNullable<PlateSpecInput["texto"]>[number];
 export type Forma = NonNullable<PlateSpecInput["formas"]>[number];
 export type Icone = NonNullable<PlateSpecInput["icones"]>[number];
+export type SvgEl = NonNullable<PlateSpecInput["svgs"]>[number];
 
 export const FONTS: { id: NonNullable<Texto["fonte"]>; name: string; tag: string; css: string; widthFactor: number }[] = [
   { id: "archivo-black", name: "Archivo Black", tag: "Easiest to cut", css: "'Archivo Black'", widthFactor: 0.86 },
@@ -40,18 +41,19 @@ export function idOf(ref: RefElemento | undefined): ElementId | null {
   if (ref.tipo === "texto") return `t:${ref.indice}`;
   if (ref.tipo === "forma") return `f:${ref.indice}`;
   if (ref.tipo === "icone") return `i:${ref.indice}`;
+  if (ref.tipo === "svg") return `s:${ref.indice}`;
   return "holes";
 }
 
-export function parseId(id: ElementId): { kind: "t" | "f" | "i" | "holes"; index: number } {
+export function parseId(id: ElementId): { kind: "t" | "f" | "i" | "s" | "holes"; index: number } {
   if (id === "holes") return { kind: "holes", index: 0 };
   const [k, i] = id.split(":");
-  return { kind: k as "t" | "f" | "i", index: Number(i) };
+  return { kind: k as "t" | "f" | "i" | "s", index: Number(i) };
 }
 
 export interface ElementRow {
   id: ElementId;
-  kind: "text" | "shape" | "icon" | "holes";
+  kind: "text" | "shape" | "icon" | "svg" | "holes";
   name: string;
   sub: string;
 }
@@ -78,6 +80,9 @@ export function listElements(spec: PlateSpecInput): ElementRow[] {
   );
   (spec.icones ?? []).forEach((c, i) =>
     rows.push({ id: `i:${i}`, kind: "icon", name: ICONS.find((x) => x.id === c.id)?.name ?? "Icon", sub: `Icon · ${c.tamanho} mm · ${MODE_NAME[c.modo ?? "relevo"]}` }),
+  );
+  (spec.svgs ?? []).forEach((v, i) =>
+    rows.push({ id: `s:${i}`, kind: "svg", name: v.nome || `Drawing ${i + 1}`, sub: `SVG · ${r(v.largura)} mm wide · ${sign ? MODE_NAME[v.modo ?? "gravado"] : "cut out"}` }),
   );
   const holes = spec.furos?.length ?? 0;
   const slots = spec.rasgos?.length ?? 0;
@@ -184,6 +189,10 @@ export function elementBoxes(spec: PlateSpecInput, result: GenerateResult | null
     const id: ElementId = `i:${i}`;
     if (!out.has(id)) out.set(id, { cx: c.x, cy: c.y, w: c.tamanho, h: c.tamanho });
   });
+  (spec.svgs ?? []).forEach((v, i) => {
+    const id: ElementId = `s:${i}`;
+    if (!out.has(id)) out.set(id, { cx: v.x, cy: v.y, w: v.largura, h: v.largura * svgAspect(v.conteudo) });
+  });
   if (!out.has("holes")) {
     const pts = [...(spec.furos ?? []).map((f) => ({ x: f.x, y: f.y, r: f.diametro / 2 })), ...(spec.rasgos ?? []).map((s) => ({ x: s.x, y: s.y, r: s.comprimento / 2 }))];
     if (pts.length) {
@@ -221,6 +230,9 @@ export function moveElement(spec: PlateSpecInput, id: ElementId, cx: number, cy:
   } else if (kind === "i" && s.icones?.[index]) {
     s.icones[index].x = rx(cx);
     s.icones[index].y = rx(cy);
+  } else if (kind === "s" && s.svgs?.[index]) {
+    s.svgs[index].x = rx(cx);
+    s.svgs[index].y = rx(cy);
   } else if (kind === "holes" && box) {
     const dx = cx - box.cx;
     const dy = cy - box.cy;
@@ -236,6 +248,7 @@ export function deleteElement(spec: PlateSpecInput, id: ElementId): PlateSpecInp
   if (kind === "t") s.texto = (s.texto ?? []).filter((_, i) => i !== index);
   if (kind === "f") s.formas = (s.formas ?? []).filter((_, i) => i !== index);
   if (kind === "i") s.icones = (s.icones ?? []).filter((_, i) => i !== index);
+  if (kind === "s") s.svgs = (s.svgs ?? []).filter((_, i) => i !== index);
   if (kind === "holes") {
     s.furos = [];
     s.rasgos = [];
@@ -272,6 +285,13 @@ export function duplicateElement(spec: PlateSpecInput, id: ElementId, box: Box |
     s.icones.push(c);
     return [s, `i:${s.icones.length - 1}`];
   }
+  if (kind === "s" && s.svgs?.[index]) {
+    const v = structuredClone(s.svgs[index]);
+    v.x += 8;
+    v.y -= 8;
+    s.svgs.push(v);
+    return [s, `s:${s.svgs.length - 1}`];
+  }
   return [s, null];
 }
 
@@ -300,11 +320,43 @@ export function addElement(spec: PlateSpecInput, tool: Exclude<Tool, "select">, 
 /** Aplica uma correção do motor (campo/valor num elemento) à especificação. */
 export function applyCorrection(spec: PlateSpecInput, ref: RefElemento, campo: string, valor: number): PlateSpecInput {
   const s = structuredClone(spec) as PlateSpecInput & Record<string, unknown>;
-  const list: Record<string, unknown[] | undefined> = { texto: s.texto, icone: s.icones, forma: s.formas, furo: s.furos, rasgo: s.rasgos };
+  const list: Record<string, unknown[] | undefined> = { texto: s.texto, icone: s.icones, forma: s.formas, svg: s.svgs, furo: s.furos, rasgo: s.rasgos };
   const arr = list[ref.tipo];
   const el = arr?.[ref.indice] as Record<string, unknown> | undefined;
   if (el) el[campo] = valor;
   // Furos: a correção vale para todos (são um grupo na interface).
   if (ref.tipo === "furo" && campo === "diametro") s.furos = s.furos?.map((f) => ({ ...f, diametro: valor }));
   return s;
+}
+
+// ------------------------------------------------------------------ SVG
+
+/** Altura ÷ largura do desenho (1 se o arquivo não puder ser lido). */
+export function svgAspect(conteudo: string) {
+  try {
+    const d = parseSvg(conteudo);
+    return d.altura / d.largura;
+  } catch {
+    return 1;
+  }
+}
+
+/**
+ * Importa um arquivo SVG como elemento novo, centrado em (x, y). A largura começa no tamanho
+ * natural do arquivo, limitada a 60% da placa (e ao que couber na altura).
+ */
+export function addSvg(spec: PlateSpecInput, conteudo: string, nome: string, x: number, y: number): [PlateSpecInput, ElementId] | { error: string } {
+  let d;
+  try {
+    d = parseSvg(conteudo);
+  } catch (e) {
+    return { error: e instanceof SvgInvalido ? e.message : "This file is not a valid SVG." };
+  }
+  const s = structuredClone(spec);
+  const sign = s.tipo !== "letreiro";
+  const maxW = Math.min(s.largura * 0.6, (s.altura * 0.6 * d.largura) / d.altura);
+  const largura = Math.max(5, Math.round(Math.min(d.largura, maxW) * 10) / 10);
+  const rx = (v: number) => Math.round(v * 10) / 10;
+  s.svgs = [...(s.svgs ?? []), { conteudo, nome: nome.replace(/\.svg$/i, "").slice(0, 60), x: rx(x), y: rx(y), largura, modo: sign ? "gravado" : "recorte", profundidade: 2 }];
+  return [s, `s:${s.svgs.length - 1}`];
 }

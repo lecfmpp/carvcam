@@ -2,7 +2,7 @@ import type { GenerateResult, PlateSpecInput } from "@gsender-next/cam-engine";
 import archivoUrl from "@gsender-next/cam-engine/fonts/archivoblack/ArchivoBlack-Regular.ttf?url";
 import bebasUrl from "@gsender-next/cam-engine/fonts/bebasneue/BebasNeue-Regular.ttf?url";
 import pacificoUrl from "@gsender-next/cam-engine/fonts/pacifico/Pacifico-Regular.ttf?url";
-import { Circle, Copy, Minus, MousePointer2, Square, Trash2, Type } from "lucide-react";
+import { Circle, Copy, FileUp, Minus, MousePointer2, Square, Trash2, Type } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type PointerEvent as RPointerEvent } from "react";
 import { TopBar } from "../../components/TopBar";
 import { useEngine } from "../../engine/useEngine";
@@ -18,6 +18,7 @@ import { AssistantBar } from "./AssistantBar";
 import { addElement, deleteElement, duplicateElement, elementBoxes, fontOf, margin, moveElement, parseId, type Box, type ElementId, type Tool } from "./elements";
 import { buildIssues, type UiIssue } from "./issues";
 import { CreatePanel } from "./Panel";
+import { importSvgFile, isSvgFile, pickSvgFile } from "./svgImport";
 import "./create.css";
 
 // As mesmas fontes do motor, para o seletor de fontes e a edição no quadro.
@@ -78,6 +79,16 @@ export default function Create() {
     if (sel && !boxes.has(sel)) setSel(null);
   }, [boxes, sel]);
 
+  const [dropping, setDropping] = useState(false);
+  const importSvg = async (file: File | null) => {
+    if (!file) return;
+    const out = await importSvgFile(file, useDesign.getState().design.spec);
+    if (!out) return;
+    patchSpec(() => out[0]);
+    setSel(out[1]);
+    setTool("select");
+  };
+
   const remove = (id: ElementId) => {
     patchSpec((s) => deleteElement(s, id));
     setSel(null);
@@ -110,6 +121,7 @@ export default function Create() {
       } else if (!e.metaKey && !e.ctrlKey && !e.altKey) {
         const t = TOOLS.find((x) => x[3] === e.key.toUpperCase());
         if (t) setTool(t[0]);
+        else if (e.key.toLowerCase() === "i") void pickSvgFile().then(importSvg);
       }
     };
     window.addEventListener("keydown", onKey);
@@ -123,14 +135,31 @@ export default function Create() {
     tool !== "select" ? `Click on the ${spec.tipo === "letreiro" ? "board" : "sign"} to add a ${TOOL_NAME[tool]}` : eng.busy ? "Re-checking…" : `Simulated cut · ${bit?.name ?? "bit"}`;
 
   return (
-    <div className="app create">
+    <div
+      className={`app create ${dropping ? "is-dropping" : ""}`}
+      onDragOver={(e) => {
+        if (![...e.dataTransfer.items].some((i) => i.kind === "file")) return;
+        e.preventDefault();
+        setDropping(true);
+      }}
+      onDragLeave={(e) => {
+        if (e.currentTarget === e.target || !e.currentTarget.contains(e.relatedTarget as Node)) setDropping(false);
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        setDropping(false);
+        const f = [...e.dataTransfer.files].find(isSvgFile) ?? e.dataTransfer.files[0] ?? null;
+        void importSvg(f);
+      }}
+    >
       <div className="dotgrid" />
       <TopBar variant="job" step="create" reachable={errors ? ["create"] : ["create", "prepare"]} />
       <Stage
         caption={caption}
         overlay={
           <>
-            <ToolRail tool={tool} setTool={setTool} />
+            <ToolRail tool={tool} setTool={setTool} onImport={() => void pickSvgFile().then(importSvg)} />
+            {dropping ? <div className="create-drop">Drop the SVG to add it to the {spec.tipo === "letreiro" ? "board" : "sign"}</div> : null}
             <Legend spec={spec} result={result} material={material} pro={mode === "pro"} bitD={bit?.d} flagged={issues.length} />
           </>
         }
@@ -206,7 +235,7 @@ export default function Create() {
 
 // ------------------------------------------------------------------ tool rail and legend
 
-function ToolRail({ tool, setTool }: { tool: Tool; setTool(t: Tool): void }) {
+function ToolRail({ tool, setTool, onImport }: { tool: Tool; setTool(t: Tool): void; onImport(): void }) {
   return (
     <div className="create-rail" role="toolbar" aria-label="Drawing tools" aria-orientation="vertical">
       {TOOLS.map(([id, label, Icon, key]) => (
@@ -214,6 +243,10 @@ function ToolRail({ tool, setTool }: { tool: Tool; setTool(t: Tool): void }) {
           <Icon size={17} strokeWidth={1.6} />
         </button>
       ))}
+      <span className="create-rail__sep" aria-hidden />
+      <button className="create-rail__btn" aria-label="Import SVG file" title="Import SVG file (I)" onClick={onImport}>
+        <FileUp size={17} strokeWidth={1.6} />
+      </button>
     </div>
   );
 }

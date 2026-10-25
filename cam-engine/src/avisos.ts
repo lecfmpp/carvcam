@@ -1,6 +1,6 @@
 /** Elemento da especificação ao qual o aviso se refere (índice dentro da lista do tipo). */
 export interface RefElemento {
-  tipo: "texto" | "icone" | "forma" | "furo" | "rasgo";
+  tipo: "texto" | "icone" | "forma" | "svg" | "furo" | "rasgo";
   indice: number;
 }
 
@@ -36,7 +36,8 @@ export interface Aviso {
     | "FRESA_PRECISA_ACESSORIO"
     | "FRESA_NAO_SUPORTADA"
     | "SEM_TABELA_SIENCI"
-    | "COMPRESSAO_PASSADA";
+    | "COMPRESSAO_PASSADA"
+    | "SVG_INVALIDO";
   severidade: "erro" | "aviso";
   mensagem: string;
   sugestao?: string;

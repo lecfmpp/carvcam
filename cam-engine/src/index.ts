@@ -9,3 +9,4 @@ export * from "./schema.js";
 export * as sienci from "./catalog/sienci/index.js";
 export { parseLines, toSegments, type Segment } from "./gcode.js";
 export { generateSurfacing, type SurfacingInput, type SurfacingResult } from "./surfacing.js";
+export { parseSvg, placeSvg, SvgInvalido, type SvgDesenho } from "./svg.js";

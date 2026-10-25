@@ -68,7 +68,7 @@ function toIssue(a: Aviso, k: number, ctx: Ctx): UiIssue {
         ...base,
         title: target ? `${q} doesn't fit on the ${spec.tipo === "letreiro" ? "board" : "sign"}` : "The lettering doesn't fit on the board",
         detail: `It runs past the margins of the ${spec.largura} × ${spec.altura} mm ${spec.tipo === "letreiro" ? "board" : "sign"}.`,
-        suggestion: v ? `Reduce the letters to ${v} mm` : "Make the letters smaller",
+        suggestion: target?.startsWith("s:") ? (v ? `Make the drawing ${v} mm wide` : "Make the drawing smaller") : v ? `Reduce the letters to ${v} mm` : "Make the letters smaller",
         apply: fix ? { label: "Apply suggestion", kind: "spec", spec: fix } : undefined,
         alts: [{ label: `Widen ${spec.tipo === "letreiro" ? "board" : "sign"} to ${wider} mm`, kind: "spec", spec: { ...spec, largura: wider } }],
       };
@@ -154,7 +154,9 @@ function toIssue(a: Aviso, k: number, ctx: Ctx): UiIssue {
     case "SEM_TABELA_SIENCI":
       return { ...base, level: "info", title: "No official speeds for this combination", detail: "We use conservative calculated values instead.", alts: [] };
     case "NADA_A_CORTAR":
-      return { ...base, title: "Nothing to carve yet", detail: "Add text, a shape or an icon.", alts: [] };
+      return { ...base, title: "Nothing to carve yet", detail: "Add text, a shape, an icon or an SVG file.", alts: [] };
+    case "SVG_INVALIDO":
+      return { ...base, title: `${q} can't be read`, detail: "Export it again as a plain SVG with text converted to outlines, or delete it.", alts: [] };
     default:
       return base;
   }

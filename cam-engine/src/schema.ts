@@ -68,6 +68,20 @@ export const FormaSchema = z.discriminatedUnion("tipo", [
   }),
 ]);
 
+/**
+ * Desenho importado de um arquivo SVG. O texto do arquivo vai junto na especificação;
+ * (x, y) é o centro e a largura define o tamanho (a altura segue a proporção do desenho).
+ */
+export const SvgSchema = z.object({
+  conteudo: z.string().min(10).max(3_000_000),
+  nome: z.string().max(120).optional(),
+  x: z.number(),
+  y: z.number(),
+  largura: z.number().positive().max(3000),
+  modo: ModoSchema.default("gravado"),
+  profundidade: z.number().positive().max(50).default(2),
+});
+
 export const FuroSchema = z.object({
   x: z.number(),
   y: z.number(),
@@ -100,6 +114,7 @@ export const PlateSpecSchema = z.object({
   moldura: z.number().min(0).default(6),
   icones: z.array(IconeSchema).max(12).default([]),
   formas: z.array(FormaSchema).max(40).default([]),
+  svgs: z.array(SvgSchema).max(8).default([]),
   furos: z.array(FuroSchema).max(12).default([]),
   rasgos: z.array(RasgoSchema).max(4).default([]),
   /** Recortar o contorno externo da peça (com abas de fixação). */
@@ -113,6 +128,7 @@ export type PlateSpecInput = z.input<typeof PlateSpecSchema>;
 export type Texto = z.infer<typeof TextoSchema>;
 export type Icone = z.infer<typeof IconeSchema>;
 export type Forma = z.infer<typeof FormaSchema>;
+export type SvgElemento = z.infer<typeof SvgSchema>;
 export type Modo = z.infer<typeof ModoSchema>;
 export type FontId = (typeof FONT_IDS)[number];
 export type IconId = (typeof ICON_IDS)[number];

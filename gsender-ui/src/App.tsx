@@ -15,7 +15,7 @@ function Home() {
   const onboarded = useWorkshop((s) => s.onboarded);
   const panel = usePanelMode();
   const spec = useDesign((s) => s.design.spec);
-  const hasProject = (spec.texto?.length ?? 0) + (spec.formas?.length ?? 0) + (spec.icones?.length ?? 0) > 0;
+  const hasProject = (spec.texto?.length ?? 0) + (spec.formas?.length ?? 0) + (spec.icones?.length ?? 0) + (spec.svgs?.length ?? 0) > 0;
   // No gControl (preso à máquina), abre direto onde se trabalha: Posicionar.
   if (onboarded && panel && hasProject) return <Navigate to="/position" replace />;
   return <Navigate to={onboarded ? "/workshop" : "/workshop/onboarding"} replace />;

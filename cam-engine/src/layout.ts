@@ -3,6 +3,7 @@ import { fmt, type Aviso, type RefElemento } from "./avisos.js";
 import { area, bounds, difference, intersection, offset, translate, union, type Region } from "./geometry/clip.js";
 import { circle, icon, plateOutline, slot, stroke } from "./geometry/shapes.js";
 import { centerAt, textToRegion } from "./geometry/text.js";
+import { parseSvg, placeSvg, SvgInvalido } from "./svg.js";
 import type { FontId, Machine, Modo, PlateSpec, Tool } from "./schema.js";
 
 export interface ElementoCorte {
@@ -59,7 +60,7 @@ export function buildLayout(spec: PlateSpec, fonts: FontMap, tool: Tool, cutTool
   }
 
   // ---- Elementos (texto e ícones) em coordenadas da peça ----
-  type Placed = { rotulo: string; regiao: Region; modo: Modo; profundidade: number; tamanho: number; idx: number; tipo: "texto" | "icone" | "forma" };
+  type Placed = { rotulo: string; regiao: Region; modo: Modo; profundidade: number; tamanho: number; idx: number; tipo: "texto" | "icone" | "forma" | "svg" };
   const placed: Placed[] = [];
 
   const autoTexts: { idx: number; regiao: Region; tamanho: number }[] = [];
@@ -104,6 +105,23 @@ export function buildLayout(spec: PlateSpec, fonts: FontMap, tool: Tool, cutTool
           : stroke(f.x, f.y, f.x2, f.y2, f.espessura);
     const tamanho = f.tipo === "retangulo" ? Math.min(f.largura, f.altura) : f.tipo === "circulo" ? f.diametro : f.espessura;
     placed.push({ rotulo: `${nome} ${i + 1}`, regiao, modo: f.modo, profundidade: f.profundidade, tamanho, idx: i, tipo: "forma" });
+  });
+
+  spec.svgs.forEach((sv, i) => {
+    const nome = sv.nome ? `desenho ${i + 1} (${sv.nome})` : `desenho ${i + 1}`;
+    try {
+      const d = parseSvg(sv.conteudo);
+      // "tamanho" do desenho é a largura: é o campo que a correção sugerida ajusta.
+      placed.push({ rotulo: nome, regiao: placeSvg(d, sv.x, sv.y, sv.largura), modo: sv.modo, profundidade: sv.profundidade, tamanho: sv.largura, idx: i, tipo: "svg" });
+    } catch (e) {
+      avisos.push({
+        codigo: "SVG_INVALIDO",
+        severidade: "erro",
+        mensagem: `Não deu para ler ${nome}: ${e instanceof SvgInvalido ? e.message : "arquivo SVG inválido."}`,
+        sugestao: "Exporte de novo como SVG simples (textos convertidos em curvas) ou apague este desenho.",
+        elemento: { tipo: "svg", indice: i },
+      });
+    }
   });
 
   spec.icones.forEach((ic, i) => {
@@ -298,7 +316,7 @@ function checkFit(
       sugestao: sugerido > 0 ? `Reduza o tamanho para cerca de ${sugerido} mm ou aumente a placa.` : "Aumente a placa.",
       dados: { tamanhoSugerido: sugerido },
       elemento: ref,
-      correcao: ref && sugerido > 0 && (ref.tipo === "texto" || ref.tipo === "icone") ? { elemento: ref, campo: "tamanho", valor: sugerido } : undefined,
+      correcao: ref && sugerido > 0 && (ref.tipo === "texto" || ref.tipo === "icone") ? { elemento: ref, campo: "tamanho", valor: sugerido } : ref && sugerido > 0 && ref.tipo === "svg" ? { elemento: ref, campo: "largura", valor: sugerido } : undefined,
     });
   }
 }

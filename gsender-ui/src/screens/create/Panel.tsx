@@ -1,5 +1,5 @@
 import type { PlateSpecInput } from "@gsender-next/cam-engine";
-import { AlertCircle, AlertTriangle, ArrowRight, CheckCircle2, ChevronDown, ChevronRight, ChevronUp, Circle, Copy, Eye, EyeOff, Heart, Layers, Minus, MoveVertical, Plus, Square, Trash2, Type, XCircle } from "lucide-react";
+import { AlertCircle, AlertTriangle, ArrowRight, CheckCircle2, ChevronDown, ChevronRight, ChevronUp, Circle, Copy, Eye, EyeOff, FileUp, Heart, Layers, Minus, MoveVertical, Plus, Shapes, Square, Trash2, Type, XCircle } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { Issue, Seg, Stepper, VideoCard } from "../../components/ui";
@@ -7,8 +7,9 @@ import { BITS, bitById, compat, materialById, MATERIALS } from "../../lib/catalo
 import { useDesign } from "../../state/design";
 import { toast } from "../../state/ui";
 import { useActiveMachine, useWorkshop } from "../../state/workshop";
-import { addElement, FONTS, ICONS, listElements, parseId, type Box, type ElementId, type ElementRow, type Forma, type Texto } from "./elements";
+import { addElement, FONTS, ICONS, listElements, parseId, type Box, type ElementId, type ElementRow, type Forma, type SvgEl, type Texto, svgAspect } from "./elements";
 import type { IssueAction, UiIssue } from "./issues";
+import { importSvgFile, pickSvgFile } from "./svgImport";
 
 type Modo = "relevo" | "gravado" | "recorte";
 
@@ -97,9 +98,9 @@ export function CreatePanel(p: Props) {
 
       <div className="sidepanel__body create-panel__body">
         {p.engineError ? <Issue kind="error" eyebrow="Error · blocks Continue" title="This design couldn't be checked" body={p.engineError} /> : null}
-        {spec.texto?.length === 0 && !spec.formas?.length && !spec.icones?.length && !spec.furos?.length ? (
+        {spec.texto?.length === 0 && !spec.formas?.length && !spec.icones?.length && !spec.svgs?.length && !spec.furos?.length ? (
           <div className="create-blankmsg">
-            Blank {spec.espessura} mm {material.id} board, {spec.largura} × {spec.altura} mm. Pick the wood and thickness above, then add text, shapes or lines with the tools on the left.
+            Blank {spec.espessura} mm {material.id} board, {spec.largura} × {spec.altura} mm. Pick the wood and thickness above, then add text, shapes or lines with the tools on the left, or drop an SVG file on the board.
           </div>
         ) : null}
         {p.issues.map((i) => (
@@ -501,6 +502,22 @@ function Inspector({ id, spec, patchSpec, sign }: { id: ElementId; spec: PlateSp
       </div>
     );
   }
+  if (kind === "s") {
+    const v = spec.svgs?.[index];
+    if (!v) return null;
+    const setV = (p: Partial<SvgEl>) => patchSpec((s) => ({ ...s, svgs: s.svgs?.map((x, i) => (i === index ? { ...x, ...p } : x)) }));
+    const h = Math.round(v.largura * svgAspect(v.conteudo) * 10) / 10;
+    return (
+      <div className="create-fields create-inspector">
+        <Field label="Width" aside={<span className="tiny muted">Height follows: {h} mm</span>}>
+          <Stepper label="Width" value={v.largura} step={2} min={5} max={1000} unit="mm" onChange={(w) => setV({ largura: w })} />
+        </Field>
+        <ModeSeg value={v.modo ?? "gravado"} sign={sign} onChange={(m) => setV({ modo: m })} />
+        {sign && (v.modo ?? "gravado") !== "recorte" ? <Slider label="Depth" value={v.profundidade ?? 2} min={0.5} max={8} step={0.5} onChange={(d) => setV({ profundidade: d })} /> : null}
+        <div className="tiny muted">Filled areas are carved; lines without fill are carved as wide as their stroke. Text must be converted to outlines before export.</div>
+      </div>
+    );
+  }
   return <HolesInspector spec={spec} patchSpec={patchSpec} />;
 }
 
@@ -548,6 +565,7 @@ function RowIcon({ row, spec }: { row: ElementRow; spec: PlateSpecInput }) {
   if (row.kind === "text") return <Type size={16} strokeWidth={1.5} />;
   if (row.kind === "icon") return <Heart size={16} strokeWidth={1.5} />;
   if (row.kind === "holes") return <Circle size={10} strokeWidth={2} />;
+  if (row.kind === "svg") return <Shapes size={16} strokeWidth={1.5} />;
   const f = spec.formas?.[parseId(row.id).index];
   if (f?.tipo === "circulo") return <Circle size={16} strokeWidth={1.5} />;
   if (f?.tipo === "linha") return <Minus size={16} strokeWidth={1.5} />;
@@ -594,6 +612,16 @@ function AddChips({ spec, onAdd }: { spec: PlateSpecInput; onAdd(s: PlateSpecInp
           + Icon
         </button>
       ) : null}
+      <button
+        className="create-add__chip"
+        onClick={async () => {
+          const file = await pickSvgFile();
+          const out = file ? await importSvgFile(file, spec) : null;
+          if (out) onAdd(out[0], out[1]);
+        }}
+      >
+        <FileUp size={13} strokeWidth={1.75} /> SVG file
+      </button>
       {spec.tipo !== "letreiro" && !hasHoles ? (
         <button className="create-add__chip" onClick={() => onAdd(withHoles(spec, "holes"), "holes")}>
           + Mounting holes
