@@ -11,6 +11,7 @@ import { addElement, arcFromBend, bendOf, elementOf, FONTS, ICONS, idOfAlvo, lis
 import type { IssueAction, UiIssue } from "./issues";
 import { importSvgFile, pickSvgFile } from "./svgImport";
 import { TraceDialog } from "./traceDialog";
+import { addLibraryElement, LibraryDialog } from "./libraryDialog";
 import { tracingFromFile, useTracingUi } from "./tracing";
 import type { TracingImage } from "../../state/design";
 
@@ -868,6 +869,7 @@ function RowIcon({ row, spec }: { row: ElementRow; spec: PlateSpecInput }) {
 }
 
 function AddChips({ spec, onAdd }: { spec: PlateSpecInput; onAdd(s: PlateSpecInput, id: ElementId | null): void }) {
+  const [lib, setLib] = useState(false);
   const cx = spec.largura / 2;
   const cy = spec.altura / 2;
   const add = (t: "text" | "rect" | "circle" | "polygon" | "star" | "line") => {
@@ -912,6 +914,18 @@ function AddChips({ spec, onAdd }: { spec: PlateSpecInput; onAdd(s: PlateSpecInp
         >
           + Icon
         </button>
+      ) : null}
+      <button className="create-add__chip" onClick={() => setLib(true)}>
+        <Shapes size={13} strokeWidth={1.75} /> Library
+      </button>
+      {lib ? (
+        <LibraryDialog
+          onClose={() => setLib(false)}
+          onPick={(el) => {
+            const out = addLibraryElement(spec, el);
+            if (out) onAdd(out[0], out[1]);
+          }}
+        />
       ) : null}
       <button
         className="create-add__chip"

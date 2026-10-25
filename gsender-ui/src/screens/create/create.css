@@ -66,6 +66,13 @@
 .create-trace__preview svg { width: 100%; height: auto; max-height: 520px; display: block; }
 .create-trace__controls { display: flex; flex-direction: column; gap: 16px; }
 .create-trace__row { display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: var(--text); }
+.create-lib { display: flex; flex-direction: column; gap: 16px; padding: 20px; }
+.create-lib__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); gap: 10px; }
+.create-lib__item { display: flex; flex-direction: column; gap: 8px; padding: 8px; border-radius: 12px; border: 1px solid var(--line-2); background: rgba(255, 255, 255, 0.03); color: var(--text); font: 500 13px var(--font); cursor: pointer; }
+.create-lib__item:hover { border-color: #FF5B1F; background: rgba(255, 91, 31, 0.06); }
+.create-lib__thumb { display: flex; align-items: center; justify-content: center; height: 92px; border-radius: 8px; background: #F5F3EF; padding: 10px; }
+.create-lib__thumb img { max-width: 100%; max-height: 100%; }
+.create-lib__name { text-align: left; }
 .create-targets { display: flex; flex-direction: column; gap: 2px; max-height: 168px; overflow: auto; }
 .create-target { display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 0 8px; border-radius: 8px; font-size: 13px; color: var(--text); cursor: pointer; }
 .create-target:hover { background: rgba(255, 255, 255, 0.05); }
