@@ -1,4 +1,4 @@
-import { parseDesenho, SvgInvalido, type GenerateResult, type PlateSpecInput, type RefElemento } from "@gsender-next/cam-engine";
+import { curvePolyline, parseDesenho, SvgInvalido, type GenerateResult, type PlateSpecInput, type RefElemento } from "@gsender-next/cam-engine";
 
 /**
  * Elementos da tela Create sobre a especificação do motor:
@@ -34,7 +34,7 @@ export const ICONS: { id: Icone["id"]; name: string }[] = [
 ];
 
 export const MODE_NAME: Record<string, string> = { relevo: "raised", gravado: "engraved", recorte: "cut out" };
-export const SHAPE_NAME: Record<Forma["tipo"], string> = { retangulo: "Rectangle", circulo: "Circle", linha: "Line", poligono: "Polygon", estrela: "Star" };
+export const SHAPE_NAME: Record<Forma["tipo"], string> = { retangulo: "Rectangle", circulo: "Circle", linha: "Line", poligono: "Polygon", estrela: "Star", curva: "Curve" };
 export const OP_NAME: Record<string, string> = { subtrair: "subtracts", mascara: "mask" };
 
 export function idOf(ref: RefElemento | undefined): ElementId | null {
@@ -104,6 +104,7 @@ function shapeSize(f: Forma) {
   if (f.tipo === "circulo") return `⌀ ${r(f.diametro)} mm`;
   if (f.tipo === "poligono") return `${f.lados ?? 6} sides · ⌀ ${r(f.diametro)} mm`;
   if (f.tipo === "estrela") return `${f.pontas ?? 5} points · ⌀ ${r(f.diametro)} mm`;
+  if (f.tipo === "curva") return `${f.pontos.length} points · ${f.fechada ?? true ? "closed" : "open"}`;
   return `${r(Math.hypot(f.x2 - f.x, f.y2 - f.y))} mm`;
 }
 
@@ -185,7 +186,12 @@ export function elementBoxes(spec: PlateSpecInput, result: GenerateResult | null
     if (out.has(id)) return;
     if (f.tipo === "retangulo") out.set(id, { cx: f.x, cy: f.y, w: f.largura, h: f.altura });
     else if (f.tipo === "circulo" || f.tipo === "poligono" || f.tipo === "estrela") out.set(id, { cx: f.x, cy: f.y, w: f.diametro, h: f.diametro });
-    else {
+    else if (f.tipo === "curva") {
+      const pts = curvePolyline(f.x, f.y, f.pontos, f.fechada ?? true);
+      const b = bounds([pts]);
+      const e = f.fechada ?? true ? 0 : (f.espessura ?? 3.2);
+      if (b) out.set(id, { cx: (b.x0 + b.x1) / 2, cy: (b.y0 + b.y1) / 2, w: b.x1 - b.x0 + e, h: b.y1 - b.y0 + e });
+    } else {
       const e = f.espessura ?? 3.2;
       out.set(id, { cx: (f.x + f.x2) / 2, cy: (f.y + f.y2) / 2, w: Math.abs(f.x2 - f.x) + e, h: Math.abs(f.y2 - f.y) + e });
     }
@@ -324,10 +330,34 @@ export function duplicateElement(spec: PlateSpecInput, id: ElementId, box: Box |
   return [s, null];
 }
 
-export type Tool = "select" | "text" | "rect" | "circle" | "polygon" | "star" | "line";
+export type Tool = "select" | "text" | "rect" | "circle" | "polygon" | "star" | "line" | "pen";
+
+/** Nó de curva livre (relativo à origem da curva; alças relativas ao nó). */
+export type CurveNode = Extract<Forma, { tipo: "curva" }>["pontos"][number];
+
+/**
+ * Cria uma curva livre a partir dos nós desenhados com a caneta (em mm absolutos da peça).
+ * A origem fica no primeiro nó.
+ */
+export function addCurve(spec: PlateSpecInput, nodes: CurveNode[], fechada: boolean): [PlateSpecInput, ElementId] {
+  const s = structuredClone(spec);
+  const rx = (v: number) => Math.round(v * 100) / 100;
+  const ox = rx(nodes[0].x);
+  const oy = rx(nodes[0].y);
+  const h = (v: number | undefined) => (v === undefined ? undefined : rx(v));
+  const pontos = nodes.map((n) => {
+    const p: CurveNode = { x: rx(n.x - ox), y: rx(n.y - oy) };
+    if (n.ox || n.oy) Object.assign(p, { ox: h(n.ox), oy: h(n.oy), ix: h(n.ix), iy: h(n.iy) });
+    return p;
+  });
+  const sign = s.tipo !== "letreiro";
+  const f: Forma = { tipo: "curva", x: ox, y: oy, pontos, fechada, espessura: 3.2, modo: sign ? "gravado" : fechada ? "recorte" : "gravado", profundidade: fechada ? 2 : 1 };
+  s.formas = [...(s.formas ?? []), f];
+  return [s, `f:${s.formas.length - 1}`];
+}
 
 /** Acrescenta um elemento novo com o centro em (x, y), mm da peça. */
-export function addElement(spec: PlateSpecInput, tool: Exclude<Tool, "select">, x: number, y: number): [PlateSpecInput, ElementId] {
+export function addElement(spec: PlateSpecInput, tool: Exclude<Tool, "select" | "pen">, x: number, y: number): [PlateSpecInput, ElementId] {
   const s = structuredClone(spec);
   const rx = (v: number) => Math.round(v * 10) / 10;
   const sign = s.tipo !== "letreiro";

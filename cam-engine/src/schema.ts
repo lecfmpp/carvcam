@@ -74,6 +74,20 @@ export const IconeSchema = z.object({
 });
 
 /**
+ * Nó de uma curva livre (Bézier cúbica), relativo à origem da curva. As alças (entrada e
+ * saída) são relativas ao próprio nó; sem alças, o nó é um canto.
+ */
+export const PontoCurvaSchema = z.object({
+  x: z.number(),
+  y: z.number(),
+  ix: z.number().optional(),
+  iy: z.number().optional(),
+  ox: z.number().optional(),
+  oy: z.number().optional(),
+});
+export type PontoCurva = z.infer<typeof PontoCurvaSchema>;
+
+/**
  * Formas desenhadas na tela Criar. Retângulo, círculo, polígono e estrela são centrados em
  * (x, y); a linha vai de (x, y) a (x2, y2) com a espessura dada.
  */
@@ -120,6 +134,19 @@ export const FormaSchema = z.discriminatedUnion("tipo", [
     /** Raio interno como fração do externo. */
     interno: z.number().min(0.15).max(0.95).default(0.45),
     rotacao: z.number().default(0),
+    modo: ModoSchema.default("gravado"),
+    profundidade: z.number().positive().max(50).default(2),
+    ...ModificadoresShape,
+  }),
+  z.object({
+    tipo: z.literal("curva"),
+    /** Origem da curva: os pontos são relativos a (x, y); mover a curva muda só isso. */
+    x: z.number(),
+    y: z.number(),
+    pontos: z.array(PontoCurvaSchema).min(2).max(400),
+    /** Fechada vira área; aberta vira um traço com a espessura dada. */
+    fechada: z.boolean().default(true),
+    espessura: z.number().positive().max(100).default(3.2),
     modo: ModoSchema.default("gravado"),
     profundidade: z.number().positive().max(50).default(2),
     ...ModificadoresShape,

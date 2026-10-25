@@ -1,5 +1,5 @@
 import type { PlateSpecInput } from "@gsender-next/cam-engine";
-import { AlertCircle, AlertTriangle, ArrowRight, CheckCircle2, ChevronDown, ChevronRight, ChevronUp, Circle, Copy, Eye, EyeOff, FileUp, Heart, Hexagon, Layers, Minus, MoveVertical, Plus, Shapes, Square, Star, Trash2, Type, XCircle } from "lucide-react";
+import { AlertCircle, AlertTriangle, ArrowRight, CheckCircle2, ChevronDown, ChevronRight, ChevronUp, Circle, Copy, Eye, EyeOff, FileUp, Heart, Hexagon, Layers, Minus, MoveVertical, PenTool, Plus, Shapes, Square, Star, Trash2, Type, XCircle } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { Issue, Seg, Stepper, VideoCard } from "../../components/ui";
@@ -621,6 +621,26 @@ function InspectorBody({ id, spec, patchSpec, sign }: { id: ElementId; spec: Pla
           <Field label="Diameter">
             <Stepper label="Diameter" value={f.diametro} step={2} min={4} max={1000} unit="mm" onChange={(v) => setF({ diametro: v })} />
           </Field>
+        ) : f.tipo === "curva" ? (
+          <>
+            <Field label="Shape">
+              <Seg<"closed" | "open">
+                label="Shape"
+                value={f.fechada ?? true ? "closed" : "open"}
+                onChange={(v) => setF({ fechada: v === "closed", ...(v === "open" && f.modo === "recorte" ? { modo: "gravado" } : {}) })}
+                options={[
+                  ["closed", "Closed shape"],
+                  ["open", "Open line"],
+                ]}
+              />
+            </Field>
+            {f.fechada ?? true ? null : (
+              <Field label="Line width">
+                <Stepper label="Line width" value={f.espessura ?? 3.2} step={0.5} min={0.5} max={40} unit="mm" onChange={(v) => setF({ espessura: v })} />
+              </Field>
+            )}
+            <div className="tiny muted">Drag the points on the board to reshape it. Double-click a point to make it sharp or smooth; hold Alt to move one handle on its own.</div>
+          </>
         ) : f.tipo === "poligono" || f.tipo === "estrela" ? (
           <>
             <div className="create-two">
@@ -650,7 +670,7 @@ function InspectorBody({ id, spec, patchSpec, sign }: { id: ElementId; spec: Pla
             </Field>
           </div>
         )}
-        <ModeSeg value={f.modo ?? "gravado"} sign={sign} onChange={(m) => setF({ modo: m })} allowThrough={f.tipo !== "linha"} />
+        <ModeSeg value={f.modo ?? "gravado"} sign={sign} onChange={(m) => setF({ modo: m })} allowThrough={f.tipo !== "linha" && !(f.tipo === "curva" && f.fechada === false)} />
         {sign && (f.modo ?? "gravado") !== "recorte" ? <DepthSlider mode={f.modo ?? "gravado"} value={f.profundidade ?? 2} min={0.5} max={8} onChange={(v) => setF({ profundidade: v })} /> : null}
       </div>
     );
@@ -737,6 +757,7 @@ function RowIcon({ row, spec }: { row: ElementRow; spec: PlateSpecInput }) {
   if (f?.tipo === "circulo") return <Circle size={16} strokeWidth={1.5} />;
   if (f?.tipo === "poligono") return <Hexagon size={16} strokeWidth={1.5} />;
   if (f?.tipo === "estrela") return <Star size={16} strokeWidth={1.5} />;
+  if (f?.tipo === "curva") return <PenTool size={16} strokeWidth={1.5} />;
   if (f?.tipo === "linha") return <Minus size={16} strokeWidth={1.5} />;
   return <Square size={16} strokeWidth={1.5} />;
 }

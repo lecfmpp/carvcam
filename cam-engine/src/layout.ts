@@ -1,7 +1,7 @@
 import type opentype from "opentype.js";
 import { fmt, type Aviso, type RefElemento } from "./avisos.js";
 import { area, bounds, difference, intersection, offset, translate, union, type Region } from "./geometry/clip.js";
-import { circle, icon, plateOutline, polygon, slot, star, stroke } from "./geometry/shapes.js";
+import { circle, curve, icon, plateOutline, polygon, slot, star, stroke } from "./geometry/shapes.js";
 import { centerAt, textToRegion } from "./geometry/text.js";
 import { parseDesenho } from "./desenho.js";
 import { placeSvg, SvgInvalido } from "./svg.js";
@@ -107,7 +107,14 @@ export function buildLayout(spec: PlateSpec, fonts: FontMap, tool: Tool, cutTool
   }
 
   spec.formas.forEach((f, i) => {
-    const nome = { retangulo: "retângulo", circulo: "círculo", linha: "linha", poligono: "polígono", estrela: "estrela" }[f.tipo];
+    const nome = { retangulo: "retângulo", circulo: "círculo", linha: "linha", poligono: "polígono", estrela: "estrela", curva: "curva" }[f.tipo];
+    if (f.tipo === "curva") {
+      const regiao = curve(f.x, f.y, f.pontos, f.fechada, f.espessura);
+      const b = regiao.length ? bounds(regiao) : null;
+      const tamanho = f.fechada && b ? Math.min(b.maxX - b.minX, b.maxY - b.minY) : f.espessura;
+      placed.push({ rotulo: `${nome} ${i + 1}`, regiao, modo: f.modo, profundidade: f.profundidade, tamanho, idx: i, tipo: "forma", mods: f });
+      return;
+    }
     const regiao =
       f.tipo === "retangulo"
         ? plateOutline(f.x - f.largura / 2, f.y - f.altura / 2, f.largura, f.altura, f.raio > 0 ? "arredondada" : "reta", f.raio)

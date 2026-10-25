@@ -17,6 +17,7 @@ import {
   Hexagon,
   Minus,
   MousePointer2,
+  PenTool,
   Square,
   Star,
   Trash2,
@@ -34,7 +35,8 @@ import { fitScale, Stage } from "../../stage/Stage";
 import { ThreeView } from "../../stage/ThreeView";
 import { machineName } from "../../lib/catalog";
 import { AssistantBar } from "./AssistantBar";
-import { addElement, alignElements, deleteElement, duplicateElement, elementBoxes, elementOf, fontOf, margin, moveElement, parseId, type Align, type Box, type ElementId, type Tool } from "./elements";
+import { CurveEditor, PenLayer, type Geom } from "./pen";
+import { addCurve, addElement, alignElements, deleteElement, patchElement, type CurveNode, duplicateElement, elementBoxes, elementOf, fontOf, margin, moveElement, parseId, type Align, type Box, type ElementId, type Tool } from "./elements";
 import { buildIssues, type UiIssue } from "./issues";
 import { CreatePanel } from "./Panel";
 import { importSvgFile, isSvgFile, pickSvgFile } from "./svgImport";
@@ -61,8 +63,9 @@ const TOOLS: [Tool, string, typeof Type, string][] = [
   ["polygon", "Polygon", Hexagon, "P"],
   ["star", "Star", Star, "S"],
   ["line", "Line", Minus, "L"],
+  ["pen", "Curve (pen)", PenTool, "B"],
 ];
-const TOOL_NAME: Record<Tool, string> = { select: "", text: "text", rect: "rectangle", circle: "circle", polygon: "polygon", star: "star", line: "line" };
+const TOOL_NAME: Record<Tool, string> = { select: "", text: "text", rect: "rectangle", circle: "circle", polygon: "polygon", star: "star", line: "line", pen: "curve" };
 
 const ALIGNS: [Align, string, typeof Type][] = [
   ["left", "Align left", AlignStartVertical],
@@ -191,7 +194,9 @@ export default function Create() {
   const block = result?.layout.bloco ?? { largura: spec.largura + 2 * m, altura: spec.altura + 2 * m, espessura: spec.espessura };
   const sameBlock = result && Math.abs(result.layout.bloco.largura - (spec.largura + 2 * m)) < 0.01 && Math.abs(result.layout.bloco.altura - (spec.altura + 2 * m)) < 0.01;
   const caption =
-    tool !== "select" ? `Click on the ${spec.tipo === "letreiro" ? "board" : "sign"} to add a ${TOOL_NAME[tool]}` : eng.busy ? "Re-checking…" : `Simulated cut · ${bit?.name ?? "bit"}`;
+    tool === "pen"
+      ? "Click to add points, drag to curve · click the first point to close · Enter for an open line"
+      : tool !== "select" ? `Click on the ${spec.tipo === "letreiro" ? "board" : "sign"} to add a ${TOOL_NAME[tool]}` : eng.busy ? "Re-checking…" : `Simulated cut · ${bit?.name ?? "bit"}`;
 
   return (
     <div
@@ -258,8 +263,15 @@ export default function Create() {
                 editing={editing}
                 setEditing={setEditing}
                 focusKey={focusKey}
+                onCurve={(nodes, closed) => {
+                  const [next, id] = addCurve(spec, nodes, closed);
+                  patchSpec(() => next);
+                  choose(id);
+                  setTool("select");
+                }}
+                onCurveNodes={(id, nodes) => patchSpec((sp) => patchElement(sp, id, { pontos: nodes }))}
                 onAdd={(x, y) => {
-                  if (tool === "select") return;
+                  if (tool === "select" || tool === "pen") return;
                   const [next, id] = addElement(spec, tool, x, y);
                   patchSpec(() => next);
                   setSel(id);
@@ -423,6 +435,8 @@ interface OverlayProps {
   setEditing(id: ElementId | null): void;
   focusKey: string | null;
   onAdd(x: number, y: number): void;
+  onCurve(nodes: CurveNode[], closed: boolean): void;
+  onCurveNodes(id: ElementId, nodes: CurveNode[]): void;
   onMove(id: ElementId, cx: number, cy: number): void;
   onText(id: ElementId, text: string): void;
   onDuplicate(id: ElementId): void;
@@ -446,6 +460,10 @@ function Overlay(p: OverlayProps) {
     const r = ref.current!.getBoundingClientRect();
     return { x: ((e.clientX - r.left) / r.width) * p.block.largura - m, y: (1 - (e.clientY - r.top) / r.height) * p.block.altura - m };
   };
+
+  const geom: Geom = { toPx: (x, y) => ({ x: (x + m) * s, y: (H - (y + m)) * s }), toMm, mmPerPx };
+  const selCurve = p.sel && p.tool === "select" && !drag ? elementOf(p.spec, p.sel) : null;
+  const curveEl = selCurve && "tipo" in selCurve && selCurve.tipo === "curva" ? selCurve : null;
 
   const errorTargets = new Set(p.issues.filter((i) => i.level === "error" && i.target).map((i) => i.target!));
   const focused = p.issues.find((i) => i.key === p.focusKey)?.target ?? null;
@@ -546,7 +564,7 @@ function Overlay(p: OverlayProps) {
       })}
 
       {p.sel && p.boxes.has(p.sel) && !drag && p.editing !== p.sel ? (
-        <div className="create-seltools" style={{ left: px(p.boxes.get(p.sel)!).left, top: px(p.boxes.get(p.sel)!).top - 46 }} onPointerDown={(e) => e.stopPropagation()}>
+        <div className="create-seltools" style={selToolsPos(px(p.boxes.get(p.sel)!), !!curveEl, p.block.altura * s)} onPointerDown={(e) => e.stopPropagation()}>
           {ALIGNS.filter(([how]) => (how === "hdist" || how === "vdist" ? p.selected.length >= 3 : true)).map(([how, label, Icon]) => {
             const t = p.selected.length > 1 ? `${label} (selection)` : `${label} on the ${p.spec.tipo === "letreiro" ? "board" : "sign"}`;
             return (
@@ -567,6 +585,11 @@ function Overlay(p: OverlayProps) {
         </div>
       ) : null}
 
+      {curveEl && p.sel ? (
+        <CurveEditor geom={geom} ox={curveEl.x} oy={curveEl.y} nodes={curveEl.pontos} closed={curveEl.fechada ?? true} onChange={(n) => p.onCurveNodes(p.sel!, n)} />
+      ) : null}
+      {p.tool === "pen" ? <PenLayer geom={geom} onCommit={p.onCurve} /> : null}
+
       {markers.map((i) => {
         const r = px(p.boxes.get(i.target!)!);
         return (
@@ -578,6 +601,17 @@ function Overlay(p: OverlayProps) {
       })}
     </div>
   );
+}
+
+/**
+ * Barra de ações acima da seleção; vai para baixo quando ficaria fora do quadro ou, numa
+ * curva, em cima dos nós e alças do topo.
+ */
+function selToolsPos(r: { left: number; top: number; width: number; height: number }, curve: boolean, boardH: number): React.CSSProperties {
+  const above = r.top - 46;
+  const below = r.top + r.height + 12;
+  const useBelow = (above < -20 || curve) && below + 40 < boardH + 60;
+  return { left: r.left, top: useBelow ? below : above };
 }
 
 function InlineText({ value, font, size, onDone }: { value: string; font: string; size: number; onDone(v: string): void }) {

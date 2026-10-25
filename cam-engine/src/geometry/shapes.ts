@@ -1,3 +1,4 @@
+import { EndType, inflatePathsD, JoinType } from "clipper2-ts";
 import type { IconId } from "../schema.js";
 import { bounds, union, type Pt, type Region } from "./clip.js";
 
@@ -70,6 +71,63 @@ export function star(cx: number, cy: number, r: number, pontas: number, interno:
     p.push({ x: cx + rr * Math.cos(a), y: cy + rr * Math.sin(a) });
   }
   return [p];
+}
+
+/**
+ * Curva livre (Bézier cúbica por partes). Fechada: área (NonZero). Aberta: traço de `espessura`
+ * com pontas redondas.
+ */
+export function curve(
+  ox: number,
+  oy: number,
+  pontos: { x: number; y: number; ix?: number; iy?: number; ox?: number; oy?: number }[],
+  fechada: boolean,
+  espessura: number,
+): Region {
+  const line = curvePolyline(ox, oy, pontos, fechada);
+  if (line.length < 2) return [];
+  if (fechada) return line.length >= 3 ? union([line]) : [];
+  return inflatePathsD([line], espessura / 2, JoinType.Round, EndType.Round, 2, 4, 0.02);
+}
+
+/** Pontos da curva achatada (mm absolutos), com passo de ~0,25 mm nas partes curvas. */
+export function curvePolyline(
+  ox: number,
+  oy: number,
+  pontos: { x: number; y: number; ix?: number; iy?: number; ox?: number; oy?: number }[],
+  fechada: boolean,
+): Pt[] {
+  const n = pontos.length;
+  if (!n) return [];
+  const abs = pontos.map((p) => ({ x: ox + p.x, y: oy + p.y }));
+  const out: Pt[] = [{ ...abs[0] }];
+  const segs = fechada ? n : n - 1;
+  for (let i = 0; i < segs; i++) {
+    const a = pontos[i];
+    const b = pontos[(i + 1) % n];
+    const p0 = abs[i];
+    const p3 = abs[(i + 1) % n];
+    const straight = !a.ox && !a.oy && !b.ix && !b.iy;
+    if (straight) {
+      out.push({ ...p3 });
+      continue;
+    }
+    const p1 = { x: p0.x + (a.ox ?? 0), y: p0.y + (a.oy ?? 0) };
+    const p2 = { x: p3.x + (b.ix ?? 0), y: p3.y + (b.iy ?? 0) };
+    const len = Math.hypot(p1.x - p0.x, p1.y - p0.y) + Math.hypot(p2.x - p1.x, p2.y - p1.y) + Math.hypot(p3.x - p2.x, p3.y - p2.y);
+    const k = Math.max(2, Math.min(200, Math.ceil(len / ARC_STEP)));
+    for (let j = 1; j <= k; j++) {
+      const t = j / k;
+      const u = 1 - t;
+      out.push({
+        x: u * u * u * p0.x + 3 * u * u * t * p1.x + 3 * u * t * t * p2.x + t * t * t * p3.x,
+        y: u * u * u * p0.y + 3 * u * u * t * p1.y + 3 * u * t * t * p2.y + t * t * t * p3.y,
+      });
+    }
+  }
+  // Fechada: o último ponto repete o primeiro; tira para o polígono não ter vértice duplicado.
+  if (fechada && out.length > 1) out.pop();
+  return out;
 }
 
 /** Traço reto de (x1, y1) a (x2, y2), com pontas arredondadas e a largura dada. */
