@@ -44,6 +44,13 @@ export function plateOutline(x: number, y: number, w: number, h: number, tipo: "
   return [p];
 }
 
+/** Traço reto de (x1, y1) a (x2, y2), com pontas arredondadas e a largura dada. */
+export function stroke(x1: number, y1: number, x2: number, y2: number, width: number): Region {
+  const len = Math.hypot(x2 - x1, y2 - y1);
+  const ang = (Math.atan2(y2 - y1, x2 - x1) * 180) / Math.PI;
+  return slot((x1 + x2) / 2, (y1 + y2) / 2, len + width, width, ang);
+}
+
 /** Rasgo oblongo (estádio), usado para pendurar a placa num prego ou parafuso. */
 export function slot(cx: number, cy: number, length: number, width: number, angleDeg: number): Region {
   const r = width / 2;

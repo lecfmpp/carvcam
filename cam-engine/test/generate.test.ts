@@ -123,3 +123,41 @@ function area1(p: { x: number; y: number }[]) {
   for (let i = 0; i < p.length; i++) s += p[i].x * p[(i + 1) % p.length].y - p[(i + 1) % p.length].x * p[i].y;
   return s / 2;
 }
+
+describe("formas e referências de elemento", () => {
+  it("gera retângulo, círculo e linha", () => {
+    const r = generatePlate(
+      {
+        ...base,
+        formas: [
+          { tipo: "retangulo", x: 50, y: 50, largura: 40, altura: 20, raio: 4, modo: "gravado", profundidade: 2 },
+          { tipo: "circulo", x: 120, y: 50, diametro: 30, modo: "relevo", profundidade: 3 },
+          { tipo: "linha", x: 20, y: 15, x2: 180, y2: 15, espessura: 4, modo: "gravado", profundidade: 1 },
+        ],
+      },
+      { fontes: f, ferramenta: longTool },
+    );
+    expect(r.avisos.filter((a) => a.severidade === "erro")).toEqual([]);
+    expect(r.ok).toBe(true);
+    expect(r.operacoes.map((o) => o.tipo)).toEqual(["gravacao", "gravacao", "relevo", "perfil"]);
+  });
+
+  it("liga o aviso ao elemento e oferece a correção", () => {
+    const r = generatePlate({ ...base, texto: [{ conteudo: "Casa da Ana", tamanho: 40 }] }, { fontes: f, ferramenta: longTool });
+    const a = r.avisos.find((x) => x.codigo === "TEXTO_NAO_CABE")!;
+    expect(a.elemento).toEqual({ tipo: "texto", indice: 0 });
+    expect(a.correcao?.campo).toBe("tamanho");
+    expect(a.correcao!.valor).toBeLessThan(40);
+    const ok = generatePlate({ ...base, texto: [{ conteudo: "Casa da Ana", tamanho: a.correcao!.valor }] }, { fontes: f, ferramenta: longTool });
+    expect(ok.avisos.map((x) => x.codigo)).not.toContain("TEXTO_NAO_CABE");
+  });
+
+  it("aponta o elemento em relevo que gera sobra de material", () => {
+    const r = generatePlate(
+      { ...base, texto: [{ conteudo: "Casa da Ana", tamanho: 16, modo: "relevo" }] },
+      { fontes: f, ferramenta: longTool },
+    );
+    const a = r.avisos.find((x) => x.codigo === "DETALHE_MENOR_QUE_FRESA");
+    expect(a?.elemento).toEqual({ tipo: "texto", indice: 0 });
+  });
+});

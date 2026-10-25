@@ -1,13 +1,16 @@
 import type opentype from "opentype.js";
-import { fmt, type Aviso } from "./avisos.js";
+import { fmt, type Aviso, type RefElemento } from "./avisos.js";
 import { area, bounds, difference, intersection, offset, translate, union, type Region } from "./geometry/clip.js";
-import { circle, icon, plateOutline, slot } from "./geometry/shapes.js";
+import { circle, icon, plateOutline, slot, stroke } from "./geometry/shapes.js";
 import { centerAt, textToRegion } from "./geometry/text.js";
 import type { FontId, Machine, Modo, PlateSpec, Tool } from "./schema.js";
 
 export interface ElementoCorte {
   /** Ex.: "texto 1 (Casa da Ana)", "ícone 2 (coração)". */
   rotulo: string;
+  ref?: RefElemento;
+  /** Só no fundo do relevo: os elementos em pé, para saber a qual deles um aviso se refere. */
+  itens?: { ref: RefElemento; regiao: Region }[];
   regiao: Region;
   profundidade: number;
 }
@@ -56,7 +59,7 @@ export function buildLayout(spec: PlateSpec, fonts: FontMap, tool: Tool, cutTool
   }
 
   // ---- Elementos (texto e ícones) em coordenadas da peça ----
-  type Placed = { rotulo: string; regiao: Region; modo: Modo; profundidade: number; tamanho: number; idx: number; tipo: "texto" | "icone" };
+  type Placed = { rotulo: string; regiao: Region; modo: Modo; profundidade: number; tamanho: number; idx: number; tipo: "texto" | "icone" | "forma" };
   const placed: Placed[] = [];
 
   const autoTexts: { idx: number; regiao: Region; tamanho: number }[] = [];
@@ -91,6 +94,18 @@ export function buildLayout(spec: PlateSpec, fonts: FontMap, tool: Tool, cutTool
     });
   }
 
+  spec.formas.forEach((f, i) => {
+    const nome = { retangulo: "retângulo", circulo: "círculo", linha: "linha" }[f.tipo];
+    const regiao =
+      f.tipo === "retangulo"
+        ? plateOutline(f.x - f.largura / 2, f.y - f.altura / 2, f.largura, f.altura, f.raio > 0 ? "arredondada" : "reta", f.raio)
+        : f.tipo === "circulo"
+          ? circle(f.x, f.y, f.diametro / 2)
+          : stroke(f.x, f.y, f.x2, f.y2, f.espessura);
+    const tamanho = f.tipo === "retangulo" ? Math.min(f.largura, f.altura) : f.tipo === "circulo" ? f.diametro : f.espessura;
+    placed.push({ rotulo: `${nome} ${i + 1}`, regiao, modo: f.modo, profundidade: f.profundidade, tamanho, idx: i, tipo: "forma" });
+  });
+
   spec.icones.forEach((ic, i) => {
     placed.push({ rotulo: `ícone ${i + 1} (${ic.id})`, regiao: icon(ic.id, ic.x, ic.y, ic.tamanho), modo: ic.modo, profundidade: ic.profundidade, tamanho: ic.tamanho, idx: i, tipo: "icone" });
   });
@@ -123,13 +138,16 @@ export function buildLayout(spec: PlateSpec, fonts: FontMap, tool: Tool, cutTool
   const inner = hasRelief && spec.moldura > 0 ? offset(pecaLocal, -spec.moldura) : offset(pecaLocal, -1);
 
   for (const p of placed) {
-    checkFit(p.regiao, null, p.rotulo, [p.tamanho], avisos, inner);
+    const ref = { tipo: p.tipo, indice: p.idx } as RefElemento;
+    checkFit(p.regiao, null, p.rotulo, [p.tamanho], avisos, inner, ref);
     if (p.modo !== "recorte" && p.profundidade >= spec.espessura) {
       avisos.push({
         codigo: "PROFUNDIDADE_EXCEDE",
         severidade: "erro",
         mensagem: `A profundidade de ${p.rotulo} (${fmt(p.profundidade)} mm) atravessaria o material de ${fmt(spec.espessura)} mm.`,
         sugestao: `Use no máximo ${fmt(spec.espessura * 0.6)} mm, ou escolha o modo "recorte".`,
+        elemento: ref,
+        correcao: { elemento: ref, campo: "profundidade", valor: Math.floor(spec.espessura * 0.6 * 10) / 10 },
       });
     }
     if (p.modo !== "recorte" && p.profundidade > tool.comprimentoCorte) {
@@ -137,6 +155,7 @@ export function buildLayout(spec: PlateSpec, fonts: FontMap, tool: Tool, cutTool
         codigo: "FERRAMENTA_CURTA",
         severidade: "erro",
         mensagem: `A fresa corta até ${fmt(tool.comprimentoCorte)} mm de profundidade, e ${p.rotulo} pede ${fmt(p.profundidade)} mm.`,
+        elemento: ref,
       });
     }
     if (tool.tipo === "vbit" && p.modo !== "gravado") {
@@ -145,13 +164,14 @@ export function buildLayout(spec: PlateSpec, fonts: FontMap, tool: Tool, cutTool
         severidade: "erro",
         mensagem: `A fresa em V só faz gravação. ${p.rotulo} está em modo "${p.modo}".`,
         sugestao: "Troque para uma fresa reta ou mude o elemento para gravado.",
+        elemento: ref,
       });
     }
   }
 
   const gravados: ElementoCorte[] = placed
     .filter((p) => p.modo === "gravado")
-    .map((p) => ({ rotulo: p.rotulo, regiao: toBlock(intersection(p.regiao, pecaLocal)), profundidade: p.profundidade }));
+    .map((p) => ({ rotulo: p.rotulo, ref: { tipo: p.tipo, indice: p.idx }, regiao: toBlock(intersection(p.regiao, pecaLocal)), profundidade: p.profundidade }));
 
   let relevo: ElementoCorte | null = null;
   const reliefItems = placed.filter((p) => p.modo === "relevo");
@@ -168,7 +188,12 @@ export function buildLayout(spec: PlateSpec, fonts: FontMap, tool: Tool, cutTool
     // Sem moldura, o fundo vai até a borda (e um pouco além, para não sobrar rebarba).
     const field = spec.moldura > 0 ? inner : offset(pecaLocal, cutTool.diametro / 2 + 0.5);
     const fundo = difference(field, union(...reliefItems.map((p) => p.regiao)));
-    relevo = { rotulo: "fundo do relevo", regiao: toBlock(fundo), profundidade: depth };
+    relevo = {
+      rotulo: "fundo do relevo",
+      regiao: toBlock(fundo),
+      profundidade: depth,
+      itens: reliefItems.map((p) => ({ ref: { tipo: p.tipo, indice: p.idx }, regiao: toBlock(p.regiao) })),
+    };
   }
 
   const vazados: ElementoCorte[] = placed
@@ -182,9 +207,10 @@ export function buildLayout(spec: PlateSpec, fonts: FontMap, tool: Tool, cutTool
           severidade: "aviso",
           mensagem: `${capitalize(p.rotulo)} tem ${ilhas} miolo(s) (como o centro do "o") que vão se soltar no recorte.`,
           sugestao: "Use uma fonte estêncil, ou deixe esse elemento em relevo ou gravado.",
+          elemento: { tipo: p.tipo, indice: p.idx },
         });
       }
-      return { rotulo: p.rotulo, regiao: toBlock(r), profundidade: through };
+      return { rotulo: p.rotulo, ref: { tipo: p.tipo, indice: p.idx } as RefElemento, regiao: toBlock(r), profundidade: through };
     });
 
   const furos = buildHoles(spec, cutTool, peca, m, through, avisos);
@@ -206,12 +232,14 @@ function buildHoles(spec: PlateSpec, tool: Tool, peca: Region, m: number, depth:
         severidade: "erro",
         mensagem: `O furo ${i + 1} tem ${fmt(f.diametro)} mm, menor que a fresa de ${fmt(tool.diametro, 2)} mm.`,
         sugestao: `Aumente o furo para pelo menos ${fmt(tool.diametro, 2)} mm.`,
+        elemento: { tipo: "furo", indice: i },
+        correcao: { elemento: { tipo: "furo", indice: i }, campo: "diametro", valor: Math.ceil(tool.diametro * 10) / 10 },
       });
       return;
     }
     const r = circle(f.x + m, f.y + m, f.diametro / 2);
-    checkInside(r, peca, `o furo ${i + 1}`, avisos);
-    out.push({ rotulo: `furo ${i + 1}`, regiao: r, profundidade: depth });
+    checkInside(r, peca, `o furo ${i + 1}`, avisos, { tipo: "furo", indice: i });
+    out.push({ rotulo: `furo ${i + 1}`, ref: { tipo: "furo", indice: i }, regiao: r, profundidade: depth });
   });
   spec.rasgos.forEach((s, i) => {
     if (s.largura < tool.diametro - 0.01) {
@@ -219,19 +247,21 @@ function buildHoles(spec: PlateSpec, tool: Tool, peca: Region, m: number, depth:
         codigo: "RASGO_MENOR_QUE_FRESA",
         severidade: "erro",
         mensagem: `O rasgo ${i + 1} tem ${fmt(s.largura)} mm de largura, menor que a fresa de ${fmt(tool.diametro, 2)} mm.`,
+        elemento: { tipo: "rasgo", indice: i },
+        correcao: { elemento: { tipo: "rasgo", indice: i }, campo: "largura", valor: Math.ceil(tool.diametro * 10) / 10 },
       });
       return;
     }
     const r = slot(s.x + m, s.y + m, s.comprimento, s.largura, s.angulo);
-    checkInside(r, peca, `o rasgo ${i + 1}`, avisos);
-    out.push({ rotulo: `rasgo ${i + 1}`, regiao: r, profundidade: depth });
+    checkInside(r, peca, `o rasgo ${i + 1}`, avisos, { tipo: "rasgo", indice: i });
+    out.push({ rotulo: `rasgo ${i + 1}`, ref: { tipo: "rasgo", indice: i }, regiao: r, profundidade: depth });
   });
   return out;
 }
 
-function checkInside(r: Region, peca: Region, rotulo: string, avisos: Aviso[]) {
+function checkInside(r: Region, peca: Region, rotulo: string, avisos: Aviso[], ref: RefElemento) {
   if (area(difference(r, peca)) > 0.01) {
-    avisos.push({ codigo: "FORA_DA_PECA", severidade: "erro", mensagem: `${capitalize(rotulo)} sai para fora da peça.` });
+    avisos.push({ codigo: "FORA_DA_PECA", severidade: "erro", mensagem: `${capitalize(rotulo)} sai para fora da peça.`, elemento: ref });
   }
 }
 
@@ -242,6 +272,7 @@ function checkFit(
   tamanhos: number[],
   avisos: Aviso[],
   inner?: Region,
+  ref?: RefElemento,
 ) {
   const b = bounds(r);
   const w = b.maxX - b.minX;
@@ -266,6 +297,8 @@ function checkFit(
       mensagem: `${capitalize(rotulo)} não cabe na área disponível da placa.`,
       sugestao: sugerido > 0 ? `Reduza o tamanho para cerca de ${sugerido} mm ou aumente a placa.` : "Aumente a placa.",
       dados: { tamanhoSugerido: sugerido },
+      elemento: ref,
+      correcao: ref && sugerido > 0 && (ref.tipo === "texto" || ref.tipo === "icone") ? { elemento: ref, campo: "tamanho", valor: sugerido } : undefined,
     });
   }
 }

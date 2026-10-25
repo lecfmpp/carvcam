@@ -1,7 +1,7 @@
 import { fmt, hasErrors, type Aviso } from "./avisos.js";
 import { PathBuilder } from "./cam/builder.js";
 import { peck, pocket, profile, trace, type Direcao } from "./cam/operations.js";
-import { area, bounds, offset, unreachable, type Region } from "./geometry/clip.js";
+import { area, bounds, intersection, offset, unreachable, type Region } from "./geometry/clip.js";
 import { buildLayout, type ElementoCorte, type FontMap, type Layout } from "./layout.js";
 import { resolverSienci, type AjusteManual, type ConfigSienci } from "./catalog/sienci/config.js";
 import { cutParams, type CutParams } from "./materials.js";
@@ -216,6 +216,7 @@ function checkDetail(el: ElementoCorte, r: number, tool: Tool, avisos: Aviso[], 
       severidade: "erro",
       mensagem: `Os traços de ${el.rotulo} são mais finos que a fresa de ${fmt(tool.diametro, 2)} mm; nada seria cortado.`,
       sugestao: "Aumente o tamanho, use uma fonte mais grossa ou uma fresa mais fina.",
+      elemento: el.ref,
     });
     return;
   }
@@ -230,8 +231,20 @@ function checkDetail(el: ElementoCorte, r: number, tool: Tool, avisos: Aviso[], 
       mensagem: `Alguns ${onde} de ${el.rotulo} são mais estreitos que a fresa de ${fmt(tool.diametro, 2)} mm; cerca de ${fmt(pct)}% dessa área não será cortada.`,
       sugestao: modo === "relevo" ? "Aumente o espaçamento ou o tamanho do texto, ou use uma fresa mais fina." : "Aumente o tamanho, use uma fonte mais grossa ou uma fresa mais fina.",
       dados: { areaMm2: Math.round(missedArea), percentual: Math.round(pct * 10) / 10 },
+      elemento: el.ref ?? nearestItem(el, missed, r),
     });
   }
+}
+
+/** No fundo do relevo, o elemento em pé que encosta na maior parte da área não cortada. */
+function nearestItem(el: ElementoCorte, missed: Region, r: number) {
+  let best: { ref: ElementoCorte["ref"]; a: number } = { ref: undefined, a: 0 };
+  const near = offset(missed, r);
+  for (const it of el.itens ?? []) {
+    const a = area(intersection(near, it.regiao));
+    if (a > best.a) best = { ref: it.ref, a };
+  }
+  return best.ref;
 }
 
 function tituloPadrao(textos: string[]) {

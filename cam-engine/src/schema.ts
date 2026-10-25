@@ -33,6 +33,41 @@ export const IconeSchema = z.object({
   profundidade: z.number().positive().max(50).default(3),
 });
 
+/**
+ * Formas desenhadas na tela Criar. Retângulo e círculo são centrados em (x, y);
+ * a linha vai de (x, y) a (x2, y2) com a espessura dada.
+ */
+export const FormaSchema = z.discriminatedUnion("tipo", [
+  z.object({
+    tipo: z.literal("retangulo"),
+    x: z.number(),
+    y: z.number(),
+    largura: z.number().positive().max(3000),
+    altura: z.number().positive().max(3000),
+    raio: z.number().min(0).default(0),
+    modo: ModoSchema.default("gravado"),
+    profundidade: z.number().positive().max(50).default(2),
+  }),
+  z.object({
+    tipo: z.literal("circulo"),
+    x: z.number(),
+    y: z.number(),
+    diametro: z.number().positive().max(3000),
+    modo: ModoSchema.default("gravado"),
+    profundidade: z.number().positive().max(50).default(2),
+  }),
+  z.object({
+    tipo: z.literal("linha"),
+    x: z.number(),
+    y: z.number(),
+    x2: z.number(),
+    y2: z.number(),
+    espessura: z.number().positive().max(100).default(3.2),
+    modo: ModoSchema.default("gravado"),
+    profundidade: z.number().positive().max(50).default(1),
+  }),
+]);
+
 export const FuroSchema = z.object({
   x: z.number(),
   y: z.number(),
@@ -64,6 +99,7 @@ export const PlateSpecSchema = z.object({
   /** Largura da moldura que fica em pé ao redor do relevo. 0 = sem moldura. */
   moldura: z.number().min(0).default(6),
   icones: z.array(IconeSchema).max(12).default([]),
+  formas: z.array(FormaSchema).max(40).default([]),
   furos: z.array(FuroSchema).max(12).default([]),
   rasgos: z.array(RasgoSchema).max(4).default([]),
   /** Recortar o contorno externo da peça (com abas de fixação). */
@@ -76,6 +112,7 @@ export type PlateSpec = z.infer<typeof PlateSpecSchema>;
 export type PlateSpecInput = z.input<typeof PlateSpecSchema>;
 export type Texto = z.infer<typeof TextoSchema>;
 export type Icone = z.infer<typeof IconeSchema>;
+export type Forma = z.infer<typeof FormaSchema>;
 export type Modo = z.infer<typeof ModoSchema>;
 export type FontId = (typeof FONT_IDS)[number];
 export type IconId = (typeof ICON_IDS)[number];

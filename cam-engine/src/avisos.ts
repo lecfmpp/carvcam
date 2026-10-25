@@ -1,3 +1,16 @@
+/** Elemento da especificação ao qual o aviso se refere (índice dentro da lista do tipo). */
+export interface RefElemento {
+  tipo: "texto" | "icone" | "forma" | "furo" | "rasgo";
+  indice: number;
+}
+
+/** Correção que a interface pode aplicar com um clique ("Aplicar sugestão"). */
+export interface Correcao {
+  elemento: RefElemento;
+  campo: string;
+  valor: number;
+}
+
 /**
  * Avisos com código estável (para a UI e a IA reagirem) e mensagem humana em pt-BR
  * (para mostrar direto ao usuário).
@@ -28,6 +41,8 @@ export interface Aviso {
   mensagem: string;
   sugestao?: string;
   dados?: Record<string, unknown>;
+  elemento?: RefElemento;
+  correcao?: Correcao;
 }
 
 export const hasErrors = (avisos: Aviso[]) => avisos.some((a) => a.severidade === "erro");
