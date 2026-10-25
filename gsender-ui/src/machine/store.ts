@@ -114,6 +114,8 @@ interface MachineState {
   setRpmOverride(v: number): void;
   raiseAlarm(code: AlarmCode): void;
   clearAlarm(): void;
+  /** Retoma o trabalho a partir de um instante (s), ex.: o início da operação interrompida por um alarme. */
+  restartFrom(elapsed: number): void;
   reset(): void;
 }
 
@@ -256,6 +258,12 @@ export const useMachine = create<MachineState>()((set, get) => ({
     // Fim de curso, emergência e posição perdida exigem achar o home de novo.
     const needsHome = code === "limit" || code === "estop" || code === "lost";
     set({ alarm: null, status: get().job && get().elapsed > 0 && code === "door" ? "paused" : "idle", homed: needsHome ? false : get().homed });
+  },
+  restartFrom: (elapsed) => {
+    const s = get();
+    if (!s.job) return;
+    set({ status: "running", alarm: null, homed: true, elapsed: Math.max(0, Math.min(elapsed, s.job.total)) });
+    startTimer();
   },
   reset: () => {
     stopTimer();

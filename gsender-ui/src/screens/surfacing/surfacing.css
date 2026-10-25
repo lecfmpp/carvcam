@@ -1,0 +1,29 @@
+/* Aplainar a mesa (Tools › Surface the bed). */
+.sf-bed { position: relative; border-radius: 10px; background: #c9b79c; box-shadow: 0 40px 80px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(0, 0, 0, 0.2); transform-style: preserve-3d; transition: transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+.sf-bed__grid { position: absolute; inset: 0; border-radius: 10px; background-image: linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px); background-size: 28px 28px; }
+.sf-area { position: absolute; border: 1.5px dashed rgba(17, 18, 20, 0.55); }
+.sf-fresh { position: absolute; background: repeating-linear-gradient(90deg, #dccdb4 0 3px, #d4c4a9 3px 5px); }
+.sf-start { position: absolute; width: 14px; height: 14px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px rgba(255, 91, 31, 0.25); }
+.sf-start-label { position: absolute; font: 500 12px var(--font); color: var(--graphite); white-space: nowrap; }
+.sf-bit { position: absolute; border-radius: 50%; border: 2.5px solid var(--accent); background: rgba(255, 91, 31, 0.25); box-shadow: 0 0 18px rgba(255, 91, 31, 0.5); }
+.sf-tag { position: absolute; height: 22px; display: flex; align-items: center; padding: 0 8px; border-radius: 6px; background: rgba(17, 18, 20, 0.9); border: 1px solid rgba(255, 255, 255, 0.12); font: 500 11px var(--mono); color: var(--text); white-space: nowrap; }
+.sf-axis { position: absolute; font: 500 12px var(--mono); color: var(--text-3); white-space: nowrap; }
+
+.sf-bars { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.sf-bars span { height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.12); }
+.sf-bars span.is-on { background: var(--accent); }
+.sf-text { font: 400 14px/1.5 var(--font); color: #d6d3cd; }
+.sf-workarea { display: flex; justify-content: space-between; padding: 12px 14px; border-radius: 12px; background: rgba(0, 0, 0, 0.22); border: 1px solid rgba(255, 255, 255, 0.07); font: 400 13px var(--font); color: var(--text-3); }
+.sf-bitcard { display: flex; align-items: center; gap: 14px; padding: 14px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.12); background: rgba(255, 255, 255, 0.04); }
+.sf-preset { min-height: 84px; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; padding: 10px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.12); background: transparent; text-align: left; color: var(--text); }
+.sf-preset[aria-pressed="true"] { border: 1.5px solid var(--text); background: rgba(255, 255, 255, 0.08); }
+.sf-row { display: flex; justify-content: space-between; gap: 12px; min-height: 40px; align-items: center; border-top: 1px solid var(--line); font: 400 14px var(--font); }
+.sf-check { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.03); }
+.sf-check--warn { min-height: 60px; padding: 8px 12px; background: rgba(242, 193, 78, 0.07); border: 1px solid rgba(242, 193, 78, 0.3); }
+.sf-ok { width: 22px; height: 22px; flex: none; border-radius: 50%; background: rgba(94, 221, 176, 0.16); color: var(--ready-text); display: flex; align-items: center; justify-content: center; }
+.sf-fix { height: 36px; padding: 0 12px; border-radius: 10px; border: 0; background: var(--text); color: var(--graphite); font: 600 13px var(--font); white-space: nowrap; }
+.sf-note { display: flex; gap: 10px; padding: 14px; border-radius: 12px; font: 400 14px/1.45 var(--font); }
+.sf-note--paused { background: rgba(242, 193, 78, 0.08); border: 1px solid rgba(242, 193, 78, 0.3); }
+.sf-note--done { background: rgba(94, 221, 176, 0.08); border: 1px solid rgba(94, 221, 176, 0.3); }
+.sf-bar { height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.sf-bar > div { height: 100%; background: var(--accent); border-radius: 3px; }
