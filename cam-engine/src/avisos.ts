@@ -18,7 +18,12 @@ export interface Aviso {
     | "PECA_PEQUENA_SEM_ABA"
     | "VBIT_SO_GRAVA"
     | "FONTE_INDISPONIVEL"
-    | "NADA_A_CORTAR";
+    | "NADA_A_CORTAR"
+    | "FRESA_INCOMPATIVEL"
+    | "FRESA_PRECISA_ACESSORIO"
+    | "FRESA_NAO_SUPORTADA"
+    | "SEM_TABELA_SIENCI"
+    | "COMPRESSAO_PASSADA";
   severidade: "erro" | "aviso";
   mensagem: string;
   sugestao?: string;

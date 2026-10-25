@@ -12,6 +12,8 @@ export interface PostHeader {
   titulo: string;
   bloco: { largura: number; altura: number; espessura: number };
   alturaSegura: number;
+  /** Linhas extras de comentário no cabeçalho. */
+  notas?: string[];
 }
 
 /**
@@ -28,6 +30,7 @@ export function postGrbl(header: PostHeader, ops: PostOperation[]): string {
   out.push(`; Bloco: ${n(header.bloco.largura)} x ${n(header.bloco.altura)} x ${n(header.bloco.espessura)} mm`);
   out.push(`; Origem: X0 Y0 no canto inferior esquerdo do bloco, Z0 na face de cima`);
   for (const t of tools) out.push(`; T${t.id}: ${t.nome} (diametro ${n(t.diametro)} mm)`);
+  for (const nota of header.notas ?? []) out.push(`; ${nota.replace(/[()]/g, "")}`);
   out.push("G21 G90 G17 G94");
   out.push(`G0 Z${n(header.alturaSegura)}`);
 

@@ -37,6 +37,29 @@ Cada aviso tem um `codigo` estável (para a UI e a IA reagirem), uma `mensagem` 
 
 Com qualquer aviso de severidade `erro`, `generatePlate` não devolve G-code (`ok: false`, `gcode: ""`).
 
+## Catálogo Sienci Labs (`src/catalog/sienci/`)
+
+A ferramenta é feita para as máquinas da Sienci. Com `sienci: { maquina, cabecote?, fresa, fresaRecorte?, velocidade? }`, o motor usa os dados reais em vez dos padrões genéricos:
+
+| Arquivo | Conteúdo | Fonte |
+|---|---|---|
+| `maquinas.ts` | LongMill MK2 (12×30, 30×30, 48×30), MK3 (30×30, 48×30), AltMill (2×4, 4×4, 4×8): curso, velocidade máxima, cabeçotes possíveis e padrão | padrões de firmware do gSender ($110–$112, $130–$132) |
+| `cabecotes.ts` | Makita RT0701 (dial manual 1–6), AutoSpin T1 (ER11, rotação por G-code), spindles 1,5/2,2 kW ER20 | páginas de produto e resources.sienci.com |
+| `fresas.ts` | 15 fresas da loja (retas 1/16″, 1/8″, 1/4″, compressão, 1 canal, V-bits 30/60/90°, aplainar 22 mm, ball nose) com medidas e link; regra de compatibilidade haste × pinça | tabelas das páginas de produto em sienci.com |
+| `tabela.ts` | Tabela oficial de avanço e rotação (madeira macia/MDF, madeira dura, plásticos × reduzida/regular/máxima), convertida para mm | resources.sienci.com/view/cnc-feeds-speeds |
+| `projetos.ts` | 7 projetos de primeiros cortes, com `projetosParaMaquina()` dizendo o que cabe e que acessórios faltam | — |
+
+O que muda na geração:
+- **Limites e velocidades reais:** curso e velocidade máxima da máquina; faixa de rotação do cabeçote.
+- **Parâmetros oficiais:** vêm da tabela Sienci. A passada é a de canal (conservadora) e o mergulho fica limitado a 300 mm/min, como a Sienci recomenda fora de entalhe 3D, porque o motor ainda desce reto.
+- **Compatibilidade de fresa:** `FRESA_PRECISA_ACESSORIO` (ex.: 1/8″ no Makita), `FRESA_INCOMPATIVEL`, `FRESA_NAO_SUPORTADA` (aplainar e ball nose não servem para placas).
+- **Fresa de compressão:** a passada sobe para passar da parte upcut (`COMPRESSAO_PASSADA`).
+- **Makita:** `ajustesManuais` traz a posição do dial ("gire o dial para 3"), que também vai no cabeçalho do G-code.
+
+Os 7 projetos geram G-code aprovado em todas as máquinas em que cabem. A placa de endereço de 90 cm só entra nas 48×30 e nas AltMill.
+
+Dados do catálogo consultados em out/2026. Preços ficam de fora porque mudam.
+
 ## Simulações dos exemplos
 
 | `casa-da-ana.json` | `letreiro-pacifico.json` | `placa-gravada-icones.json` |
@@ -50,7 +73,7 @@ Cores: bege = face intacta; marrom = rebaixado; preto = atravessou.
 
 ```bash
 npm install
-npm test                      # 35 testes, incluindo o critério de aceite da v1
+npm test                      # 53 testes, incluindo o critério de aceite da v1 e os projetos Sienci
 npm run generate -- examples/casa-da-ana.json saida.nc
 npm run render -- saida.nc saida.png 220 120 15 examples/casa-da-ana.json
 ```

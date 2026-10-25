@@ -3,6 +3,7 @@ import { PathBuilder } from "./cam/builder.js";
 import { peck, pocket, profile, trace, type Direcao } from "./cam/operations.js";
 import { area, bounds, offset, unreachable, type Region } from "./geometry/clip.js";
 import { buildLayout, type ElementoCorte, type FontMap, type Layout } from "./layout.js";
+import { resolverSienci, type AjusteManual, type ConfigSienci } from "./catalog/sienci/config.js";
 import { cutParams, type CutParams } from "./materials.js";
 import { postGrbl, type PostOperation } from "./post/grbl.js";
 import {
@@ -25,6 +26,14 @@ export interface GenerateOptions {
   ferramentaRecorte?: ToolInput;
   maquina?: MachineInput;
   corte?: Partial<CutParams>;
+  /** Parâmetros da fresa de recorte. Padrão: os mesmos de `corte`. */
+  corteRecorte?: Partial<CutParams>;
+  /**
+   * Máquina, cabeçote e fresas do catálogo Sienci Labs. Quando presente, substitui
+   * `maquina`, `ferramenta`, `ferramentaRecorte`, `corte` e `corteRecorte` pelos dados do catálogo
+   * e pela tabela oficial de avanço e rotação.
+   */
+  sienci?: ConfigSienci;
   direcao?: Direcao;
   abas?: { quantidade?: number; largura?: number; altura?: number };
   titulo?: string;
@@ -46,12 +55,20 @@ export interface GenerateResult {
   verificacao: VerifyResult | null;
   parametros: { principal: CutParams; recorte: CutParams };
   ferramentas: Tool[];
+  /** Ajustes que o usuário faz à mão antes de cortar (ex.: dial do Makita). */
+  ajustesManuais: AjusteManual[];
+  /** De onde vieram os parâmetros de corte. */
+  fonteParametros: string;
   /** Geometria em coordenadas do bloco, para a prévia 2D/3D da UI. */
   layout: Layout;
 }
 
-export function generatePlate(input: PlateSpecInput, opts: GenerateOptions): GenerateResult {
+export function generatePlate(input: PlateSpecInput, options: GenerateOptions): GenerateResult {
   const spec = PlateSpecSchema.parse(input);
+  const sienci = options.sienci ? resolverSienci(options.sienci, spec.material) : null;
+  const opts: GenerateOptions = sienci
+    ? { ...options, maquina: sienci.maquina, ferramenta: sienci.ferramenta, ferramentaRecorte: sienci.ferramentaRecorte, corte: sienci.corte, corteRecorte: sienci.corteRecorte }
+    : options;
   const tool = ToolSchema.parse(opts.ferramenta ?? {});
   let cutTool = opts.ferramentaRecorte ? ToolSchema.parse(opts.ferramentaRecorte) : tool;
   // Duas fresas precisam de números (T) diferentes para a troca de ferramenta funcionar.
@@ -59,12 +76,24 @@ export function generatePlate(input: PlateSpecInput, opts: GenerateOptions): Gen
   const machine: Machine = MachineSchema.parse(opts.maquina ?? {});
   const direcao = opts.direcao ?? "convencional";
   const layout = buildLayout(spec, opts.fontes, tool, cutTool, machine);
-  const avisos = [...layout.avisos];
+  const avisos = [...(sienci?.avisos ?? []), ...layout.avisos];
 
   const pMain = cutParams(spec.material, tool, machine, opts.corte);
-  const pCut = cutTool === tool ? pMain : cutParams(spec.material, cutTool, machine, opts.corte);
+  const pCut = cutTool === tool ? pMain : cutParams(spec.material, cutTool, machine, opts.corteRecorte ?? opts.corte);
   const ferramentas = cutTool.id === tool.id ? [tool] : [tool, cutTool];
-  const base = { ok: false, avisos, operacoes: [], verificacao: null, parametros: { principal: pMain, recorte: pCut }, ferramentas, layout };
+  const ajustesManuais = sienci?.ajustesManuais ?? [];
+  const fonteParametros = sienci?.fonte ?? "Cálculo genérico por avanço por dente";
+  const base = {
+    ok: false,
+    avisos,
+    operacoes: [],
+    verificacao: null,
+    parametros: { principal: pMain, recorte: pCut },
+    ferramentas,
+    ajustesManuais,
+    fonteParametros,
+    layout,
+  };
 
   if (hasErrors(avisos)) return { ...base, gcode: "" };
 
@@ -149,7 +178,12 @@ export function generatePlate(input: PlateSpecInput, opts: GenerateOptions): Gen
   }
 
   const gcode = postGrbl(
-    { titulo: opts.titulo ?? tituloPadrao(spec.texto.map((t) => t.conteudo)), bloco: layout.bloco, alturaSegura: machine.alturaSegura },
+    {
+      titulo: opts.titulo ?? tituloPadrao(spec.texto.map((t) => t.conteudo)),
+      bloco: layout.bloco,
+      alturaSegura: machine.alturaSegura,
+      notas: [`Maquina: ${machine.nome}`, `Parametros: ${fonteParametros}`, ...ajustesManuais.map((a) => a.mensagem)],
+    },
     ops,
   );
 

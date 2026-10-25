@@ -168,3 +168,80 @@ Inclua no protótipo navegável:
 - Criar com erro bloqueando, depois "Aplicar sugestão" resolvendo
 - Troca de fresa no meio do corte
 - Letreiro recortado (tipo "letreiro") com letras cursivas ligadas
+
+---
+
+MÁQUINAS E FRESAS DA SIENCI LABS (atualize o design com isto)
+
+A ferramenta passa a ser feita para as máquinas da Sienci Labs. Máquina, router/spindle e fresas reais entram no fluxo, com configurações padrão para cada máquina e projetos prontos para os primeiros cortes. O motor já tem esses dados; o design precisa mostrá-los.
+
+Dados que a interface vai receber:
+- Máquinas: LongMill MK2 (12×30, 30×30, 48×30), LongMill MK3 (30×30, 48×30), AltMill (2×4, 4×4, 4×8). Cada uma tem área útil real, velocidade máxima e os cabeçotes possíveis.
+- Cabeçotes: Makita RT0701 (rotação no dial, à mão, posições 1 a 6), AutoSpin T1 (rotação automática pelo programa) e Spindle 1,5 kW / 2,2 kW (rotação automática).
+- Fresas Sienci: retas 1/16″, 1/8″ e 1/4″ (upcut, downcut, 1 canal, compressão), V-bits de 30°, 60° e 90°, fresa de aplainar 22 mm e ball nose. Cada uma tem diâmetro, haste, comprimento de corte, indicação de uso e link da loja.
+- Compatibilidade: cada fresa é "cabe", "precisa de acessório" (ex.: haste 1/8″ no Makita precisa da pinça de 1/8″) ou "não cabe".
+- Velocidades: tabela oficial da Sienci (Reduzida, Regular, Máxima) por fresa e material.
+- 7 projetos de primeiros cortes, cada um com nível, fresas, material, o que a pessoa aprende e em quais máquinas cabe.
+
+1. ONBOARDING "MINHA OFICINA" (primeira vez que abre)
+Três passos curtos, com ilustrações (não use logotipo nem fotos de produto sem autorização da Sienci):
+- Qual é a sua máquina? Cards por família (LongMill MK2, LongMill MK3, AltMill), depois o tamanho. Mostre a área útil em cm. Se o gSender já tiver um perfil de máquina configurado, abra com ele sugerido ("Encontramos uma LongMill MK3 30×30. É essa?").
+- O que gira a fresa? Makita RT0701, AutoSpin T1 ou Spindle, com o padrão da máquina já marcado (MK2 = Makita, MK3 = AutoSpin, AltMill = Spindle 2,2 kW).
+- Quais fresas você tem? Grade de cards das fresas Sienci. Atalho "Tenho o Starter End Mill Set (Beginner's Kit)" marca as 5 fresas do kit de uma vez.
+No fim: "Primeiro passo: aplainar a mesa" (abre a ferramenta Surfacing do gSender com a fresa de 22 mm).
+
+2. CHIP DE MÁQUINA SEMPRE VISÍVEL
+No topo, ao lado do status: "LongMill MK3 30×30 · AutoSpin". Tocar abre a troca de máquina (há quem tenha mais de uma). Trocar de máquina revalida o projeto na hora: área, fresas e velocidades.
+
+3. A MESA REAL NO PALCO 3D
+O viewport mostra a mesa no tamanho da área útil da máquina escolhida, com o bloco posicionado nela. Se a peça não couber, a parte que sai da área aparece em vermelho, e o aviso diz em qual máquina caberia.
+
+4. BIBLIOTECA DE FRESAS (Minhas fresas + Loja Sienci)
+- Card de fresa: silhueta desenhada do perfil (reta, V, bola, compressão), diâmetro em mm e polegadas, haste, comprimento de corte e uma frase de uso ("Relevo e gravação sem lascar a face de cima").
+- Selos de compatibilidade com o cabeçote atual: "Cabe no seu AutoSpin ✓", "Precisa da pinça 1/8″ · ver na loja", "Não serve para placas (ainda)".
+- Filtro por intenção: Gravar, Relevo, Recortar, Plástico, Aplainar.
+- Duas abas: "Minhas fresas" (as que a pessoa marcou) e "Todas as fresas Sienci" (com botão "Ver na loja").
+
+5. CRIAR E PREPARAR USAM AS FRESAS REAIS
+- O chip de fresa em Criar só oferece fresas de "Minhas fresas" que cabem no cabeçote.
+- Se a IA sugerir uma fresa que a pessoa não tem: "Para esse detalhe o ideal é a 1/16″ downcut, que você ainda não tem. Usar a 1/8″ (alguns detalhes somem) ou ver na loja?"
+- Projetos com duas fresas mostram as duas, na ordem de uso.
+
+6. VELOCIDADE = TABELA OFICIAL SIENCI
+O preset de Preparar passa a ser a tabela da Sienci: Detalhado = Reduzida, Equilibrado = Regular, Rápido = Máxima. O padrão depende da máquina (LongMill = Equilibrado, AltMill = Rápido). Mostre a fonte com discrição: "Valores da tabela oficial Sienci Labs". No modo Pro, mostre RPM, avanço, mergulho e passada.
+
+7. MAKITA: DIAL À MÃO
+Com o Makita, a rotação não é automática. Desenhe:
+- No checklist antes de cortar: ilustração do dial com a posição destacada ("Gire o dial para 3 · 17.000 RPM").
+- Na troca de fresa no meio do corte: o novo valor do dial, se mudar.
+Com AutoSpin ou Spindle, mostre apenas "Rotação automática ✓".
+
+8. PRIMEIROS CORTES (galeria e trilha "Comece aqui")
+Uma área "Primeiros cortes" na tela inicial e no estado vazio de Criar, com cards. Cada card tem:
+- Prévia da simulação
+- Nível (Primeiro corte, Fácil, Intermediário)
+- Tempo estimado na máquina da pessoa
+- Fresas necessárias, com ✓ para as que ela tem e ✗ para as que faltam
+- O que ela aprende
+- Botão "Fazer este projeto" (abre já configurado, pode editar)
+Se não couber na máquina, o card aparece esmaecido com "Precisa de uma 48×30 ou AltMill".
+Projetos:
+- Teste de profundidade: 1, 2 e 3 gravados a 1, 2 e 3 mm numa sobra de MDF, sem recorte (primeiro corte)
+- Porta-copos com inicial: disco de 10 cm recortado com abas (primeiro corte)
+- Placa de porta em relevo: "Casa da Ana", moldura e furos (fácil)
+- Plaquinha de pet: duas fresas, troca no meio (intermediário)
+- Letreiro "Bem-vindos": cursiva recortada em compensado com fresa de compressão (intermediário)
+- Chaveiro de acrílico: gravação em V e furo (intermediário)
+- Placa de endereço grande: 90 × 30 cm, só máquinas grandes (intermediário)
+A trilha "Comece aqui" é: Aplainar a mesa → Teste de profundidade → Porta-copos → Placa de porta. Mostre o progresso com marcas de concluído, sem exagero de gamificação.
+
+9. NOVOS AVISOS
+- "Precisa de acessório": aviso amarelo com botão "Ver na loja".
+- "Fresa não serve para placas": erro, com sugestão de outra fresa que a pessoa tem.
+- "Fresa de compressão: passada aumentada para 3,5 mm": aviso informativo.
+- "Peça maior que a sua máquina": erro, mostrando em quais máquinas caberia.
+
+10. CONFIGURAÇÃO > MINHA MÁQUINA
+Mostre os dados da máquina só para leitura (área útil, velocidade máxima, cabeçote, controlador). Botão "Trocar máquina" refaz o onboarding. No fim da lista de máquinas, deixe uma opção discreta "Outra máquina (GRBL genérica)".
+
+Comece pelo onboarding "Minha oficina" e pela galeria "Primeiros cortes"; depois atualize Criar (chip de fresa), Preparar (velocidade) e Cortar (dial do Makita).
