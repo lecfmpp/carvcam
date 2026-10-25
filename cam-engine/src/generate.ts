@@ -1,6 +1,6 @@
 import { fmt, hasErrors, type Aviso } from "./avisos.js";
 import { PathBuilder } from "./cam/builder.js";
-import { peck, pocket, profile, trace, type Direcao } from "./cam/operations.js";
+import { hatch, peck, pocket, profile, vcarve, type Direcao } from "./cam/operations.js";
 import { area, bounds, intersection, offset, unreachable, type Region } from "./geometry/clip.js";
 import { buildLayout, type ElementoCorte, type FontMap, type Layout } from "./layout.js";
 import { resolverSienci, type AjusteManual, type ConfigSienci } from "./catalog/sienci/config.js";
@@ -120,8 +120,30 @@ export function generatePlate(input: PlateSpecInput, options: GenerateOptions): 
 
   // 1. Gravações (rasas, com a fresa principal).
   for (const g of layout.gravados) {
+    if (g.hachura) {
+      const h = g.hachura;
+      run(`Hachura: ${g.rotulo}`, "gravacao", tool, pMain, g.profundidade, (b) => {
+        hatch(b, g.regiao, { raio: tool.tipo === "vbit" ? 0 : rMain, profundidade: g.profundidade, passada: pMain.passada, espacamento: h.espacamento, angulo: h.angulo, direcao });
+      });
+      continue;
+    }
     if (tool.tipo === "vbit") {
-      run(`Gravação em V: ${g.rotulo}`, "gravacao", tool, pMain, g.profundidade, (b) => trace(b, g.regiao, g.profundidade, direcao));
+      const meio = ((tool.angulo ?? 60) * Math.PI) / 360;
+      // Limite: o pedido, o comprimento de corte, a parte cônica da fresa e o material.
+      const max = Math.min(g.profundidade, tool.comprimentoCorte, rMain / Math.tan(meio), spec.espessura - 0.5);
+      run(`V-carve: ${g.rotulo}`, "gravacao", tool, pMain, max, (b) => {
+        const res = vcarve(b, g.regiao, { meioAngulo: meio, profundidadeMax: max, passada: pMain.passada, direcao });
+        if (res.areaPlana > 1) {
+          avisos.push({
+            codigo: "VCARVE_FUNDO_PLANO",
+            severidade: "aviso",
+            mensagem: `Partes largas de ${g.rotulo} passariam de ${fmt(max)} mm de profundidade; ali o fundo fica plano e é limpo com a fresa em V (mais demorado).`,
+            sugestao: max < g.profundidade ? "A fresa não desce mais que isso. Use uma fresa em V maior ou afine o desenho." : `Aumente a profundidade máxima para cerca de ${fmt(Math.min(tool.comprimentoCorte, spec.espessura * 0.6))} mm, ou afine o desenho.`,
+            dados: { areaPlana: Math.round(res.areaPlana) },
+            elemento: g.ref,
+          });
+        }
+      });
       continue;
     }
     checkDetail(g, rMain, tool, avisos, "gravado");

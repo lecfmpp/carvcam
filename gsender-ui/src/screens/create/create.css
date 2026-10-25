@@ -36,6 +36,11 @@
 .create-seltools { position: absolute; z-index: 2; display: flex; gap: 2px; padding: 3px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--line-2); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4); }
 .create-seltools button { width: 32px; height: 32px; border: 0; border-radius: 7px; background: transparent; color: var(--text); display: flex; align-items: center; justify-content: center; }
 .create-seltools button:hover { background: rgba(255, 255, 255, 0.08); }
+.create-seltools__sep { width: 1px; margin: 4px 3px; background: var(--line-2); }
+.create-el.is-ghost { outline: 1.5px dashed rgba(245, 243, 239, 0.55); outline-offset: 0; background: repeating-linear-gradient(135deg, rgba(245, 243, 239, 0.12) 0 3px, transparent 3px 8px); }
+.create-more { padding-top: 6px; border-top: 1px solid var(--line-2); }
+.create-more__toggle { display: flex; align-items: center; gap: 6px; padding: 4px 0; border: 0; background: transparent; color: var(--text-2); font: inherit; font-size: 13px; cursor: pointer; }
+.create-more__toggle:hover { color: var(--text); }
 
 .create-marker { position: absolute; display: flex; align-items: center; gap: 6px; pointer-events: none; transform: translate(-60%, -50%); }
 .create-marker__tag { padding: 3px 7px; border-radius: 6px; background: rgba(17, 18, 20, 0.88); color: #F2C14E; font-size: 11px; white-space: nowrap; }

@@ -28,6 +28,13 @@ export const ModificadoresShape = {
     })
     .optional(),
   operacao: z.enum(["normal", "subtrair", "mascara"]).default("normal"),
+  /** Só para gravado: em vez de esvaziar a área, grava o contorno e linhas paralelas dentro. */
+  hachura: z
+    .object({
+      espacamento: z.number().min(0.3).max(30).default(2),
+      angulo: z.number().min(-180).max(180).default(45),
+    })
+    .optional(),
 };
 
 export const TextoSchema = z.object({

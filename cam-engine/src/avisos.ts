@@ -37,7 +37,9 @@ export interface Aviso {
     | "FRESA_NAO_SUPORTADA"
     | "SEM_TABELA_SIENCI"
     | "COMPRESSAO_PASSADA"
-    | "SVG_INVALIDO";
+    | "SVG_INVALIDO"
+    | "VCARVE_FUNDO_PLANO"
+    | "GRAVADO_NO_FUNDO";
   severidade: "erro" | "aviso";
   mensagem: string;
   sugestao?: string;

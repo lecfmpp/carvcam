@@ -107,6 +107,19 @@ describe("ajustes de elemento", () => {
     expect(b.maxX - b.minX).toBeLessThan(40.1);
   });
 
+  it("gravado raso no fundo do relevo avisa e sugere gravar mais fundo", () => {
+    const r = gen({
+      largura: 160,
+      altura: 100,
+      espessura: 12,
+      texto: [{ conteudo: "OI", tamanho: 20, modo: "relevo", profundidade: 3, x: 50, y: 50 }],
+      formas: [{ tipo: "circulo", x: 120, y: 50, diametro: 20, modo: "gravado", profundidade: 2 }],
+    });
+    const a = r.avisos.find((x) => x.codigo === "GRAVADO_NO_FUNDO");
+    expect(a?.elemento).toEqual({ tipo: "forma", indice: 0 });
+    expect(a?.correcao?.valor).toBe(4);
+  });
+
   it("afinar até sumir vira erro com correção", () => {
     const r = gen({ ...base, formas: [{ tipo: "circulo", x: 80, y: 50, diametro: 10, deslocamento: -6 }] });
     const a = r.avisos.find((x) => x.codigo === "ELEMENTO_NAO_USINAVEL");

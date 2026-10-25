@@ -155,6 +155,23 @@ function toIssue(a: Aviso, k: number, ctx: Ctx): UiIssue {
       return { ...base, level: "info", title: "No official speeds for this combination", detail: "We use conservative calculated values instead.", alts: [] };
     case "NADA_A_CORTAR":
       return { ...base, title: "Nothing to carve yet", detail: "Add text, a shape, an icon or an SVG file.", alts: [] };
+    case "GRAVADO_NO_FUNDO":
+      return {
+        ...base,
+        title: `${q} won't show`,
+        detail: `It sits on the lowered background, which is already deeper than its engraving.`,
+        suggestion: a.correcao ? `Engrave it ${fmt(a.correcao.valor)} mm deep` : "Make it raised, or move it onto a raised element",
+        apply: fix ? { label: "Apply suggestion", kind: "spec", spec: fix } : undefined,
+        alts: [],
+      };
+    case "VCARVE_FUNDO_PLANO":
+      return {
+        ...base,
+        title: `${q} gets a flat bottom`,
+        detail: "Its widest parts would go deeper than the depth limit, so the V-bit flattens them there. That takes longer.",
+        suggestion: "Raise the max depth, or make the design thinner",
+        alts: [],
+      };
     case "SVG_INVALIDO":
       return { ...base, title: `${q} can't be read`, detail: "Export it again as a plain SVG with text converted to outlines, or delete it.", alts: [] };
     default:

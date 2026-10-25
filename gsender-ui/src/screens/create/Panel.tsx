@@ -1,5 +1,5 @@
 import type { PlateSpecInput } from "@gsender-next/cam-engine";
-import { AlertCircle, AlertTriangle, ArrowRight, CheckCircle2, ChevronDown, ChevronRight, ChevronUp, Circle, Copy, Eye, EyeOff, FileUp, Heart, Layers, Minus, MoveVertical, Plus, Shapes, Square, Trash2, Type, XCircle } from "lucide-react";
+import { AlertCircle, AlertTriangle, ArrowRight, CheckCircle2, ChevronDown, ChevronRight, ChevronUp, Circle, Copy, Eye, EyeOff, FileUp, Heart, Hexagon, Layers, Minus, MoveVertical, Plus, Shapes, Square, Star, Trash2, Type, XCircle } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { Issue, Seg, Stepper, VideoCard } from "../../components/ui";
@@ -7,7 +7,7 @@ import { BITS, bitById, compat, materialById, MATERIALS } from "../../lib/catalo
 import { useDesign } from "../../state/design";
 import { toast } from "../../state/ui";
 import { useActiveMachine, useWorkshop } from "../../state/workshop";
-import { addElement, FONTS, ICONS, listElements, parseId, type Box, type ElementId, type ElementRow, type Forma, type SvgEl, type Texto, svgAspect } from "./elements";
+import { addElement, arcFromBend, bendOf, elementOf, FONTS, ICONS, listElements, parseId, patchElement, type Box, type ElementId, type ElementRow, type Forma, type SvgEl, type Texto, svgAspect } from "./elements";
 import type { IssueAction, UiIssue } from "./issues";
 import { importSvgFile, pickSvgFile } from "./svgImport";
 
@@ -384,6 +384,22 @@ function Slider(props: { label: string; value: number; min: number; max: number;
   );
 }
 
+/**
+ * Profundidade. Com fresa em V, gravar vira V-carve: a profundidade acompanha a largura do
+ * traço e o valor aqui é só o limite.
+ */
+function DepthSlider({ mode, value, min, max, onChange }: { mode: Modo; value: number; min: number; max: number; onChange(v: number): void }) {
+  const bitId = useDesign((s) => s.design.bit);
+  const vcarve = mode === "gravado" && bitById(bitId)?.profile === "v";
+  if (!vcarve) return <Slider label="Depth" value={value} min={min} max={max} step={0.5} onChange={onChange} />;
+  return (
+    <>
+      <Slider label="Max depth (V-carve)" value={value} min={0.5} max={12} step={0.5} onChange={onChange} />
+      <div className="tiny muted">The V-bit goes deeper where the lines are wider, up to this limit.</div>
+    </>
+  );
+}
+
 function ModeSeg({ value, sign, onChange, allowThrough = true }: { value: Modo; sign: boolean; onChange(m: Modo): void; allowThrough?: boolean }) {
   if (!sign) return <div className="tiny muted">Cut-out lettering: every element is cut all the way through.</div>;
   const opts: [Modo, string][] = [
@@ -399,6 +415,102 @@ function ModeSeg({ value, sign, onChange, allowThrough = true }: { value: Modo; 
 }
 
 function Inspector({ id, spec, patchSpec, sign }: { id: ElementId; spec: PlateSpecInput; patchSpec(fn: (s: PlateSpecInput) => PlateSpecInput): void; sign: boolean }) {
+  const body = <InspectorBody id={id} spec={spec} patchSpec={patchSpec} sign={sign} />;
+  if (id === "holes") return body;
+  return (
+    <>
+      {body}
+      <ShapeTools key={id} id={id} spec={spec} patchSpec={patchSpec} />
+    </>
+  );
+}
+
+/** Ajustes comuns: engrossar/afinar, anel de contorno e combinar com outros elementos. */
+function ShapeTools({ id, spec, patchSpec }: { id: ElementId; spec: PlateSpecInput; patchSpec(fn: (s: PlateSpecInput) => PlateSpecInput): void }) {
+  const el = elementOf(spec, id);
+  const [open, setOpen] = useState(() => !!el && (!!el.deslocamento || !!el.contorno || !!el.hachura || (el.operacao ?? "normal") !== "normal"));
+  if (!el) return null;
+  const set = (p: Record<string, unknown>) => patchSpec((s) => patchElement(s, id, p));
+  const ring = el.contorno;
+  const op = el.operacao ?? "normal";
+  return (
+    <div className="create-fields create-inspector create-more">
+      <button className="create-more__toggle" aria-expanded={open} onClick={() => setOpen(!open)}>
+        {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />} Outline, fill &amp; combine
+      </button>
+      {open ? (
+        <>
+          <Slider label="Thicker / thinner" value={el.deslocamento ?? 0} min={-3} max={6} step={0.25} onChange={(v) => set({ deslocamento: v })} />
+          <Field label="Outline ring">
+            <Seg<"off" | "on">
+              label="Outline ring"
+              value={ring ? "on" : "off"}
+              onChange={(v) => set({ contorno: v === "on" ? { distancia: 2, largura: 2 } : undefined })}
+              options={[
+                ["off", "None"],
+                ["on", "Add ring"],
+              ]}
+            />
+          </Field>
+          {ring ? (
+            <div className="create-two">
+              <Field label="Gap">
+                <Stepper label="Gap" value={ring.distancia ?? 2} step={0.5} min={0} max={30} unit="mm" onChange={(v) => set({ contorno: { ...ring, distancia: v } })} />
+              </Field>
+              <Field label="Ring width">
+                <Stepper label="Ring width" value={ring.largura ?? 2} step={0.5} min={0.5} max={20} unit="mm" onChange={(v) => set({ contorno: { ...ring, largura: v } })} />
+              </Field>
+            </div>
+          ) : null}
+          <Field label="Combine with others">
+            <Seg<"normal" | "subtrair" | "mascara">
+              label="Combine with others"
+              value={op}
+              onChange={(v) => set({ operacao: v })}
+              options={[
+                ["normal", "Normal"],
+                ["subtrair", "Subtract"],
+                ["mascara", "Mask"],
+              ]}
+            />
+          </Field>
+          {op !== "normal" ? (
+            <div className="tiny muted">
+              {op === "subtrair" ? "This element isn't carved: it cuts its shape out of the elements it covers." : "This element isn't carved: the others keep only the part inside it."}
+            </div>
+          ) : null}
+          {op === "normal" && (el.modo ?? "gravado") === "gravado" && spec.tipo !== "letreiro" ? (
+            <>
+              <Field label="Engraving fill">
+                <Seg<"solid" | "hatch">
+                  label="Engraving fill"
+                  value={el.hachura ? "hatch" : "solid"}
+                  onChange={(v) => set({ hachura: v === "hatch" ? { espacamento: 2, angulo: 45 } : undefined })}
+                  options={[
+                    ["solid", "Solid"],
+                    ["hatch", "Outline + lines"],
+                  ]}
+                />
+              </Field>
+              {el.hachura ? (
+                <div className="create-two">
+                  <Field label="Line spacing">
+                    <Stepper label="Line spacing" value={el.hachura.espacamento ?? 2} step={0.5} min={0.5} max={20} unit="mm" onChange={(v) => set({ hachura: { ...el.hachura, espacamento: v } })} />
+                  </Field>
+                  <Field label="Angle">
+                    <Stepper label="Angle" value={el.hachura.angulo ?? 45} step={15} min={-90} max={90} unit="°" onChange={(v) => set({ hachura: { ...el.hachura, angulo: v } })} />
+                  </Field>
+                </div>
+              ) : null}
+            </>
+          ) : null}
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+function InspectorBody({ id, spec, patchSpec, sign }: { id: ElementId; spec: PlateSpecInput; patchSpec(fn: (s: PlateSpecInput) => PlateSpecInput): void; sign: boolean }) {
   const { kind, index } = parseId(id);
   if (kind === "t") {
     const t = spec.texto?.[index];
@@ -424,8 +536,9 @@ function Inspector({ id, spec, patchSpec, sign }: { id: ElementId; spec: PlateSp
           </div>
         </Field>
         <Slider label="Letter height" value={t.tamanho} min={8} max={70} step={1} onChange={(v) => setT({ tamanho: v })} />
+        <Slider label="Curve" unit="%" value={bendOf(t)} min={-100} max={100} step={5} onChange={(v) => setT({ arco: arcFromBend(t, v) })} />
         <ModeSeg value={t.modo ?? "relevo"} sign={sign} onChange={(m) => setT({ modo: m })} />
-        {sign && (t.modo ?? "relevo") !== "recorte" ? <Slider label="Depth" value={t.profundidade ?? 3} min={1} max={12} step={0.5} onChange={(v) => setT({ profundidade: v })} /> : null}
+        {sign && (t.modo ?? "relevo") !== "recorte" ? <DepthSlider mode={t.modo ?? "relevo"} value={t.profundidade ?? 3} min={1} max={12} onChange={(v) => setT({ profundidade: v })} /> : null}
         <Field label="Position">
           <Seg<"auto" | "drag">
             label="Position"
@@ -473,6 +586,25 @@ function Inspector({ id, spec, patchSpec, sign }: { id: ElementId; spec: PlateSp
           <Field label="Diameter">
             <Stepper label="Diameter" value={f.diametro} step={2} min={4} max={1000} unit="mm" onChange={(v) => setF({ diametro: v })} />
           </Field>
+        ) : f.tipo === "poligono" || f.tipo === "estrela" ? (
+          <>
+            <div className="create-two">
+              <Field label="Size">
+                <Stepper label="Size" value={f.diametro} step={2} min={4} max={1000} unit="mm" onChange={(v) => setF({ diametro: v })} />
+              </Field>
+              {f.tipo === "poligono" ? (
+                <Field label="Sides">
+                  <Stepper label="Sides" value={f.lados ?? 6} step={1} min={3} max={24} onChange={(v) => setF({ lados: v })} />
+                </Field>
+              ) : (
+                <Field label="Points">
+                  <Stepper label="Points" value={f.pontas ?? 5} step={1} min={3} max={24} onChange={(v) => setF({ pontas: v })} />
+                </Field>
+              )}
+            </div>
+            {f.tipo === "estrela" ? <Slider label="Inner size" unit="%" value={Math.round((f.interno ?? 0.45) * 100)} min={15} max={95} step={5} onChange={(v) => setF({ interno: v / 100 })} /> : null}
+            <Slider label="Rotation" unit="°" value={f.rotacao ?? 0} min={-180} max={180} step={5} onChange={(v) => setF({ rotacao: v })} />
+          </>
         ) : (
           <div className="create-two">
             <Field label="Length">
@@ -484,7 +616,7 @@ function Inspector({ id, spec, patchSpec, sign }: { id: ElementId; spec: PlateSp
           </div>
         )}
         <ModeSeg value={f.modo ?? "gravado"} sign={sign} onChange={(m) => setF({ modo: m })} allowThrough={f.tipo !== "linha"} />
-        {sign && (f.modo ?? "gravado") !== "recorte" ? <Slider label="Depth" value={f.profundidade ?? 2} min={0.5} max={8} step={0.5} onChange={(v) => setF({ profundidade: v })} /> : null}
+        {sign && (f.modo ?? "gravado") !== "recorte" ? <DepthSlider mode={f.modo ?? "gravado"} value={f.profundidade ?? 2} min={0.5} max={8} onChange={(v) => setF({ profundidade: v })} /> : null}
       </div>
     );
   }
@@ -513,7 +645,7 @@ function Inspector({ id, spec, patchSpec, sign }: { id: ElementId; spec: PlateSp
           <Stepper label="Width" value={v.largura} step={2} min={5} max={1000} unit="mm" onChange={(w) => setV({ largura: w })} />
         </Field>
         <ModeSeg value={v.modo ?? "gravado"} sign={sign} onChange={(m) => setV({ modo: m })} />
-        {sign && (v.modo ?? "gravado") !== "recorte" ? <Slider label="Depth" value={v.profundidade ?? 2} min={0.5} max={8} step={0.5} onChange={(d) => setV({ profundidade: d })} /> : null}
+        {sign && (v.modo ?? "gravado") !== "recorte" ? <DepthSlider mode={v.modo ?? "gravado"} value={v.profundidade ?? 2} min={0.5} max={8} onChange={(d) => setV({ profundidade: d })} /> : null}
         <div className="tiny muted">Filled areas are carved; lines without fill are carved as wide as their stroke. Text must be converted to outlines before export.</div>
       </div>
     );
@@ -568,6 +700,8 @@ function RowIcon({ row, spec }: { row: ElementRow; spec: PlateSpecInput }) {
   if (row.kind === "svg") return <Shapes size={16} strokeWidth={1.5} />;
   const f = spec.formas?.[parseId(row.id).index];
   if (f?.tipo === "circulo") return <Circle size={16} strokeWidth={1.5} />;
+  if (f?.tipo === "poligono") return <Hexagon size={16} strokeWidth={1.5} />;
+  if (f?.tipo === "estrela") return <Star size={16} strokeWidth={1.5} />;
   if (f?.tipo === "linha") return <Minus size={16} strokeWidth={1.5} />;
   return <Square size={16} strokeWidth={1.5} />;
 }
@@ -575,7 +709,7 @@ function RowIcon({ row, spec }: { row: ElementRow; spec: PlateSpecInput }) {
 function AddChips({ spec, onAdd }: { spec: PlateSpecInput; onAdd(s: PlateSpecInput, id: ElementId | null): void }) {
   const cx = spec.largura / 2;
   const cy = spec.altura / 2;
-  const add = (t: "text" | "rect" | "circle" | "line") => {
+  const add = (t: "text" | "rect" | "circle" | "polygon" | "star" | "line") => {
     // Texto novo sem posição: o motor empilha e centraliza.
     if (t === "text") {
       const [s, id] = addElement(spec, "text", cx, cy);
@@ -597,6 +731,12 @@ function AddChips({ spec, onAdd }: { spec: PlateSpecInput; onAdd(s: PlateSpecInp
       </button>
       <button className="create-add__chip" onClick={() => add("circle")}>
         + Circle
+      </button>
+      <button className="create-add__chip" onClick={() => add("polygon")}>
+        + Polygon
+      </button>
+      <button className="create-add__chip" onClick={() => add("star")}>
+        + Star
       </button>
       <button className="create-add__chip" onClick={() => add("line")}>
         + Line
@@ -620,7 +760,7 @@ function AddChips({ spec, onAdd }: { spec: PlateSpecInput; onAdd(s: PlateSpecInp
           if (out) onAdd(out[0], out[1]);
         }}
       >
-        <FileUp size={13} strokeWidth={1.75} /> SVG file
+        <FileUp size={13} strokeWidth={1.75} /> SVG / DXF file
       </button>
       {spec.tipo !== "letreiro" && !hasHoles ? (
         <button className="create-add__chip" onClick={() => onAdd(withHoles(spec, "holes"), "holes")}>

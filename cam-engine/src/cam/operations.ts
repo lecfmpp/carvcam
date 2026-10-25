@@ -136,6 +136,168 @@ export function trace(b: PathBuilder, region: Region, depth: number, direcao: Di
   }
 }
 
+export interface VCarveOpts {
+  /** Metade do ângulo da ponta, em radianos. */
+  meioAngulo: number;
+  /** Profundidade máxima (limite do usuário, da fresa e do material). */
+  profundidadeMax: number;
+  passada: number;
+  direcao: Direcao;
+  /** Distância entre anéis, em mm. */
+  passo?: number;
+}
+
+export interface VCarveResult {
+  /** Área (mm²) que ficou com fundo plano por causa do limite de profundidade. */
+  areaPlana: number;
+}
+
+/**
+ * V-carve de verdade: a profundidade acompanha a largura do traço. Anéis de offset para dentro
+ * a uma distância d da borda são cortados na profundidade d / tan(meio ângulo); assim o cone da
+ * fresa encosta exatamente na borda e o fundo sobe até o eixo central de cada traço, como numa
+ * gravação feita à mão. Onde a profundidade passaria do limite, o fundo fica plano e é limpo com
+ * a própria fresa em V, em passes próximos.
+ */
+export function vcarve(b: PathBuilder, region: Region, o: VCarveOpts): VCarveResult {
+  const tan = Math.tan(o.meioAngulo);
+  const passo = o.passo ?? 0.2;
+  const dCap = o.profundidadeMax * tan;
+  // No fundo plano, passes próximos o bastante para a crista entre eles ficar com ~0,08 mm.
+  const passoPlano = Math.max(0.1, 2 * 0.08 * tan);
+  let areaPlana = 0;
+
+  type Ring = { d: number; z: number; path: Pt[] };
+  for (const comp of components(simplify(region))) {
+    const rings: Ring[] = [];
+    let d = passo / 2;
+    for (let k = 0; k < 20000; k++) {
+      const cur = simplify(offset(comp, -d));
+      if (area(cur) <= 0) break;
+      const z = -Math.min(d / tan, o.profundidadeMax);
+      for (const p of cur) rings.push({ d, z, path: orient(p, o.direcao, "pocket") });
+      d += d < dCap ? passo : passoPlano;
+    }
+    areaPlana += Math.max(0, area(offset(comp, -dCap)));
+    if (!rings.length) continue;
+
+    // Por nível de profundidade: cada anel desce no máximo até o nível atual, e só entra nos
+    // níveis em que ainda tem material a tirar.
+    const levels = depthLevels(o.profundidadeMax, o.passada);
+    let prev = 0;
+    for (const level of levels) {
+      const todo = rings.filter((r) => r.z < prev - 1e-6);
+      for (const r of nearestRings(todo, b)) {
+        const z = Math.max(r.z, level);
+        const path = rotateToNearest(r.path, b);
+        b.travel(path[0]);
+        b.plunge(z);
+        for (let i = 1; i < path.length; i++) b.feed(path[i], z);
+        b.feed(path[0], z);
+      }
+      b.retract();
+      prev = level;
+    }
+  }
+  return { areaPlana };
+}
+
+function nearestRings<R extends { path: Pt[] }>(rings: R[], from: Pt): R[] {
+  const pending = [...rings];
+  const out: R[] = [];
+  let cur = { x: from.x, y: from.y };
+  while (pending.length) {
+    let bi = 0;
+    let bd = Infinity;
+    pending.forEach((r, i) => {
+      for (const q of r.path) {
+        const dd = (q.x - cur.x) ** 2 + (q.y - cur.y) ** 2;
+        if (dd < bd) {
+          bd = dd;
+          bi = i;
+        }
+      }
+    });
+    const next = pending.splice(bi, 1)[0];
+    out.push(next);
+    cur = rotateToNearest(next.path, cur)[0];
+  }
+  return out;
+}
+
+export interface HatchOpts {
+  /** Raio efetivo da fresa na profundidade (0 para a ponta de uma fresa em V). */
+  raio: number;
+  profundidade: number;
+  passada: number;
+  espacamento: number;
+  /** Ângulo das linhas, em graus. */
+  angulo: number;
+  direcao: Direcao;
+}
+
+/**
+ * Gravação com hachura: contorno do elemento mais linhas paralelas dentro dele, em vez de
+ * esvaziar a área toda. Fica com cara de textura e corta muito mais rápido.
+ */
+export function hatch(b: PathBuilder, region: Region, o: HatchOpts): boolean {
+  const inner = o.raio > 0 ? simplify(offset(region, -o.raio)) : simplify(region);
+  if (area(inner) <= 0) return false;
+  const a = (o.angulo * Math.PI) / 180;
+  const c = Math.cos(a);
+  const s = Math.sin(a);
+  // Gira a região para as linhas ficarem horizontais, corta e desgira.
+  const rot = inner.map((p) => p.map((q) => ({ x: q.x * c + q.y * s, y: -q.x * s + q.y * c })));
+  const unrot = (q: Pt): Pt => ({ x: q.x * c - q.y * s, y: q.x * s + q.y * c });
+  let y0 = Infinity;
+  let y1 = -Infinity;
+  for (const p of rot) for (const q of p) {
+    y0 = Math.min(y0, q.y);
+    y1 = Math.max(y1, q.y);
+  }
+  const segs: [Pt, Pt][] = [];
+  let flip = false;
+  for (let y = y0 + o.espacamento / 2; y < y1; y += o.espacamento) {
+    const xs: number[] = [];
+    for (const p of rot) {
+      for (let i = 0; i < p.length; i++) {
+        const P = p[i];
+        const Q = p[(i + 1) % p.length];
+        if (P.y > y !== Q.y > y) xs.push(P.x + ((y - P.y) * (Q.x - P.x)) / (Q.y - P.y));
+      }
+    }
+    xs.sort((m, n) => m - n);
+    const row: [Pt, Pt][] = [];
+    for (let i = 0; i + 1 < xs.length; i += 2) {
+      if (xs[i + 1] - xs[i] < 0.05) continue;
+      row.push([unrot({ x: xs[i], y }), unrot({ x: xs[i + 1], y })]);
+    }
+    if (flip) row.reverse().forEach((sg) => sg.reverse());
+    segs.push(...row);
+    flip = !flip;
+  }
+  for (const z of depthLevels(o.profundidade, o.passada)) {
+    for (const raw of nearestOrder(inner, b, () => 0)) {
+      const path = rotateToNearest(orient(raw, o.direcao, "pocket"), b);
+      b.travel(path[0]);
+      b.plunge(z);
+      for (let i = 1; i < path.length; i++) b.feed(path[i], z);
+      b.feed(path[0], z);
+    }
+    for (const [p, q] of segs) {
+      // Segmento seguinte começando perto do fim do anterior, dentro da região: segue sem subir.
+      if (Math.abs(b.z - z) < 1e-6 && dist(b, p) <= o.espacamento * 1.6 && segmentInside(inner, b, p)) b.feed(p, z);
+      else {
+        b.travel(p);
+        b.plunge(z);
+      }
+      b.feed(q, z);
+    }
+    b.retract();
+  }
+  return true;
+}
+
 // ---------------------------------------------------------------------------
 
 /**

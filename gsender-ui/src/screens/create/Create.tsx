@@ -2,7 +2,26 @@ import type { GenerateResult, PlateSpecInput } from "@gsender-next/cam-engine";
 import archivoUrl from "@gsender-next/cam-engine/fonts/archivoblack/ArchivoBlack-Regular.ttf?url";
 import bebasUrl from "@gsender-next/cam-engine/fonts/bebasneue/BebasNeue-Regular.ttf?url";
 import pacificoUrl from "@gsender-next/cam-engine/fonts/pacifico/Pacifico-Regular.ttf?url";
-import { Circle, Copy, FileUp, Minus, MousePointer2, Square, Trash2, Type } from "lucide-react";
+import {
+  AlignCenterHorizontal,
+  AlignCenterVertical,
+  AlignEndHorizontal,
+  AlignEndVertical,
+  AlignHorizontalDistributeCenter,
+  AlignStartHorizontal,
+  AlignStartVertical,
+  AlignVerticalDistributeCenter,
+  Circle,
+  Copy,
+  FileUp,
+  Hexagon,
+  Minus,
+  MousePointer2,
+  Square,
+  Star,
+  Trash2,
+  Type,
+} from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type PointerEvent as RPointerEvent } from "react";
 import { TopBar } from "../../components/TopBar";
 import { useEngine } from "../../engine/useEngine";
@@ -15,7 +34,7 @@ import { fitScale, Stage } from "../../stage/Stage";
 import { ThreeView } from "../../stage/ThreeView";
 import { machineName } from "../../lib/catalog";
 import { AssistantBar } from "./AssistantBar";
-import { addElement, deleteElement, duplicateElement, elementBoxes, fontOf, margin, moveElement, parseId, type Box, type ElementId, type Tool } from "./elements";
+import { addElement, alignElements, deleteElement, duplicateElement, elementBoxes, elementOf, fontOf, margin, moveElement, parseId, type Align, type Box, type ElementId, type Tool } from "./elements";
 import { buildIssues, type UiIssue } from "./issues";
 import { CreatePanel } from "./Panel";
 import { importSvgFile, isSvgFile, pickSvgFile } from "./svgImport";
@@ -39,9 +58,22 @@ const TOOLS: [Tool, string, typeof Type, string][] = [
   ["text", "Text", Type, "T"],
   ["rect", "Rectangle", Square, "R"],
   ["circle", "Circle", Circle, "C"],
+  ["polygon", "Polygon", Hexagon, "P"],
+  ["star", "Star", Star, "S"],
   ["line", "Line", Minus, "L"],
 ];
-const TOOL_NAME: Record<Tool, string> = { select: "", text: "text", rect: "rectangle", circle: "circle", line: "line" };
+const TOOL_NAME: Record<Tool, string> = { select: "", text: "text", rect: "rectangle", circle: "circle", polygon: "polygon", star: "star", line: "line" };
+
+const ALIGNS: [Align, string, typeof Type][] = [
+  ["left", "Align left", AlignStartVertical],
+  ["hcenter", "Center horizontally", AlignCenterVertical],
+  ["right", "Align right", AlignEndVertical],
+  ["top", "Align top", AlignStartHorizontal],
+  ["vcenter", "Center vertically", AlignCenterHorizontal],
+  ["bottom", "Align bottom", AlignEndHorizontal],
+  ["hdist", "Distribute horizontally", AlignHorizontalDistributeCenter],
+  ["vdist", "Distribute vertically", AlignVerticalDistributeCenter],
+];
 
 const isTyping = (t: EventTarget | null) => t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
 
@@ -74,10 +106,34 @@ export default function Create() {
   const warnings = issues.filter((i) => i.level === "warning").length;
   const boxes = useMemo(() => elementBoxes(spec, result), [spec, result]);
 
+  // Seleção múltipla (Shift+clique): `sel` é o elemento principal (o do painel); `extra`, os demais.
+  const [extra, setExtra] = useState<ElementId[]>([]);
+  const selected = sel ? [sel, ...extra.filter((x) => x !== sel && boxes.has(x))] : [];
+  const choose = (id: ElementId | null) => {
+    setSel(id);
+    setExtra([]);
+  };
+  const pick = (id: ElementId, additive: boolean) => {
+    if (!additive || !sel) return choose(id);
+    if (id === sel) {
+      setSel(extra[0] ?? null);
+      setExtra(extra.slice(1));
+    } else setExtra(extra.includes(id) ? extra.filter((x) => x !== id) : [...extra, id]);
+  };
+  const align = (how: Align) => patchSpec((s) => alignElements(s, selected, boxes, how));
+  const moveMany = (ids: ElementId[], dx: number, dy: number) =>
+    patchSpec((sp) =>
+      ids.reduce((acc, id) => {
+        const b = boxes.get(id);
+        return b ? moveElement(acc, id, b.cx + dx, b.cy + dy, b) : acc;
+      }, sp),
+    );
+
   // Seleção some quando o elemento deixa de existir (apagado pelo assistente, por exemplo).
   useEffect(() => {
     if (sel && !boxes.has(sel)) setSel(null);
-  }, [boxes, sel]);
+    if (extra.some((x) => !boxes.has(x))) setExtra(extra.filter((x) => boxes.has(x)));
+  }, [boxes, sel, extra]);
 
   const [dropping, setDropping] = useState(false);
   const importSvg = async (file: File | null) => {
@@ -90,8 +146,11 @@ export default function Create() {
   };
 
   const remove = (id: ElementId) => {
-    patchSpec((s) => deleteElement(s, id));
-    setSel(null);
+    // Com vários selecionados, apaga todos (do maior índice para o menor, para não deslocar os outros).
+    const ids = selected.includes(id) ? selected : [id];
+    const order = [...ids].sort((a, b) => parseId(b).index - parseId(a).index);
+    patchSpec((s) => order.reduce((acc, x) => deleteElement(acc, x), s));
+    choose(null);
   };
   const duplicate = (id: ElementId) => {
     const [next, nid] = duplicateElement(spec, id, boxes.get(id));
@@ -109,7 +168,7 @@ export default function Create() {
       }
       if (isTyping(e.target)) return;
       if (e.key === "Escape") {
-        setSel(null);
+        choose(null);
         setEditing(null);
         setTool("select");
       } else if ((e.key === "Delete" || e.key === "Backspace") && sel) {
@@ -159,7 +218,7 @@ export default function Create() {
         overlay={
           <>
             <ToolRail tool={tool} setTool={setTool} onImport={() => void pickSvgFile().then(importSvg)} />
-            {dropping ? <div className="create-drop">Drop the SVG to add it to the {spec.tipo === "letreiro" ? "board" : "sign"}</div> : null}
+            {dropping ? <div className="create-drop">Drop the SVG or DXF to add it to the {spec.tipo === "letreiro" ? "board" : "sign"}</div> : null}
             <Legend spec={spec} result={result} material={material} pro={mode === "pro"} bitD={bit?.d} flagged={issues.length} />
           </>
         }
@@ -191,7 +250,11 @@ export default function Create() {
                 issues={issues}
                 tool={tool}
                 sel={sel}
-                setSel={setSel}
+                selected={selected}
+                setSel={choose}
+                onPick={pick}
+                onAlign={align}
+                onMoveMany={moveMany}
                 editing={editing}
                 setEditing={setEditing}
                 focusKey={focusKey}
@@ -222,7 +285,7 @@ export default function Create() {
         busy={eng.busy}
         engineError={eng.error}
         sel={sel}
-        setSel={setSel}
+        setSel={choose}
         boxes={boxes}
         focusKey={focusKey}
         setFocusKey={setFocusKey}
@@ -335,7 +398,12 @@ interface OverlayProps {
   issues: UiIssue[];
   tool: Tool;
   sel: ElementId | null;
+  /** Todos os selecionados (o principal primeiro). */
+  selected: ElementId[];
   setSel(id: ElementId | null): void;
+  onPick(id: ElementId, additive: boolean): void;
+  onAlign(how: Align): void;
+  onMoveMany(ids: ElementId[], dx: number, dy: number): void;
   editing: ElementId | null;
   setEditing(id: ElementId | null): void;
   focusKey: string | null;
@@ -367,11 +435,17 @@ function Overlay(p: OverlayProps) {
   const errorTargets = new Set(p.issues.filter((i) => i.level === "error" && i.target).map((i) => i.target!));
   const focused = p.issues.find((i) => i.key === p.focusKey)?.target ?? null;
   const markers = p.issues.filter((i) => i.pct !== undefined && i.target && p.boxes.has(i.target));
+  // Arrastar um elemento selecionado leva junto os outros selecionados.
+  const group = drag && p.selected.includes(drag.id) ? p.selected : drag ? [drag.id] : [];
 
   const down = (id: ElementId) => (e: RPointerEvent) => {
     if (p.tool !== "select" || e.button !== 0) return;
     e.stopPropagation();
-    p.setSel(id);
+    if (e.shiftKey) {
+      p.onPick(id, true);
+      return;
+    }
+    if (!p.selected.includes(id)) p.onPick(id, false);
     try {
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     } catch {
@@ -387,7 +461,10 @@ function Overlay(p: OverlayProps) {
   const up = () => {
     if (!drag) return;
     const b = p.boxes.get(drag.id);
-    if (b && Math.hypot(drag.dx, drag.dy) > 0.5) p.onMove(drag.id, b.cx + drag.dx, b.cy + drag.dy);
+    if (b && Math.hypot(drag.dx, drag.dy) > 0.5) {
+      if (group.length > 1) p.onMoveMany(group, drag.dx, drag.dy);
+      else p.onMove(drag.id, b.cx + drag.dx, b.cy + drag.dy);
+    }
     setDrag(null);
   };
 
@@ -419,15 +496,17 @@ function Overlay(p: OverlayProps) {
       </div>
 
       {[...p.boxes].map(([id, b]) => {
-        const d = drag?.id === id ? drag : null;
+        const d = drag && group.includes(id) ? drag : null;
         const r = px({ ...b, cx: b.cx + (d?.dx ?? 0), cy: b.cy + (d?.dy ?? 0) });
-        const isSel = p.sel === id;
+        const isSel = p.selected.includes(id);
         const err = errorTargets.has(id);
-        const cls = ["create-el", isSel ? "is-sel" : "", err ? "is-error" : "", focused === id ? "is-focus" : "", d ? "is-drag" : ""].join(" ");
+        const op = elementOf(p.spec, id)?.operacao ?? "normal";
+        const cls = ["create-el", isSel ? "is-sel" : "", err ? "is-error" : "", focused === id ? "is-focus" : "", d ? "is-drag" : "", op !== "normal" ? "is-ghost" : ""].join(" ");
         const text = id.startsWith("t:") ? p.spec.texto?.[parseId(id).index] : undefined;
         return (
           <div
             key={id}
+            data-id={id}
             className={cls}
             style={r}
             onPointerDown={down(id)}
@@ -453,9 +532,20 @@ function Overlay(p: OverlayProps) {
 
       {p.sel && p.boxes.has(p.sel) && !drag && p.editing !== p.sel ? (
         <div className="create-seltools" style={{ left: px(p.boxes.get(p.sel)!).left, top: px(p.boxes.get(p.sel)!).top - 46 }} onPointerDown={(e) => e.stopPropagation()}>
-          <button aria-label="Duplicate (Ctrl+D)" title="Duplicate (Ctrl+D)" onClick={() => p.onDuplicate(p.sel!)}>
-            <Copy size={14} strokeWidth={1.75} />
-          </button>
+          {ALIGNS.filter(([how]) => (how === "hdist" || how === "vdist" ? p.selected.length >= 3 : true)).map(([how, label, Icon]) => {
+            const t = p.selected.length > 1 ? `${label} (selection)` : `${label} on the ${p.spec.tipo === "letreiro" ? "board" : "sign"}`;
+            return (
+              <button key={how} aria-label={t} title={t} onClick={() => p.onAlign(how)}>
+                <Icon size={14} strokeWidth={1.75} />
+              </button>
+            );
+          })}
+          <span className="create-seltools__sep" aria-hidden />
+          {p.selected.length === 1 ? (
+            <button aria-label="Duplicate (Ctrl+D)" title="Duplicate (Ctrl+D)" onClick={() => p.onDuplicate(p.sel!)}>
+              <Copy size={14} strokeWidth={1.75} />
+            </button>
+          ) : null}
           <button aria-label="Delete (Del)" title="Delete (Del)" onClick={() => p.onDelete(p.sel!)}>
             <Trash2 size={14} strokeWidth={1.75} />
           </button>

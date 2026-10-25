@@ -106,6 +106,21 @@ Os 7 projetos atuais já se ajustam ao curso da máquina (`projetosParaMaquina`)
 - **Marca e imagens:** citar "compatível com Shapeoko" é uso nominativo. Não usar logotipo nem fotos da Carbide 3D.
 - **Relação com a Sienci:** se o produto for oferecido à Sienci, a inclusão de outras marcas pode incomodar. Vale deixar isso configurável no build (`MARCAS=sienci` ou `MARCAS=todas`).
 
+## Situação (atualizada depois dos passos 2 e 3)
+
+Feito:
+
+- **Formas:** polígono regular e estrela, ao lado de retângulo, círculo e linha.
+- **Texto em arco:** controle "Curve" de −100% a 100% (meia volta).
+- **Offset de vetor:** "Thicker / thinner" engrossa ou afina qualquer elemento; "Outline ring" acrescenta um anel em volta a uma distância escolhida.
+- **Booleanas:** união automática entre elementos que se tocam. "Subtract" tira a forma do elemento dos outros (por exemplo, uma lua). "Mask" faz os outros ficarem só com a parte de dentro.
+- **Alinhar e distribuir:** Shift+clique seleciona vários. Dá para alinhar à seleção, ou à placa quando há um só elemento, e distribuir quando há 3 ou mais. Arrastar move o grupo.
+- **Importar DXF:** junto com o SVG, pelo mesmo botão e por arrastar o arquivo. Lê linhas, polilinhas com arco, círculos, arcos, elipses e splines, com unidades.
+- **V-carve de verdade:** a profundidade acompanha a largura do traço. O valor de profundidade vira o limite. Onde o traço passaria do limite, o fundo fica plano e aparece o aviso `VCARVE_FUNDO_PLANO`.
+- **Hachura** (recurso do Pro): "Outline + lines" em vez de esvaziar a área gravada, com espaçamento e ângulo.
+
+Ainda falta para igualar o Core: ferramenta de curvas Bézier livre, imagem de fundo para decalcar, vetorização automática de imagem e uma biblioteca maior de elementos. O "Subtract" vale para todos os elementos que a forma cobre, não para um só.
+
 ## 4. Ordem sugerida
 
 Combina com o doc 05 (paridade com o CAMLab):

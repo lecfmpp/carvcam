@@ -7,7 +7,12 @@ import { parseDesenho } from "./desenho.js";
 import { placeSvg, SvgInvalido } from "./svg.js";
 import type { FontId, Machine, Modo, PlateSpec, Tool } from "./schema.js";
 
-type Mods = { deslocamento: number; contorno?: { distancia: number; largura: number }; operacao: "normal" | "subtrair" | "mascara" };
+type Mods = {
+  deslocamento: number;
+  contorno?: { distancia: number; largura: number };
+  operacao: "normal" | "subtrair" | "mascara";
+  hachura?: { espacamento: number; angulo: number };
+};
 
 export interface ElementoCorte {
   /** Ex.: "texto 1 (Casa da Ana)", "ícone 2 (coração)". */
@@ -17,6 +22,8 @@ export interface ElementoCorte {
   itens?: { ref: RefElemento; regiao: Region }[];
   regiao: Region;
   profundidade: number;
+  /** Gravação com hachura em vez de esvaziar a área. */
+  hachura?: { espacamento: number; angulo: number };
 }
 
 /** Tudo em coordenadas do bloco: X0 Y0 no canto inferior esquerdo, Z0 na face de cima. */
@@ -198,7 +205,7 @@ export function buildLayout(spec: PlateSpec, fonts: FontMap, tool: Tool, cutTool
 
   const gravados: ElementoCorte[] = placed
     .filter((p) => p.modo === "gravado")
-    .map((p) => ({ rotulo: p.rotulo, ref: { tipo: p.tipo, indice: p.idx }, regiao: toBlock(intersection(p.regiao, pecaLocal)), profundidade: p.profundidade }));
+    .map((p) => ({ rotulo: p.rotulo, ref: { tipo: p.tipo, indice: p.idx }, regiao: toBlock(intersection(p.regiao, pecaLocal)), profundidade: p.profundidade, hachura: p.mods.hachura }));
 
   let relevo: ElementoCorte | null = null;
   const reliefItems = placed.filter((p) => p.modo === "relevo");
@@ -221,6 +228,25 @@ export function buildLayout(spec: PlateSpec, fonts: FontMap, tool: Tool, cutTool
       profundidade: depth,
       itens: reliefItems.map((p) => ({ ref: { tipo: p.tipo, indice: p.idx }, regiao: toBlock(p.regiao) })),
     };
+
+    // Gravado que cai no fundo rebaixado e é mais raso que ele simplesmente desaparece.
+    for (const p of placed) {
+      if (p.modo !== "gravado" || p.profundidade > depth) continue;
+      const total = area(p.regiao);
+      if (total <= 0) continue;
+      const sumido = area(intersection(p.regiao, fundo)) / total;
+      if (sumido < 0.5) continue;
+      const ref = { tipo: p.tipo, indice: p.idx } as RefElemento;
+      const nova = Math.round((depth + 1) * 10) / 10;
+      avisos.push({
+        codigo: "GRAVADO_NO_FUNDO",
+        severidade: "aviso",
+        mensagem: `${capitalize(p.rotulo)} está no fundo rebaixado (${fmt(depth)} mm); gravado a ${fmt(p.profundidade)} mm, não vai aparecer.`,
+        sugestao: `Coloque-o em cima de um elemento em relevo, deixe-o em relevo, ou grave mais fundo (${fmt(nova)} mm).`,
+        elemento: ref,
+        correcao: nova < spec.espessura ? { elemento: ref, campo: "profundidade", valor: nova } : undefined,
+      });
+    }
   }
 
   const vazados: ElementoCorte[] = placed
