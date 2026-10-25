@@ -44,6 +44,34 @@ export function plateOutline(x: number, y: number, w: number, h: number, tipo: "
   return [p];
 }
 
+/**
+ * Polígono regular inscrito no círculo de raio r. Com rotação 0 o lado de baixo fica
+ * horizontal (é o que se espera de um hexágono ou triângulo numa placa).
+ */
+export function polygon(cx: number, cy: number, r: number, lados: number, rotacaoDeg = 0): Region {
+  const n = Math.max(3, Math.round(lados));
+  const a0 = -Math.PI / 2 + Math.PI / n + (rotacaoDeg * Math.PI) / 180;
+  const p: Pt[] = [];
+  for (let i = 0; i < n; i++) {
+    const a = a0 + (2 * Math.PI * i) / n;
+    p.push({ x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) });
+  }
+  return [p];
+}
+
+/** Estrela com `pontas` pontas; `interno` é o raio interno como fração do externo. */
+export function star(cx: number, cy: number, r: number, pontas: number, interno: number, rotacaoDeg = 0): Region {
+  const n = Math.max(3, Math.round(pontas));
+  const a0 = Math.PI / 2 + (rotacaoDeg * Math.PI) / 180;
+  const p: Pt[] = [];
+  for (let i = 0; i < 2 * n; i++) {
+    const a = a0 + (Math.PI * i) / n;
+    const rr = i % 2 === 0 ? r : r * interno;
+    p.push({ x: cx + rr * Math.cos(a), y: cy + rr * Math.sin(a) });
+  }
+  return [p];
+}
+
 /** Traço reto de (x1, y1) a (x2, y2), com pontas arredondadas e a largura dada. */
 export function stroke(x1: number, y1: number, x2: number, y2: number, width: number): Region {
   const len = Math.hypot(x2 - x1, y2 - y1);

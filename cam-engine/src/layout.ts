@@ -1,10 +1,13 @@
 import type opentype from "opentype.js";
 import { fmt, type Aviso, type RefElemento } from "./avisos.js";
 import { area, bounds, difference, intersection, offset, translate, union, type Region } from "./geometry/clip.js";
-import { circle, icon, plateOutline, slot, stroke } from "./geometry/shapes.js";
+import { circle, icon, plateOutline, polygon, slot, star, stroke } from "./geometry/shapes.js";
 import { centerAt, textToRegion } from "./geometry/text.js";
-import { parseSvg, placeSvg, SvgInvalido } from "./svg.js";
+import { parseDesenho } from "./desenho.js";
+import { placeSvg, SvgInvalido } from "./svg.js";
 import type { FontId, Machine, Modo, PlateSpec, Tool } from "./schema.js";
+
+type Mods = { deslocamento: number; contorno?: { distancia: number; largura: number }; operacao: "normal" | "subtrair" | "mascara" };
 
 export interface ElementoCorte {
   /** Ex.: "texto 1 (Casa da Ana)", "ícone 2 (coração)". */
@@ -60,8 +63,8 @@ export function buildLayout(spec: PlateSpec, fonts: FontMap, tool: Tool, cutTool
   }
 
   // ---- Elementos (texto e ícones) em coordenadas da peça ----
-  type Placed = { rotulo: string; regiao: Region; modo: Modo; profundidade: number; tamanho: number; idx: number; tipo: "texto" | "icone" | "forma" | "svg" };
-  const placed: Placed[] = [];
+  type Placed = { rotulo: string; regiao: Region; modo: Modo; profundidade: number; tamanho: number; idx: number; tipo: "texto" | "icone" | "forma" | "svg"; mods: Mods };
+  let placed: Placed[] = [];
 
   const autoTexts: { idx: number; regiao: Region; tamanho: number }[] = [];
   spec.texto.forEach((t, i) => {
@@ -70,9 +73,9 @@ export function buildLayout(spec: PlateSpec, fonts: FontMap, tool: Tool, cutTool
       avisos.push({ codigo: "FONTE_INDISPONIVEL", severidade: "erro", mensagem: `A fonte "${t.fonte}" não foi carregada.` });
       return;
     }
-    const raw = textToRegion(font, t.conteudo, t.tamanho);
+    const raw = textToRegion(font, t.conteudo, t.tamanho, t.arco || undefined);
     if (t.x !== undefined && t.y !== undefined) {
-      placed.push({ rotulo: `texto ${i + 1} (${t.conteudo})`, regiao: centerAt(raw, t.x, t.y), modo: t.modo, profundidade: t.profundidade, tamanho: t.tamanho, idx: i, tipo: "texto" });
+      placed.push({ rotulo: `texto ${i + 1} (${t.conteudo})`, regiao: centerAt(raw, t.x, t.y), modo: t.modo, profundidade: t.profundidade, tamanho: t.tamanho, idx: i, tipo: "texto", mods: t });
     } else {
       autoTexts.push({ idx: i, regiao: raw, tamanho: t.tamanho });
     }
@@ -90,43 +93,49 @@ export function buildLayout(spec: PlateSpec, fonts: FontMap, tool: Tool, cutTool
     autoTexts.forEach((a, k) => {
       const cy = top - heights[k] / 2;
       const t = spec.texto[a.idx];
-      placed.push({ rotulo: `texto ${a.idx + 1} (${t.conteudo})`, regiao: centerAt(a.regiao, spec.largura / 2, cy), modo: t.modo, profundidade: t.profundidade, tamanho: t.tamanho, idx: a.idx, tipo: "texto" });
+      placed.push({ rotulo: `texto ${a.idx + 1} (${t.conteudo})`, regiao: centerAt(a.regiao, spec.largura / 2, cy), modo: t.modo, profundidade: t.profundidade, tamanho: t.tamanho, idx: a.idx, tipo: "texto", mods: t });
       top -= heights[k] + (gaps[k] ?? 0);
     });
   }
 
   spec.formas.forEach((f, i) => {
-    const nome = { retangulo: "retângulo", circulo: "círculo", linha: "linha" }[f.tipo];
+    const nome = { retangulo: "retângulo", circulo: "círculo", linha: "linha", poligono: "polígono", estrela: "estrela" }[f.tipo];
     const regiao =
       f.tipo === "retangulo"
         ? plateOutline(f.x - f.largura / 2, f.y - f.altura / 2, f.largura, f.altura, f.raio > 0 ? "arredondada" : "reta", f.raio)
         : f.tipo === "circulo"
           ? circle(f.x, f.y, f.diametro / 2)
-          : stroke(f.x, f.y, f.x2, f.y2, f.espessura);
-    const tamanho = f.tipo === "retangulo" ? Math.min(f.largura, f.altura) : f.tipo === "circulo" ? f.diametro : f.espessura;
-    placed.push({ rotulo: `${nome} ${i + 1}`, regiao, modo: f.modo, profundidade: f.profundidade, tamanho, idx: i, tipo: "forma" });
+          : f.tipo === "poligono"
+            ? polygon(f.x, f.y, f.diametro / 2, f.lados, f.rotacao)
+            : f.tipo === "estrela"
+              ? star(f.x, f.y, f.diametro / 2, f.pontas, f.interno, f.rotacao)
+              : stroke(f.x, f.y, f.x2, f.y2, f.espessura);
+    const tamanho = f.tipo === "retangulo" ? Math.min(f.largura, f.altura) : f.tipo === "linha" ? f.espessura : f.diametro;
+    placed.push({ rotulo: `${nome} ${i + 1}`, regiao, modo: f.modo, profundidade: f.profundidade, tamanho, idx: i, tipo: "forma", mods: f });
   });
 
   spec.svgs.forEach((sv, i) => {
     const nome = sv.nome ? `desenho ${i + 1} (${sv.nome})` : `desenho ${i + 1}`;
     try {
-      const d = parseSvg(sv.conteudo);
+      const d = parseDesenho(sv.conteudo);
       // "tamanho" do desenho é a largura: é o campo que a correção sugerida ajusta.
-      placed.push({ rotulo: nome, regiao: placeSvg(d, sv.x, sv.y, sv.largura), modo: sv.modo, profundidade: sv.profundidade, tamanho: sv.largura, idx: i, tipo: "svg" });
+      placed.push({ rotulo: nome, regiao: placeSvg(d, sv.x, sv.y, sv.largura), modo: sv.modo, profundidade: sv.profundidade, tamanho: sv.largura, idx: i, tipo: "svg", mods: sv });
     } catch (e) {
       avisos.push({
         codigo: "SVG_INVALIDO",
         severidade: "erro",
-        mensagem: `Não deu para ler ${nome}: ${e instanceof SvgInvalido ? e.message : "arquivo SVG inválido."}`,
-        sugestao: "Exporte de novo como SVG simples (textos convertidos em curvas) ou apague este desenho.",
+        mensagem: `Não deu para ler ${nome}: ${e instanceof SvgInvalido ? e.message : "arquivo inválido."}`,
+        sugestao: "Exporte de novo como SVG ou DXF simples (textos convertidos em curvas) ou apague este desenho.",
         elemento: { tipo: "svg", indice: i },
       });
     }
   });
 
   spec.icones.forEach((ic, i) => {
-    placed.push({ rotulo: `ícone ${i + 1} (${ic.id})`, regiao: icon(ic.id, ic.x, ic.y, ic.tamanho), modo: ic.modo, profundidade: ic.profundidade, tamanho: ic.tamanho, idx: i, tipo: "icone" });
+    placed.push({ rotulo: `ícone ${i + 1} (${ic.id})`, regiao: icon(ic.id, ic.x, ic.y, ic.tamanho), modo: ic.modo, profundidade: ic.profundidade, tamanho: ic.tamanho, idx: i, tipo: "icone", mods: ic });
   });
+
+  placed = applyModifiers(placed, avisos);
 
   const toBlock = (r: Region) => translate(r, m, m);
 
@@ -239,6 +248,49 @@ export function buildLayout(spec: PlateSpec, fonts: FontMap, tool: Tool, cutTool
   }
 
   return { bloco, peca, gravados, relevo, vazados, furos, perfil, avisos };
+}
+
+/**
+ * Aplica os ajustes de cada elemento: deslocamento (offset), anel de contorno e as operações
+ * entre elementos (subtrair / máscara). Elementos que subtraem ou mascaram não são cortados.
+ */
+function applyModifiers<P extends { rotulo: string; regiao: Region; tipo: string; idx: number; mods: Mods }>(placed: P[], avisos: Aviso[]): P[] {
+  const shaped = placed.map((p) => {
+    let r = p.regiao;
+    const d = p.mods.deslocamento ?? 0;
+    if (d) r = offset(r, d);
+    const c = p.mods.contorno;
+    if (c && area(r) > 0) {
+      const ring = difference(offset(r, c.distancia + c.largura), offset(r, c.distancia));
+      r = union(r, ring);
+    }
+    if (p.regiao.length && area(r) <= 0.001) {
+      avisos.push({
+        codigo: "ELEMENTO_NAO_USINAVEL",
+        severidade: "erro",
+        mensagem: `${capitalize(p.rotulo)} sumiu depois de afinar ${fmt(-d)} mm.`,
+        sugestao: "Diminua o quanto o elemento é afinado.",
+        elemento: { tipo: p.tipo, indice: p.idx } as RefElemento,
+        correcao: { elemento: { tipo: p.tipo, indice: p.idx } as RefElemento, campo: "deslocamento", valor: 0 },
+      });
+    }
+    return { ...p, regiao: r };
+  });
+  const sub = shaped.filter((p) => p.mods.operacao === "subtrair");
+  const mask = shaped.filter((p) => p.mods.operacao === "mascara");
+  const normal = shaped.filter((p) => (p.mods.operacao ?? "normal") === "normal");
+  if (!sub.length && !mask.length) return shaped;
+  const cut = union(...sub.map((p) => p.regiao));
+  const keep = mask.length ? union(...mask.map((p) => p.regiao)) : null;
+  if (!normal.length) {
+    avisos.push({ codigo: "NADA_A_CORTAR", severidade: "erro", mensagem: "Só há elementos que subtraem ou mascaram; não sobra nada para cortar." });
+  }
+  return normal.map((p) => {
+    let r = p.regiao;
+    if (cut.length) r = difference(r, cut);
+    if (keep) r = intersection(r, keep);
+    return { ...p, regiao: r };
+  });
 }
 
 function buildHoles(spec: PlateSpec, tool: Tool, peca: Region, m: number, depth: number, avisos: Aviso[]): ElementoCorte[] {

@@ -12,6 +12,24 @@ export const MATERIAL_IDS = ["mdf", "compensado", "madeira_macia", "madeira_dura
 
 export const ModoSchema = z.enum(["relevo", "gravado", "recorte"]);
 
+/**
+ * Ajustes que valem para qualquer elemento desenhado (texto, ícone, forma, desenho importado).
+ * - deslocamento: engrossa (+) ou afina (−) o contorno do elemento, em mm (offset de vetor).
+ * - contorno: acrescenta um anel em volta do elemento, a `distancia` mm dele, com `largura` mm.
+ * - operacao: "subtrair" tira a área deste elemento dos outros que ele cobre (ele mesmo não é
+ *   cortado); "mascara" faz os outros elementos ficarem só com a parte dentro dele.
+ */
+export const ModificadoresShape = {
+  deslocamento: z.number().min(-20).max(30).default(0),
+  contorno: z
+    .object({
+      distancia: z.number().min(0).max(50).default(2),
+      largura: z.number().positive().max(30).default(2),
+    })
+    .optional(),
+  operacao: z.enum(["normal", "subtrair", "mascara"]).default("normal"),
+};
+
 export const TextoSchema = z.object({
   conteudo: z.string().min(1).max(60),
   fonte: z.enum(FONT_IDS).default("archivo-black"),
@@ -22,6 +40,12 @@ export const TextoSchema = z.object({
   /** Centro do texto. Se omitido, os textos são empilhados e centralizados na placa. */
   x: z.number().optional(),
   y: z.number().optional(),
+  /**
+   * Texto em arco: raio da linha de base em mm. Positivo curva para cima, negativo para baixo.
+   * Omitido ou 0 = texto reto.
+   */
+  arco: z.number().min(-5000).max(5000).optional(),
+  ...ModificadoresShape,
 });
 
 export const IconeSchema = z.object({
@@ -31,11 +55,12 @@ export const IconeSchema = z.object({
   tamanho: z.number().positive().max(500),
   modo: ModoSchema.default("relevo"),
   profundidade: z.number().positive().max(50).default(3),
+  ...ModificadoresShape,
 });
 
 /**
- * Formas desenhadas na tela Criar. Retângulo e círculo são centrados em (x, y);
- * a linha vai de (x, y) a (x2, y2) com a espessura dada.
+ * Formas desenhadas na tela Criar. Retângulo, círculo, polígono e estrela são centrados em
+ * (x, y); a linha vai de (x, y) a (x2, y2) com a espessura dada.
  */
 export const FormaSchema = z.discriminatedUnion("tipo", [
   z.object({
@@ -47,6 +72,7 @@ export const FormaSchema = z.discriminatedUnion("tipo", [
     raio: z.number().min(0).default(0),
     modo: ModoSchema.default("gravado"),
     profundidade: z.number().positive().max(50).default(2),
+    ...ModificadoresShape,
   }),
   z.object({
     tipo: z.literal("circulo"),
@@ -55,6 +81,33 @@ export const FormaSchema = z.discriminatedUnion("tipo", [
     diametro: z.number().positive().max(3000),
     modo: ModoSchema.default("gravado"),
     profundidade: z.number().positive().max(50).default(2),
+    ...ModificadoresShape,
+  }),
+  z.object({
+    tipo: z.literal("poligono"),
+    x: z.number(),
+    y: z.number(),
+    /** Diâmetro do círculo que passa pelos vértices. */
+    diametro: z.number().positive().max(3000),
+    lados: z.number().int().min(3).max(24).default(6),
+    rotacao: z.number().default(0),
+    modo: ModoSchema.default("gravado"),
+    profundidade: z.number().positive().max(50).default(2),
+    ...ModificadoresShape,
+  }),
+  z.object({
+    tipo: z.literal("estrela"),
+    x: z.number(),
+    y: z.number(),
+    /** Diâmetro do círculo que passa pelas pontas. */
+    diametro: z.number().positive().max(3000),
+    pontas: z.number().int().min(3).max(24).default(5),
+    /** Raio interno como fração do externo. */
+    interno: z.number().min(0.15).max(0.95).default(0.45),
+    rotacao: z.number().default(0),
+    modo: ModoSchema.default("gravado"),
+    profundidade: z.number().positive().max(50).default(2),
+    ...ModificadoresShape,
   }),
   z.object({
     tipo: z.literal("linha"),
@@ -65,11 +118,13 @@ export const FormaSchema = z.discriminatedUnion("tipo", [
     espessura: z.number().positive().max(100).default(3.2),
     modo: ModoSchema.default("gravado"),
     profundidade: z.number().positive().max(50).default(1),
+    ...ModificadoresShape,
   }),
 ]);
 
 /**
- * Desenho importado de um arquivo SVG. O texto do arquivo vai junto na especificação;
+ * Desenho importado de um arquivo SVG ou DXF (o formato é detectado pelo conteúdo).
+ * O texto do arquivo vai junto na especificação;
  * (x, y) é o centro e a largura define o tamanho (a altura segue a proporção do desenho).
  */
 export const SvgSchema = z.object({
@@ -80,6 +135,7 @@ export const SvgSchema = z.object({
   largura: z.number().positive().max(3000),
   modo: ModoSchema.default("gravado"),
   profundidade: z.number().positive().max(50).default(2),
+  ...ModificadoresShape,
 });
 
 export const FuroSchema = z.object({
