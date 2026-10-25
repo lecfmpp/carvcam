@@ -36,6 +36,8 @@ import { ThreeView } from "../../stage/ThreeView";
 import { machineName } from "../../lib/catalog";
 import { AssistantBar } from "./AssistantBar";
 import { CurveEditor, PenLayer, type Geom } from "./pen";
+import { isImageFile, tracingFromFile, TracingLayer } from "./tracing";
+import { toast } from "../../state/ui";
 import { addCurve, addElement, alignElements, deleteElement, patchElement, type CurveNode, duplicateElement, elementBoxes, elementOf, fontOf, margin, moveElement, parseId, type Align, type Box, type ElementId, type Tool } from "./elements";
 import { buildIssues, type UiIssue } from "./issues";
 import { CreatePanel } from "./Panel";
@@ -212,8 +214,20 @@ export default function Create() {
       onDrop={(e) => {
         e.preventDefault();
         setDropping(false);
-        const f = [...e.dataTransfer.files].find(isSvgFile) ?? e.dataTransfer.files[0] ?? null;
-        void importSvg(f);
+        const files = [...e.dataTransfer.files];
+        const img = files.find(isImageFile);
+        if (img && !files.some(isSvgFile)) {
+          // Foto ou logo: vira imagem de decalque (não é cortada).
+          tracingFromFile(img, useDesign.getState().design.spec).then(
+            (t) => {
+              useDesign.getState().patch({ tracing: t });
+              toast("Added as a tracing image. Draw over it, or use Convert to vector in the panel.");
+            },
+            () => toast("This image could not be opened."),
+          );
+          return;
+        }
+        void importSvg(files.find(isSvgFile) ?? files[0] ?? null);
       }}
     >
       <div className="dotgrid" />
@@ -223,7 +237,7 @@ export default function Create() {
         overlay={
           <>
             <ToolRail tool={tool} setTool={setTool} onImport={() => void pickSvgFile().then(importSvg)} />
-            {dropping ? <div className="create-drop">Drop the SVG or DXF to add it to the {spec.tipo === "letreiro" ? "board" : "sign"}</div> : null}
+            {dropping ? <div className="create-drop">Drop an SVG or DXF to carve it, or a picture to trace over, on the {spec.tipo === "letreiro" ? "board" : "sign"}</div> : null}
             <Legend spec={spec} result={result} material={material} pro={mode === "pro"} bitD={bit?.d} flagged={issues.length} />
           </>
         }
@@ -246,6 +260,7 @@ export default function Create() {
                 {(!eng.sim || eng.busy || !sameBlock) && result ? <VectorPreview result={result} material={material} faded={!!eng.sim} lineWidth={bit?.profile === "v" ? 0.6 : (bit?.d ?? 3.175)} /> : null}
                 {!result ? <div style={{ position: "absolute", inset: m * s, background: material.face, borderRadius: 4 }} /> : null}
               </div>
+              <TracingLayer margin={m} scale={s} boardH={block.altura} />
               <Overlay
                 spec={spec}
                 block={block}

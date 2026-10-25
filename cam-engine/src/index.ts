@@ -13,3 +13,4 @@ export { parseSvg, placeSvg, SvgInvalido, type SvgDesenho } from "./svg.js";
 export { parseDxf } from "./dxf.js";
 export { parseDesenho, formatoDe, type Formato } from "./desenho.js";
 export { curvePolyline } from "./geometry/shapes.js";
+export { traceMask, maskFromRgba, regionToSvg, type TraceOpts } from "./trace.js";

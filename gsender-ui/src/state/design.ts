@@ -19,6 +19,21 @@ export interface Design {
   useBit2: boolean;
   preset?: Preset;
   tabs: { count: number; height: number };
+  /** Imagem de referência para decalcar: aparece sob o desenho e nunca é cortada. */
+  tracing?: TracingImage;
+}
+
+export interface TracingImage {
+  /** JPEG reduzido (data URL), para caber no armazenamento local. */
+  src: string;
+  name: string;
+  /** Centro e largura em mm da peça; a altura segue `aspect` (altura ÷ largura). */
+  x: number;
+  y: number;
+  width: number;
+  aspect: number;
+  opacity: number;
+  visible: boolean;
 }
 
 export const BLANK: Design = {

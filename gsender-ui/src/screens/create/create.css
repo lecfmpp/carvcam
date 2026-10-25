@@ -51,6 +51,21 @@
 .create-pen__hdot { fill: #F5F3EF; stroke: #111214; stroke-width: 1; }
 .create-pen__node { fill: #111214; stroke: #F5F3EF; stroke-width: 1.5; }
 .create-pen__node.is-close { fill: #FF5B1F; }
+.create-tracing { position: absolute; z-index: 1; pointer-events: none; }
+.create-tracing img { width: 100%; height: 100%; display: block; user-select: none; }
+.create-tracing.is-moving { z-index: 6; pointer-events: all; cursor: move; outline: 1.5px dashed #FF5B1F; outline-offset: 2px; }
+.create-modal { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; background: rgba(10, 10, 12, 0.6); backdrop-filter: blur(4px); }
+.create-modal__card { width: min(980px, calc(100vw - 48px)); max-height: calc(100vh - 48px); overflow: auto; border-radius: 16px; background: var(--surface, #1A1B1E); border: 1px solid var(--line-2); box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5); }
+.create-modal__head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--line-2); }
+.create-modal__head h3 { margin: 0; font-size: 17px; }
+.create-modal__close { width: 36px; height: 36px; border: 0; border-radius: 8px; background: transparent; color: var(--text-2); display: flex; align-items: center; justify-content: center; }
+.create-modal__close:hover { background: rgba(255, 255, 255, 0.08); color: var(--text); }
+.create-modal__body { display: grid; grid-template-columns: 1fr 300px; gap: 20px; padding: 20px; }
+.create-modal__actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: auto; }
+.create-trace__preview { display: flex; align-items: center; justify-content: center; min-height: 360px; border-radius: 12px; background: #F5F3EF; overflow: hidden; }
+.create-trace__preview svg { width: 100%; height: auto; max-height: 520px; display: block; }
+.create-trace__controls { display: flex; flex-direction: column; gap: 16px; }
+.create-trace__row { display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: var(--text); }
 .create-targets { display: flex; flex-direction: column; gap: 2px; max-height: 168px; overflow: auto; }
 .create-target { display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 0 8px; border-radius: 8px; font-size: 13px; color: var(--text); cursor: pointer; }
 .create-target:hover { background: rgba(255, 255, 255, 0.05); }

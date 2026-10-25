@@ -1,5 +1,5 @@
 import type { PlateSpecInput } from "@gsender-next/cam-engine";
-import { AlertCircle, AlertTriangle, ArrowRight, CheckCircle2, ChevronDown, ChevronRight, ChevronUp, Circle, Copy, Eye, EyeOff, FileUp, Heart, Hexagon, Layers, Minus, MoveVertical, PenTool, Plus, Shapes, Square, Star, Trash2, Type, XCircle } from "lucide-react";
+import { AlertCircle, AlertTriangle, ArrowRight, CheckCircle2, ChevronDown, ChevronRight, ChevronUp, Circle, Copy, Eye, EyeOff, FileUp, Heart, Hexagon, ImagePlus, Layers, Move, Wand2, Minus, MoveVertical, PenTool, Plus, Shapes, Square, Star, Trash2, Type, XCircle } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { Issue, Seg, Stepper, VideoCard } from "../../components/ui";
@@ -10,6 +10,9 @@ import { useActiveMachine, useWorkshop } from "../../state/workshop";
 import { addElement, arcFromBend, bendOf, elementOf, FONTS, ICONS, idOfAlvo, listElements, parseId, patchElement, refOf, type Alvo, type Box, type ElementId, type ElementRow, type Forma, type SvgEl, type Texto, svgAspect } from "./elements";
 import type { IssueAction, UiIssue } from "./issues";
 import { importSvgFile, pickSvgFile } from "./svgImport";
+import { TraceDialog } from "./traceDialog";
+import { tracingFromFile, useTracingUi } from "./tracing";
+import type { TracingImage } from "../../state/design";
 
 type Modo = "relevo" | "gravado" | "recorte";
 
@@ -108,6 +111,7 @@ export function CreatePanel(p: Props) {
         ))}
 
         <ShapeSection spec={spec} patchSpec={patchSpec} />
+        <TracingSection spec={spec} onAdded={(id) => p.setSel(id)} />
 
         <section className="create-section">
           <div className="create-section__head">
@@ -360,6 +364,107 @@ function ShapeSection({ spec, patchSpec }: { spec: PlateSpecInput; patchSpec(fn:
       ) : null}
     </section>
   );
+}
+
+/**
+ * Imagem de decalque: referência sob o desenho (não é cortada). Dá para desenhar por cima com
+ * a caneta, ou converter em vetor automaticamente.
+ */
+function TracingSection({ spec, onAdded }: { spec: PlateSpecInput; onAdded(id: ElementId): void }) {
+  const t = useDesign((s) => s.design.tracing);
+  const patch = useDesign((s) => s.patch);
+  const { moving, setMoving } = useTracingUi();
+  const [open, setOpen] = useState(false);
+  const [tracingOpen, setTracingOpen] = useState(false);
+  const set = (p: Partial<TracingImage>) => t && patch({ tracing: { ...t, ...p } });
+  const load = async () => {
+    const file = await pickImageFile();
+    if (!file) return;
+    try {
+      patch({ tracing: await tracingFromFile(file, spec) });
+      setOpen(true);
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "This image could not be opened.");
+    }
+  };
+  return (
+    <section className="create-section create-shape">
+      <button className="create-section__toggle" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <h3>Tracing image</h3>
+        <span className="tiny muted">{t ? `${t.name} · not carved` : "Draw over a photo or logo"}</span>
+        {open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+      </button>
+      {open ? (
+        <div className="create-fields">
+          {!t ? (
+            <>
+              <div className="tiny muted">Put a picture under the board to trace it with the pen, or convert it to a carvable drawing automatically. The picture itself is never carved.</div>
+              <button className="btn btn--outline" onClick={load}>
+                <ImagePlus size={16} /> Choose image…
+              </button>
+            </>
+          ) : (
+            <>
+              <div className="create-two">
+                <Field label="Show">
+                  <Seg<"on" | "off">
+                    label="Show"
+                    value={t.visible ? "on" : "off"}
+                    onChange={(v) => set({ visible: v === "on" })}
+                    options={[
+                      ["on", "Visible"],
+                      ["off", "Hidden"],
+                    ]}
+                  />
+                </Field>
+                <Field label="Width">
+                  <Stepper label="Width" value={t.width} step={5} min={10} max={3000} unit="mm" onChange={(v) => set({ width: v })} />
+                </Field>
+              </div>
+              <Slider label="Opacity" unit="%" value={Math.round(t.opacity * 100)} min={10} max={100} step={5} onChange={(v) => set({ opacity: v / 100 })} />
+              <div className="create-two">
+                <button className={`btn ${moving ? "btn--light" : "btn--outline"}`} aria-pressed={moving} onClick={() => setMoving(!moving)}>
+                  <Move size={16} /> {moving ? "Done moving" : "Move on board"}
+                </button>
+                <button className="btn btn--outline" onClick={() => set({ x: spec.largura / 2, y: spec.altura / 2, width: Math.round(Math.min(spec.largura, spec.altura / t.aspect) * 10) / 10 })}>
+                  Fit to sign
+                </button>
+              </div>
+              <button className="btn btn--primary" onClick={() => setTracingOpen(true)}>
+                <Wand2 size={16} /> Convert to vector…
+              </button>
+              <div className="create-two">
+                <button className="btn btn--quiet btn--sm" onClick={load}>
+                  Replace image
+                </button>
+                <button
+                  className="btn btn--quiet btn--sm"
+                  onClick={() => {
+                    setMoving(false);
+                    patch({ tracing: undefined });
+                  }}
+                >
+                  Remove image
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      ) : null}
+      {tracingOpen && t ? <TraceDialog tracing={t} onClose={() => setTracingOpen(false)} onAdded={onAdded} /> : null}
+    </section>
+  );
+}
+
+function pickImageFile(): Promise<File | null> {
+  return new Promise((resolve) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/png,image/jpeg,image/webp,image/gif,image/bmp";
+    input.onchange = () => resolve(input.files?.[0] ?? null);
+    input.oncancel = () => resolve(null);
+    input.click();
+  });
 }
 
 // ------------------------------------------------------------------ inspector
