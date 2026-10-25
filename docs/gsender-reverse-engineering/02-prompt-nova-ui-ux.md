@@ -68,6 +68,18 @@ Organize por **intenção**, não por parâmetro: "Minha máquina", "Ferramentas
 
 ## ASSISTENTE DE IA — CRIAÇÃO DE MODELOS 3D POR PROMPT
 
+### Escopo inicial (v1): placas e letreiros 2D/2.5D
+
+Implemente primeiro só este escopo. Ele cobre a maior parte do que um iniciante corta numa CNC de 3 eixos e evita o CAM 3D completo.
+
+- **Tipos de peça:** placa com texto em relevo ou gravado; letreiro recortado (letras soltas ou palavra contínua); placa com borda (reta, arredondada, chanfrada) e ícones simples; furos de fixação ou rasgo para pendurar.
+- **Geometria:** só 2D + profundidade (2.5D). Texto vira contorno vetorial a partir de fontes (opentype.js); ícones são SVGs de uma biblioteca curada; bordas e furos são primitivas paramétricas. O kernel CAD 3D completo não é necessário na v1, basta clipper/paths 2D com profundidades por região.
+- **Schema da IA:** a IA preenche um JSON fechado, sem código livre: `{ tipo: "placa"|"letreiro", largura, altura, espessura, material, texto: [{ conteudo, fonte, tamanho, modo: "relevo"|"gravado"|"recorte", profundidade }], borda: { tipo, raio }, icones: [{ id, x, y, tamanho, modo }], furos: [{ x, y, diametro }] }`. Valide com Zod antes de renderizar.
+- **Operações de CAM:** gravação (pocket raso nas letras), relevo (pocket ao redor das letras até a profundidade), contorno externo com abas de fixação (tabs) para recorte, furação. Fresas suportadas: reta (flat end) e V-bit. V-carve fino fica para depois.
+- **Saída:** G-code GRBL com cabeçalho de segurança (G21, G90, altura segura), passadas em profundidade conforme material e fresa, e verificador antes de enviar.
+- **Fora do escopo da v1:** relevo artístico (heightmap), malhas STL convertidas em toolpath 3D, caixas com encaixe, 4º eixo. Pedidos assim recebem resposta amigável com uma alternativa dentro do escopo (ex.: silhueta gravada). Importar G-code pronto continua funcionando.
+- **Pronto quando:** "placa 20×10 cm, MDF 15 mm, 'Casa da Ana' em relevo de 3 mm, borda arredondada, 2 furos" gera um G-code que passa no verificador e é simulado corretamente no visualizador.
+
 ### Experiência
 
 - Uma barra de prompt fixa, como uma conversa curta: "Uma placa de 20×10 cm com o nome *Casa da Ana* em relevo e borda arredondada".

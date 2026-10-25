@@ -2,7 +2,7 @@ PAPEL
 Você é um(a) Product Designer sênior especializado em software para iniciantes em fabricação digital (referências: Bambu Studio, Glowforge, Cricut Design Space, Linear, Teenage Engineering). Vai desenhar uma interface nova para o gSender, um programa open source que controla fresadoras CNC (máquinas que esculpem madeira, MDF, acrílico e alumínio a partir de arquivos G-code).
 
 OBJETIVO
-Desenhar uma interface minimalista, bonita e diferente de tudo no mercado de CNC. Uma pessoa sem experiência precisa ir do zero ao primeiro corte em menos de 10 minutos, sem atrapalhar o usuário avançado. A grande novidade é um assistente de IA que cria modelos 3D a partir de um texto ("uma placa com o nome Casa da Ana em relevo") e os prepara para cortar.
+Desenhar uma interface minimalista, bonita e diferente de tudo no mercado de CNC. Uma pessoa sem experiência precisa ir do zero ao primeiro corte em menos de 10 minutos, sem atrapalhar o usuário avançado. A grande novidade é um assistente de IA que cria modelos a partir de um texto ("uma placa com o nome Casa da Ana em relevo") e os prepara para cortar. Na primeira versão, ele cria placas e letreiros (veja "Escopo inicial").
 
 Entregue design e protótipo navegável com dados simulados. Não precisa conectar a uma máquina real.
 
@@ -66,6 +66,17 @@ AS 4 ETAPAS
 CONFIGURAÇÃO
 Organizada por intenção, não por parâmetro: Minha máquina, Ferramentas, Conexão, Segurança, Acessibilidade, Avançado. Assistente de primeira configuração com perfis prontos (Sienci LongMill, AltMill, Shapeoko, genérico). Parâmetros de firmware só em Avançado, com aviso, valor padrão e botão restaurar. As 8 ferramentas atuais (Surfacing, Squaring etc.) viram assistentes acessíveis pelo menu Ferramentas.
 
+ESCOPO INICIAL DO ASSISTENTE (v1): PLACAS E LETREIROS
+Na primeira versão, a IA cria só placas e letreiros em 2D/2.5D. Todos os exemplos, prompts sugeridos, galeria e telas do assistente devem girar em torno disso:
+- Placas com nome ou número (casa, porta, mesa, pet), em relevo (letras altas) ou gravadas (letras baixas)
+- Letreiros recortados (letras soltas ou palavra contínua cortada do material)
+- Placas com borda (reta, arredondada, chanfrada) e ícones simples (folha, coração, estrela, casa)
+- Placas com furos de fixação ou rasgo para pendurar
+- Parâmetros principais: largura, altura, espessura, texto, fonte, tamanho e profundidade das letras, tipo de borda, ícone, furos
+- Materiais sugeridos: MDF, madeira maciça, compensado, acrílico
+Fora do escopo da v1 (mostrar como "em breve" na galeria, sem telas próprias): relevos artísticos 3D, caixas com encaixe, peças mecânicas. Se o usuário pedir algo fora do escopo, a IA explica em uma frase e oferece uma alternativa dentro dele (ex.: "um leão em relevo" → "placa com silhueta de leão gravada").
+Importar STL/SVG/DXF e G-code pronto continua disponível na etapa Criar.
+
 ASSISTENTE DE IA (desenhe todas estas telas e estados)
 - Barra de prompt fixa, estilo conversa curta, com prompts de exemplo e histórico.
 - Estado "gerando": animação elegante, sem spinner genérico.
@@ -73,8 +84,8 @@ ASSISTENTE DE IA (desenhe todas estas telas e estados)
 - Parâmetros editáveis como chips e sliders (largura, profundidade, fonte, raio da borda) que atualizam o modelo na hora.
 - Aviso de fabricabilidade em linguagem simples: "Esse detalhe é menor que a fresa de 3 mm. Vou engrossar para 3.2 mm. Ok?"
 - Sugestão automática de material, fresa e profundidade, que preenche a etapa Preparar.
-- Modo relevo para pedidos artísticos ("um leão em relevo"), mostrando a peça como relevo esculpido.
-- Galeria com "remix" de projetos.
+- Estado "fora do escopo": resposta amigável com alternativa dentro de placas e letreiros.
+- Galeria com "remix" de placas e letreiros prontos, e uma seção "em breve" para relevos e caixas.
 - Regra visual clara: a IA só cria arquivos; iniciar o corte é sempre uma ação explícita do usuário.
 
 DIREÇÃO VISUAL — "Calm Precision"
