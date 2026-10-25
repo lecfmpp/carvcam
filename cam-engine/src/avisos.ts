@@ -39,7 +39,8 @@ export interface Aviso {
     | "COMPRESSAO_PASSADA"
     | "SVG_INVALIDO"
     | "VCARVE_FUNDO_PLANO"
-    | "GRAVADO_NO_FUNDO";
+    | "GRAVADO_NO_FUNDO"
+    | "HACHURA_FECHADA";
   severidade: "erro" | "aviso";
   mensagem: string;
   sugestao?: string;

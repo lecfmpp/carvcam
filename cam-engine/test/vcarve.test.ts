@@ -91,6 +91,15 @@ describe("generatePlate com fresa em V", () => {
     expect(r.verificacao?.ok).toBe(true);
   });
 
+  it("hachura mais fechada que a fresa avisa e sugere espaçamento", () => {
+    const r = generatePlate(
+      { largura: 120, altura: 80, espessura: 12, recorteExterno: false, formas: [{ tipo: "retangulo", x: 60, y: 40, largura: 40, altura: 40, modo: "gravado", profundidade: 1, hachura: { espacamento: 2, angulo: 0 } }] },
+      { fontes: f, ferramenta: { diametro: 3.175, comprimentoCorte: 12 } },
+    );
+    const a = r.avisos.find((x) => x.codigo === "HACHURA_FECHADA");
+    expect(a?.correcao).toEqual({ elemento: { tipo: "forma", indice: 0 }, campo: "hachura.espacamento", valor: 6 });
+  });
+
   it("avisa quando o limite deixa fundo plano", () => {
     const r = generatePlate(
       { largura: 120, altura: 80, espessura: 12, recorteExterno: false, formas: [{ tipo: "circulo", x: 60, y: 40, diametro: 30, modo: "gravado", profundidade: 2 }] },

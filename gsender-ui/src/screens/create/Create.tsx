@@ -238,7 +238,7 @@ export default function Create() {
                 {eng.sim ? (
                   <SimCanvas sim={eng.sim} thickness={block.espessura} material={material} scale={s} board={{ width: block.largura, height: block.altura }} />
                 ) : null}
-                {(!eng.sim || eng.busy || !sameBlock) && result ? <VectorPreview result={result} material={material} faded={!!eng.sim} /> : null}
+                {(!eng.sim || eng.busy || !sameBlock) && result ? <VectorPreview result={result} material={material} faded={!!eng.sim} lineWidth={bit?.profile === "v" ? 0.6 : (bit?.d ?? 3.175)} /> : null}
                 {!result ? <div style={{ position: "absolute", inset: m * s, background: material.face, borderRadius: 4 }} /> : null}
               </div>
               <Overlay
@@ -355,7 +355,7 @@ const pathOf = (reg: Region) => reg.map((p) => `M${p.map((q) => `${q.x.toFixed(2
  * Desenho rápido a partir das regiões do motor: aparece na hora, enquanto a simulação do corte
  * (mais lenta) ainda está sendo calculada.
  */
-function VectorPreview({ result, material, faded }: { result: GenerateResult; material: Material; faded: boolean }) {
+function VectorPreview({ result, material, faded, lineWidth }: { result: GenerateResult; material: Material; faded: boolean; lineWidth: number }) {
   const L = result.layout;
   const { largura: W, altura: H } = L.bloco;
   return (
@@ -363,9 +363,24 @@ function VectorPreview({ result, material, faded }: { result: GenerateResult; ma
       <g transform={`translate(0 ${H}) scale(1 -1)`} fillRule="evenodd">
         <path d={pathOf(L.peca as Region)} fill={material.face} />
         {L.relevo ? <path d={pathOf(L.relevo.regiao as Region)} fill={material.recess} /> : null}
-        {L.gravados.map((g, i) => (
-          <path key={`g${i}`} d={pathOf(g.regiao as Region)} fill={g.profundidade >= L.bloco.espessura ? THROUGH_COLOR : material.recess} />
-        ))}
+        {L.gravados.map((g, i) => {
+          const color = g.profundidade >= L.bloco.espessura ? THROUGH_COLOR : material.recess;
+          if (!g.hachura) return <path key={`g${i}`} d={pathOf(g.regiao as Region)} fill={color} />;
+          // Hachura: contorno mais linhas paralelas, na largura do corte da fresa. O padrão fica no
+          // mesmo sistema (Y para cima) que o motor usa para o ângulo.
+          const { espacamento: e, angulo } = g.hachura;
+          const pid = `hatch-${i}`;
+          return (
+            <g key={`g${i}`}>
+              <defs>
+                <pattern id={pid} patternUnits="userSpaceOnUse" width={e} height={e} patternTransform={`rotate(${angulo})`}>
+                  <rect x={0} y={e / 2 - lineWidth / 2} width={e} height={lineWidth} fill={color} />
+                </pattern>
+              </defs>
+              <path d={pathOf(g.regiao as Region)} fill={`url(#${pid})`} stroke={color} strokeWidth={lineWidth} />
+            </g>
+          );
+        })}
         {[...L.vazados, ...L.furos].map((v, i) => (
           <path key={`v${i}`} d={pathOf(v.regiao as Region)} fill={THROUGH_COLOR} />
         ))}

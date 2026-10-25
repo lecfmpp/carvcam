@@ -122,6 +122,18 @@ export function generatePlate(input: PlateSpecInput, options: GenerateOptions): 
   for (const g of layout.gravados) {
     if (g.hachura) {
       const h = g.hachura;
+      const largura = tool.tipo === "vbit" ? 2 * g.profundidade * Math.tan(((tool.angulo ?? 60) * Math.PI) / 360) : tool.diametro;
+      if (h.espacamento <= largura) {
+        const sugerido = Math.ceil(largura * 1.8 * 2) / 2;
+        avisos.push({
+          codigo: "HACHURA_FECHADA",
+          severidade: "aviso",
+          mensagem: `As linhas da hachura de ${g.rotulo} ficam a ${fmt(h.espacamento)} mm, menos que a largura do corte (${fmt(largura)} mm); a área vai sair toda rebaixada.`,
+          sugestao: `Use pelo menos ${fmt(sugerido)} mm entre as linhas.`,
+          elemento: g.ref,
+          correcao: g.ref ? { elemento: g.ref, campo: "hachura.espacamento", valor: sugerido } : undefined,
+        });
+      }
       run(`Hachura: ${g.rotulo}`, "gravacao", tool, pMain, g.profundidade, (b) => {
         hatch(b, g.regiao, { raio: tool.tipo === "vbit" ? 0 : rMain, profundidade: g.profundidade, passada: pMain.passada, espacamento: h.espacamento, angulo: h.angulo, direcao });
       });

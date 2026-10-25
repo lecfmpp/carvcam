@@ -164,6 +164,15 @@ function toIssue(a: Aviso, k: number, ctx: Ctx): UiIssue {
         apply: fix ? { label: "Apply suggestion", kind: "spec", spec: fix } : undefined,
         alts: [],
       };
+    case "HACHURA_FECHADA":
+      return {
+        ...base,
+        title: `The lines in ${q} merge together`,
+        detail: `They're closer than the ${bitName} cuts, so the whole area comes out lowered.`,
+        suggestion: a.correcao ? `Space the lines ${fmt(a.correcao.valor)} mm apart` : "Space the lines further apart",
+        apply: fix ? { label: "Apply suggestion", kind: "spec", spec: fix } : undefined,
+        alts: [],
+      };
     case "VCARVE_FUNDO_PLANO":
       return {
         ...base,

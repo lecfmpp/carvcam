@@ -28,6 +28,14 @@ export const ModificadoresShape = {
     })
     .optional(),
   operacao: z.enum(["normal", "subtrair", "mascara"]).default("normal"),
+  /**
+   * Só para subtrair/mascara: elementos afetados. Omitido = todos os elementos normais.
+   * Lista vazia = nenhum.
+   */
+  alvos: z
+    .array(z.object({ tipo: z.enum(["texto", "icone", "forma", "svg"]), indice: z.number().int().min(0) }))
+    .max(80)
+    .optional(),
   /** Só para gravado: em vez de esvaziar a área, grava o contorno e linhas paralelas dentro. */
   hachura: z
     .object({

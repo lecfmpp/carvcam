@@ -107,6 +107,37 @@ describe("ajustes de elemento", () => {
     expect(b.maxX - b.minX).toBeLessThan(40.1);
   });
 
+  it("subtrair e máscara com alvos afetam só os elementos escolhidos", () => {
+    const g = engraved(
+      gen({
+        ...base,
+        formas: [
+          { tipo: "circulo", x: 60, y: 50, diametro: 30 },
+          { tipo: "circulo", x: 100, y: 50, diametro: 30 },
+          // Faixa que cobre os dois, mas só corta o segundo.
+          { tipo: "retangulo", x: 80, y: 50, largura: 100, altura: 6, operacao: "subtrair", alvos: [{ tipo: "forma", indice: 1 }] },
+        ],
+      }),
+    );
+    expect(g).toHaveLength(2);
+    expect(pointInRegion(g[0].regiao, { x: 60, y: 50 })).toBe(true);
+    expect(pointInRegion(g[1].regiao, { x: 100, y: 50 })).toBe(false);
+
+    const m = engraved(
+      gen({
+        ...base,
+        formas: [
+          { tipo: "retangulo", x: 50, y: 50, largura: 60, altura: 10 },
+          { tipo: "retangulo", x: 110, y: 50, largura: 60, altura: 10 },
+          { tipo: "circulo", x: 80, y: 50, diametro: 100, operacao: "mascara", alvos: [] },
+        ],
+      }),
+    );
+    // Lista vazia: a máscara não afeta ninguém.
+    expect(area(m[0].regiao)).toBeCloseTo(600, 0);
+    expect(area(m[1].regiao)).toBeCloseTo(600, 0);
+  });
+
   it("gravado raso no fundo do relevo avisa e sugere gravar mais fundo", () => {
     const r = gen({
       largura: 160,

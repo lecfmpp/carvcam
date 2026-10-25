@@ -11,6 +11,7 @@ type Mods = {
   deslocamento: number;
   contorno?: { distancia: number; largura: number };
   operacao: "normal" | "subtrair" | "mascara";
+  alvos?: { tipo: "texto" | "icone" | "forma" | "svg"; indice: number }[];
   hachura?: { espacamento: number; angulo: number };
 };
 
@@ -306,15 +307,17 @@ function applyModifiers<P extends { rotulo: string; regiao: Region; tipo: string
   const mask = shaped.filter((p) => p.mods.operacao === "mascara");
   const normal = shaped.filter((p) => (p.mods.operacao ?? "normal") === "normal");
   if (!sub.length && !mask.length) return shaped;
-  const cut = union(...sub.map((p) => p.regiao));
-  const keep = mask.length ? union(...mask.map((p) => p.regiao)) : null;
   if (!normal.length) {
     avisos.push({ codigo: "NADA_A_CORTAR", severidade: "erro", mensagem: "Só há elementos que subtraem ou mascaram; não sobra nada para cortar." });
   }
+  // Sem lista de alvos, a operação vale para todos os elementos normais.
+  const hits = (op: P, alvo: P) => !op.mods.alvos || op.mods.alvos.some((a) => a.tipo === alvo.tipo && a.indice === alvo.idx);
   return normal.map((p) => {
     let r = p.regiao;
-    if (cut.length) r = difference(r, cut);
-    if (keep) r = intersection(r, keep);
+    const cuts = sub.filter((s) => hits(s, p));
+    if (cuts.length) r = difference(r, union(...cuts.map((s) => s.regiao)));
+    const masks = mask.filter((s) => hits(s, p));
+    if (masks.length) r = intersection(r, union(...masks.map((s) => s.regiao)));
     return { ...p, regiao: r };
   });
 }

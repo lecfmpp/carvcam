@@ -261,9 +261,29 @@ export function deleteElement(spec: PlateSpecInput, id: ElementId): PlateSpecInp
   if (kind === "holes") {
     s.furos = [];
     s.rasgos = [];
+    return s;
+  }
+  // Os alvos de subtrair/máscara apontam por índice: tira o apagado e renumera os seguintes.
+  const tipo = TIPO_OF[kind];
+  for (const key of ["texto", "formas", "icones", "svgs"] as const) {
+    for (const el of (s[key] ?? []) as AnyEl[]) {
+      if (!el.alvos) continue;
+      el.alvos = el.alvos.filter((a) => !(a.tipo === tipo && a.indice === index)).map((a) => (a.tipo === tipo && a.indice > index ? { ...a, indice: a.indice - 1 } : a));
+    }
   }
   return s;
 }
+
+const TIPO_OF = { t: "texto", f: "forma", i: "icone", s: "svg" } as const;
+const KIND_OF = { texto: "t", forma: "f", icone: "i", svg: "s" } as const;
+export type Alvo = { tipo: (typeof TIPO_OF)[keyof typeof TIPO_OF]; indice: number };
+
+/** Referência do motor para um elemento da tela (null para o grupo de furos). */
+export function refOf(id: ElementId): Alvo | null {
+  const { kind, index } = parseId(id);
+  return kind === "holes" ? null : { tipo: TIPO_OF[kind], indice: index };
+}
+export const idOfAlvo = (a: Alvo): ElementId => `${KIND_OF[a.tipo]}:${a.indice}` as ElementId;
 
 /** Duplica e devolve a especificação e o id da cópia (deslocada 8 mm). */
 export function duplicateElement(spec: PlateSpecInput, id: ElementId, box: Box | undefined): [PlateSpecInput, ElementId | null] {
@@ -336,7 +356,13 @@ export function applyCorrection(spec: PlateSpecInput, ref: RefElemento, campo: s
   const list: Record<string, unknown[] | undefined> = { texto: s.texto, icone: s.icones, forma: s.formas, svg: s.svgs, furo: s.furos, rasgo: s.rasgos };
   const arr = list[ref.tipo];
   const el = arr?.[ref.indice] as Record<string, unknown> | undefined;
-  if (el) el[campo] = valor;
+  if (el) {
+    // Campo pode ser aninhado ("hachura.espacamento").
+    const path = campo.split(".");
+    let obj = el;
+    for (const k of path.slice(0, -1)) obj = (obj[k] ??= {}) as Record<string, unknown>;
+    obj[path[path.length - 1]] = valor;
+  }
   // Furos: a correção vale para todos (são um grupo na interface).
   if (ref.tipo === "furo" && campo === "diametro") s.furos = s.furos?.map((f) => ({ ...f, diametro: valor }));
   return s;

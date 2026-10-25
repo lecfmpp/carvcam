@@ -7,7 +7,7 @@ import { BITS, bitById, compat, materialById, MATERIALS } from "../../lib/catalo
 import { useDesign } from "../../state/design";
 import { toast } from "../../state/ui";
 import { useActiveMachine, useWorkshop } from "../../state/workshop";
-import { addElement, arcFromBend, bendOf, elementOf, FONTS, ICONS, listElements, parseId, patchElement, type Box, type ElementId, type ElementRow, type Forma, type SvgEl, type Texto, svgAspect } from "./elements";
+import { addElement, arcFromBend, bendOf, elementOf, FONTS, ICONS, idOfAlvo, listElements, parseId, patchElement, refOf, type Alvo, type Box, type ElementId, type ElementRow, type Forma, type SvgEl, type Texto, svgAspect } from "./elements";
 import type { IssueAction, UiIssue } from "./issues";
 import { importSvgFile, pickSvgFile } from "./svgImport";
 
@@ -429,7 +429,10 @@ function Inspector({ id, spec, patchSpec, sign }: { id: ElementId; spec: PlateSp
 function ShapeTools({ id, spec, patchSpec }: { id: ElementId; spec: PlateSpecInput; patchSpec(fn: (s: PlateSpecInput) => PlateSpecInput): void }) {
   const el = elementOf(spec, id);
   const [open, setOpen] = useState(() => !!el && (!!el.deslocamento || !!el.contorno || !!el.hachura || (el.operacao ?? "normal") !== "normal"));
+  const bit = bitById(useDesign((s) => s.design.bit));
   if (!el) return null;
+  // Espaçamento inicial da hachura: com fresa reta, ~1,8× a largura do corte para as linhas aparecerem.
+  const hatchGap = bit && bit.profile !== "v" ? Math.ceil(bit.d * 1.8 * 2) / 2 : 2;
   const set = (p: Record<string, unknown>) => patchSpec((s) => patchElement(s, id, p));
   const ring = el.contorno;
   const op = el.operacao ?? "normal";
@@ -475,9 +478,12 @@ function ShapeTools({ id, spec, patchSpec }: { id: ElementId; spec: PlateSpecInp
             />
           </Field>
           {op !== "normal" ? (
-            <div className="tiny muted">
-              {op === "subtrair" ? "This element isn't carved: it cuts its shape out of the elements it covers." : "This element isn't carved: the others keep only the part inside it."}
-            </div>
+            <>
+              <div className="tiny muted">
+                {op === "subtrair" ? "This element isn't carved: it cuts its shape out of the elements it applies to." : "This element isn't carved: the elements it applies to keep only the part inside it."}
+              </div>
+              <Targets id={id} spec={spec} alvos={el.alvos} onChange={(alvos) => set({ alvos })} />
+            </>
           ) : null}
           {op === "normal" && (el.modo ?? "gravado") === "gravado" && spec.tipo !== "letreiro" ? (
             <>
@@ -485,7 +491,7 @@ function ShapeTools({ id, spec, patchSpec }: { id: ElementId; spec: PlateSpecInp
                 <Seg<"solid" | "hatch">
                   label="Engraving fill"
                   value={el.hachura ? "hatch" : "solid"}
-                  onChange={(v) => set({ hachura: v === "hatch" ? { espacamento: 2, angulo: 45 } : undefined })}
+                  onChange={(v) => set({ hachura: v === "hatch" ? { espacamento: hatchGap, angulo: 45 } : undefined })}
                   options={[
                     ["solid", "Solid"],
                     ["hatch", "Outline + lines"],
@@ -507,6 +513,35 @@ function ShapeTools({ id, spec, patchSpec }: { id: ElementId; spec: PlateSpecInp
         </>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * A quais elementos o subtrair/máscara se aplica. Sem lista (padrão) vale para todos; ao
+ * desmarcar o primeiro, a lista passa a ser explícita.
+ */
+function Targets({ id, spec, alvos, onChange }: { id: ElementId; spec: PlateSpecInput; alvos: Alvo[] | undefined; onChange(a: Alvo[] | undefined): void }) {
+  const rows = listElements(spec).filter((r) => r.id !== id && r.kind !== "holes" && (elementOf(spec, r.id)?.operacao ?? "normal") === "normal");
+  if (!rows.length) return <div className="tiny muted">There's nothing else on the board for it to affect yet.</div>;
+  const all = rows.map((r) => refOf(r.id)!);
+  const on = (r: ElementId) => !alvos || alvos.some((a) => idOfAlvo(a) === r);
+  const toggle = (r: ElementId) => {
+    const cur = alvos ?? all;
+    const next = on(r) ? cur.filter((a) => idOfAlvo(a) !== r) : [...cur, refOf(r)!];
+    // Todos marcados volta ao padrão ("todos"), que também inclui elementos novos.
+    onChange(rows.every((x) => next.some((a) => idOfAlvo(a) === x.id)) ? undefined : next);
+  };
+  return (
+    <Field label="Applies to" aside={<span className="tiny muted">{alvos ? `${alvos.length} of ${rows.length}` : "All elements"}</span>}>
+      <div className="create-targets">
+        {rows.map((r) => (
+          <label key={r.id} className="create-target">
+            <input type="checkbox" checked={on(r.id)} onChange={() => toggle(r.id)} />
+            <span>{r.name}</span>
+          </label>
+        ))}
+      </div>
+    </Field>
   );
 }
 
