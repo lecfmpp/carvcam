@@ -12,6 +12,7 @@ import { useActiveMachine, useWorkshop } from "../../state/workshop";
 import { ToolpathOverlay, useSegments } from "../../stage/Board";
 import { Stage } from "../../stage/Stage";
 import { compatBadge, Dial } from "../workshop/parts";
+import "../workshop/workshop.css";
 import "./surfacing.css";
 
 type Step = "area" | "bit" | "preview" | "check";
