@@ -10,6 +10,8 @@ export interface WorkshopState {
   bits: string[];
   trackDone: string[];
   mode: "simple" | "pro";
+  /** Modo Painel (tela touch do gControl): automático, sempre ligado ou desligado. */
+  panel: "auto" | "on" | "off";
 
   finishOnboarding(machine: MachineId, head: HeadId, bits: string[]): void;
   skipOnboarding(): void;
@@ -21,6 +23,7 @@ export interface WorkshopState {
   setBits(ids: string[]): void;
   markDone(trackId: string): void;
   setMode(mode: "simple" | "pro"): void;
+  setPanel(panel: "auto" | "on" | "off"): void;
 }
 
 export const useWorkshop = create<WorkshopState>()(
@@ -32,6 +35,7 @@ export const useWorkshop = create<WorkshopState>()(
       bits: KIT.slice(),
       trackDone: [],
       mode: "simple",
+      panel: "auto",
 
       finishOnboarding: (machine, head, bits) => set({ onboarded: true, machines: [{ id: machine, head }], active: 0, bits }),
       skipOnboarding: () => set({ onboarded: true }),
@@ -55,6 +59,7 @@ export const useWorkshop = create<WorkshopState>()(
         if (!get().trackDone.includes(trackId)) set({ trackDone: [...get().trackDone, trackId] });
       },
       setMode: (mode) => set({ mode }),
+      setPanel: (panel) => set({ panel }),
     }),
     { name: "gsender-workshop", version: 1 },
   ),

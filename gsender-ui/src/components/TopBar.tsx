@@ -1,7 +1,8 @@
-import { Check, ChevronDown, Menu, Monitor, Plus, Square } from "lucide-react";
+import { Check, ChevronDown, Maximize, Menu, Minimize, Monitor, Plus, Square } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { machineById, machineName, HEADS } from "../lib/catalog";
+import { usePanelMode } from "../lib/panel";
 import { useMachine } from "../machine/store";
 import { useActiveMachine, useWorkshop } from "../state/workshop";
 import { Seg } from "./ui";
@@ -80,6 +81,7 @@ export function TopBar(props: { variant: "app" | "job" | "tool" | "onboarding"; 
       ) : null}
 
       {props.right}
+      <FullscreenButton />
       {props.variant !== "onboarding" ? (
         <>
           <MachineChip />
@@ -257,6 +259,28 @@ export function StopButton() {
     <button className="stop-btn" onClick={stop} aria-keyshortcuts="Escape">
       <span style={{ width: 12, height: 12, borderRadius: 2, background: "var(--alarm)" }} />
       Stop <span className="kbd">Esc</span>
+    </button>
+  );
+}
+
+/** Tela cheia (só no modo Painel): no gControl, o app ocupa a tela inteira, como um quiosque. */
+function FullscreenButton() {
+  const panel = usePanelMode();
+  const [full, setFull] = useState(() => !!document.fullscreenElement);
+  useEffect(() => {
+    const on = () => setFull(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", on);
+    return () => document.removeEventListener("fullscreenchange", on);
+  }, []);
+  if (!panel || !document.fullscreenEnabled) return null;
+  return (
+    <button
+      className="icon-btn"
+      aria-label={full ? "Exit full screen" : "Full screen"}
+      title={full ? "Exit full screen" : "Full screen"}
+      onClick={() => (full ? document.exitFullscreen() : document.documentElement.requestFullscreen())}
+    >
+      {full ? <Minimize size={20} strokeWidth={1.5} /> : <Maximize size={20} strokeWidth={1.5} />}
     </button>
   );
 }

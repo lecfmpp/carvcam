@@ -44,8 +44,8 @@ input, select, textarea { font: inherit; color: inherit; }
 .app {
   position: relative;
   height: 100%;
-  min-width: 1280px;
-  min-height: 760px;
+  min-width: 1200px;
+  min-height: 680px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -226,3 +226,34 @@ input, select, textarea { font: inherit; color: inherit; }
 .menu-item { width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--text); text-align: left; }
 .menu-item:hover { background: rgba(255, 255, 255, 0.06); }
 .menu-item[aria-checked="true"] { background: rgba(255, 255, 255, 0.08); }
+
+/* ---------- Modo Painel (gControl: touch, 15,6″, de pé ao lado da máquina) ----------
+   O layout precisa caber em 1280×720 (Windows a 150%). Os controles principais crescem
+   para pelo menos 48–56 px, e nada importante depende de passar o mouse. */
+:root[data-panel="1"] { --header-h: 68px; --panel-w: 420px; }
+:root[data-panel="1"] body { font-size: 15px; }
+:root[data-panel="1"] .app { min-height: 680px; min-width: 1200px; }
+:root[data-panel="1"] .btn { height: 52px; font-size: 16px; }
+:root[data-panel="1"] .btn--lg { height: 60px; font-size: 17px; }
+:root[data-panel="1"] .btn--sm { height: 44px; font-size: 14px; }
+:root[data-panel="1"] .seg__opt { height: 40px; font-size: 14px; }
+:root[data-panel="1"] .seg--lg .seg__opt { height: 46px; }
+:root[data-panel="1"] .stepper { height: 54px; }
+:root[data-panel="1"] .stepper button { width: 54px; font-size: 22px; }
+:root[data-panel="1"] .stepper__val { font-size: 16px; }
+:root[data-panel="1"] .navtab, :root[data-panel="1"] .icon-btn { height: 52px; }
+:root[data-panel="1"] .icon-btn { width: 52px; }
+:root[data-panel="1"] .machine-chip { height: 48px; font-size: 14px; }
+:root[data-panel="1"] .pill { height: 44px; font-size: 14px; }
+:root[data-panel="1"] .stop-btn { height: 56px; padding: 0 20px; font-size: 17px; }
+:root[data-panel="1"] .stop-btn .kbd { display: none; }
+:root[data-panel="1"] .tool-btn { height: 52px; font-size: 14px; }
+:root[data-panel="1"] .stage__zoom button { width: 52px; height: 52px; }
+:root[data-panel="1"] .menu-item { padding: 14px 14px; font-size: 15px; }
+:root[data-panel="1"] .sidepanel__title { font-size: 22px; }
+:root[data-panel="1"] .sidepanel__hint, :root[data-panel="1"] .issue__body { font-size: 14px; }
+:root[data-panel="1"] .issue__title { font-size: 15px; }
+:root[data-panel="1"] .stage__caption, :root[data-panel="1"] .muted.tiny { font-size: 13px; }
+:root[data-panel="1"] .kbd { display: none; }
+/* Toque: nada de seleção de texto acidental nem atraso de duplo toque. */
+:root[data-panel="1"] button, :root[data-panel="1"] .stage { touch-action: manipulation; -webkit-user-select: none; user-select: none; }

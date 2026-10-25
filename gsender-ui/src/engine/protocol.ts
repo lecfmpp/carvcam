@@ -7,6 +7,8 @@ export interface EngineRequest {
   /** Também simula o corte e devolve o mapa de alturas. */
   simulate: boolean;
   simRes?: number;
+  /** Modo Painel (gControl, processador modesto): simulação em resolução menor. */
+  lowPower?: boolean;
 }
 
 /** Mapa de alturas do material depois do corte: 0 = face intacta, negativo = usinado. */

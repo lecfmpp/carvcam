@@ -257,7 +257,7 @@ export default function Surfacing() {
         }
         caption={phase === "setup" ? "Orange rows = where the bit sweeps" : "Live · lighter area is already flat"}
         render={({ view, zoom, size, spin }) => {
-          const s = Math.min((size.w - 140) / aw, (size.h - 160) / ah);
+          const s = Math.min((size.w - 140) / aw, (size.h - 210) / ah);
           const px = (v: number) => v * s;
           const turned = view === "3d";
           const freshRows = phase === "done" ? h : phase === "setup" ? 0 : Math.max(0, Math.min(h, (bitPos?.y ?? y0) - y0));

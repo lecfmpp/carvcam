@@ -19,6 +19,13 @@ npm run build      # typecheck + build de produção
 | `#/prepare` | Preparar: velocidades da tabela Sienci, abas, segunda fresa, G-code verificado, **Download G-code (.nc)** |
 | `#/position`, `#/carve` | Posicionar e Cortar (máquina **simulada** por enquanto) |
 
+## Modo Painel (gControl)
+Para a tela touch de 15,6″ do gControl. Liga sozinho quando o dispositivo principal é touch (`pointer: coarse`), em Settings (Automatic / Always on / Off) ou com `?panel=1` na URL.
+- **Tamanho:** o layout cabe em 1280×720 (Windows a 150%) e os controles principais crescem para 48–60 px.
+- **Tela cheia:** botão no topo (quiosque).
+- **Desempenho:** simulação e malha 3D mais leves para o processador N150.
+- **Início:** com um projeto aberto, o app inicia direto em Posicionar.
+
 ## Arquitetura
 - `src/lib/catalog.ts`: catálogo da interface derivado do catálogo Sienci do motor (máquinas, cabeçotes, fresas, projetos).
 - `src/engine/`: o motor roda num Web Worker (`generatePlate` + simulação do corte).

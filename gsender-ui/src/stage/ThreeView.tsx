@@ -82,8 +82,9 @@ export function ThreeView(props: { sim: SimGrid; thickness: number; material: Ma
     if (!c) return;
     const { sim, thickness, material } = props;
     const { cols, rows, res, x0, y0, h } = sim;
-    // Reduz a malha para no máximo ~520 colunas.
-    const step = Math.max(1, Math.ceil(Math.max(cols, rows) / 520));
+    // Reduz a malha para no máximo ~520 colunas (260 no modo Painel).
+    const maxCols = document.documentElement.dataset.panel === "1" ? 260 : 520;
+    const step = Math.max(1, Math.ceil(Math.max(cols, rows) / maxCols));
     const nx = Math.floor((cols - 1) / step) + 1;
     const ny = Math.floor((rows - 1) / step) + 1;
     const pos = new Float32Array(nx * ny * 3);

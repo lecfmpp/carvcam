@@ -27,7 +27,7 @@ self.onmessage = async (ev: MessageEvent<EngineRequest>) => {
       const b = result.layout.bloco;
       const tools = result.ferramentas.map((t) => ToolSchema.parse(t));
       const pad = 2;
-      const res = req.simRes ?? simResFor(b.largura, b.altura);
+      const res = req.simRes ?? simResFor(b.largura, b.altura, req.lowPower);
       const hm = simulate(result.gcode, tools, { x0: -pad, y0: -pad, width: b.largura + 2 * pad, height: b.altura + 2 * pad }, res);
       sim = { x0: hm.x0, y0: hm.y0, cols: hm.cols, rows: hm.rows, res: hm.res, h: hm.h };
     }
@@ -39,7 +39,7 @@ self.onmessage = async (ev: MessageEvent<EngineRequest>) => {
   }
 };
 
-/** Resolução da simulação: ~900 células no lado maior, entre 0,15 e 2 mm. */
-function simResFor(w: number, h: number) {
-  return Math.min(2, Math.max(0.15, Math.max(w, h) / 900));
+/** Resolução da simulação: ~900 células no lado maior (600 no modo Painel), entre 0,15 e 2 mm. */
+function simResFor(w: number, h: number, lowPower = false) {
+  return Math.min(2, Math.max(0.15, Math.max(w, h) / (lowPower ? 600 : 900)));
 }

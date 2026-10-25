@@ -75,7 +75,7 @@ export function SimCanvas(props: {
         bottom: sim.y0 * props.scale,
         width: w,
         height: hpx,
-        imageRendering: props.scale / (1 / sim.res) > 2 ? "pixelated" : "auto",
+        imageRendering: "auto",
         ...props.style,
       }}
     />

@@ -1,6 +1,7 @@
 import type { GenerateOptions, GenerateResult, PlateSpecInput } from "@gsender-next/cam-engine";
 import { useEffect, useRef, useState } from "react";
 import { PRESET_TO_SPEED, type Preset } from "../lib/catalog";
+import { isPanelMode } from "../lib/panel";
 import type { Design } from "../state/design";
 import { useActiveMachine } from "../state/workshop";
 import type { EngineRequest, EngineResponse, SimGrid } from "./protocol";
@@ -23,7 +24,7 @@ function getWorker() {
 /** Pede uma geração ao worker. */
 export function runEngine(spec: PlateSpecInput, options: Omit<GenerateOptions, "fontes">, simulate = true, simRes?: number): Promise<EngineResponse> {
   const id = nextId++;
-  const req: EngineRequest = { id, spec, options, simulate, simRes };
+  const req: EngineRequest = { id, spec, options, simulate, simRes, lowPower: isPanelMode() };
   return new Promise((resolve) => {
     pending.set(id, resolve);
     getWorker().postMessage(req);

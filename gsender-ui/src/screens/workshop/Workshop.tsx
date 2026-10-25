@@ -1,3 +1,4 @@
+import { usePanelMode } from "../../lib/panel";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Seg } from "../../components/ui";
@@ -350,6 +351,7 @@ function Settings() {
           <Seg<HeadId> label="What spins the bit" size="lg" value={headId} onChange={setHead} options={machine.heads.map((h) => [h, HEADS[h].name] as [HeadId, string])} />
         </div>
       ) : null}
+      <PanelSetting />
       <div style={{ display: "flex", gap: 10 }}>
         <button className="ws-btn ws-btn--ghost" style={{ height: 48, background: "rgba(255,255,255,.06)", borderColor: "rgba(255,255,255,.18)" }} onClick={() => nav("/workshop/onboarding")}>
           Change machine
@@ -359,6 +361,34 @@ function Settings() {
             Remove this machine
           </button>
         ) : null}
+      </div>
+    </div>
+  );
+}
+
+/** Modo Painel para a tela touch do gControl. */
+function PanelSetting() {
+  const { panel, setPanel } = useWorkshop();
+  const on = usePanelMode();
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <span className="field-label" style={{ margin: 0 }}>
+        Touch panel mode (gControl)
+      </span>
+      <Seg<"auto" | "on" | "off">
+        label="Touch panel mode"
+        size="lg"
+        value={panel}
+        onChange={setPanel}
+        options={[
+          ["auto", "Automatic"],
+          ["on", "Always on"],
+          ["off", "Off"],
+        ]}
+      />
+      <div style={{ font: "400 13px var(--font)", color: "var(--text-4)" }}>
+        Bigger buttons for a touch screen next to the machine, a lighter preview for the gControl's processor, and a full-screen button. Automatic turns on when
+        the main screen is touch. Now: {on ? "on" : "off"}.
       </div>
     </div>
   );
