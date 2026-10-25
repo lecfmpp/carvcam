@@ -8,7 +8,6 @@ import { TopBar } from "../../components/TopBar";
 import { useEngine } from "../../engine/useEngine";
 import { bitById, materialById, THROUGH_COLOR, type Material } from "../../lib/catalog";
 import { useDesign } from "../../state/design";
-import { toast } from "../../state/ui";
 import { useActiveMachine, useWorkshop } from "../../state/workshop";
 import { Board } from "../../stage/Board";
 import { SimCanvas } from "../../stage/SimCanvas";
