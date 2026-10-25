@@ -72,11 +72,21 @@ Organize por **intenção**, não por parâmetro: "Minha máquina", "Ferramentas
 
 Implemente primeiro só este escopo. Ele cobre a maior parte do que um iniciante corta numa CNC de 3 eixos e evita o CAM 3D completo.
 
-- **Tipos de peça:** placa com texto em relevo ou gravado; letreiro recortado (letras soltas ou palavra contínua); placa com borda (reta, arredondada, chanfrada) e ícones simples; furos de fixação ou rasgo para pendurar.
-- **Geometria:** só 2D + profundidade (2.5D). Texto vira contorno vetorial a partir de fontes (opentype.js); ícones são SVGs de uma biblioteca curada; bordas e furos são primitivas paramétricas. O kernel CAD 3D completo não é necessário na v1, basta clipper/paths 2D com profundidades por região.
-- **Schema da IA:** a IA preenche um JSON fechado, sem código livre: `{ tipo: "placa"|"letreiro", largura, altura, espessura, material, texto: [{ conteudo, fonte, tamanho, modo: "relevo"|"gravado"|"recorte", profundidade }], borda: { tipo, raio }, icones: [{ id, x, y, tamanho, modo }], furos: [{ x, y, diametro }] }`. Valide com Zod antes de renderizar.
-- **Operações de CAM:** gravação (pocket raso nas letras), relevo (pocket ao redor das letras até a profundidade), contorno externo com abas de fixação (tabs) para recorte, furação. Fresas suportadas: reta (flat end) e V-bit. V-carve fino fica para depois.
-- **Saída:** G-code GRBL com cabeçalho de segurança (G21, G90, altura segura), passadas em profundidade conforme material e fresa, e verificador antes de enviar.
+> **O motor de CAM desta v1 já existe:** a pasta `cam-engine/` (TypeScript, 35 testes passando) gera G-code GRBL verificado a partir do JSON abaixo. **Use esse pacote; não reescreva o CAM.** O trabalho da UI é chamar `generatePlate(spec, opções)`, mostrar `avisos`, desenhar a prévia a partir de `layout` e da simulação, e enviar o `gcode` quando `ok` for verdadeiro. Detalhes em `cam-engine/README.md`.
+
+- **Tipos de peça:** placa com texto em relevo, gravado ou vazado; letreiro recortado (letras soltas ou palavra contínua); placa com borda (reta, arredondada, chanfrada) e ícones simples (coração, estrela, casa, folha); furos de fixação e rasgo para pendurar.
+- **Bibliotecas (todas no navegador, sem servidor):**
+  - **opentype.js** (MIT): texto → contornos vetoriais a partir de fontes TTF/OTF. Fontes incluídas: Archivo Black, Pacifico, Bebas Neue (SIL OFL).
+  - **Clipper2 via `clipper2-ts`** (BSL-1.0): união e diferença das regiões e offsets da fresa (pocket por anéis, recorte por fora e por dentro, checagem de detalhes menores que a fresa). O pacote `clipper2-js` foi descartado: o offset negativo dele está quebrado.
+  - **Zod** (MIT): valida o JSON que a IA preenche antes de qualquer cálculo.
+  - **Three.js / React Three Fiber**: prévia 3D, alimentada pelo mapa de alturas da simulação do `cam-engine`.
+  - Não usamos kernel CAD 3D (Replicad/OpenCascade/manifold) na v1.
+- **Aproveitado do rudra496/cnc (MIT):** só ideias, nenhum arquivo copiado. A simulação de remoção de material por mapa de alturas (reescrita em `cam-engine/src/sim/heightmap.ts`, sem Three.js e com resolução de 0,25 mm) e a fórmula de avanço da calculadora (avanço por dente × canais × RPM, em `cam-engine/src/materials.ts`). Os presets de material dele (metais) não servem; usamos MDF, compensado, madeira macia/dura e acrílico.
+- **Schema da IA:** a IA preenche um JSON fechado, sem código livre: `PlateSpecSchema` em `cam-engine/src/schema.ts` (`tipo`, `largura`, `altura`, `espessura`, `material`, `texto[]` com `conteudo/fonte/tamanho/modo/profundidade/x/y`, `borda`, `moldura`, `icones[]`, `furos[]`, `rasgos[]`, `recorteExterno`, `margem`). Use o próprio schema Zod como definição da ferramenta (tool use) da Claude API.
+- **Operações de CAM (prontas):** gravação e relevo por pocket de anéis concêntricos, vazado (estêncil), furos (bicada ou pocket), rasgos, recorte externo com abas e troca entre duas fresas (`T# M6`). Fresas: reta e V-bit (a V-bit só grava seguindo o contorno). V-carve de profundidade variável e entrada em rampa ficam para a v1.1.
+- **Saída e segurança:** G-code GRBL com cabeçalho (G21 G90 G17 G94), altura segura e passadas por material e fresa. O verificador relê o texto final e bloqueia `$`, G20/G91, G0 dentro do material, corte com spindle desligado, avanço acima do máximo e saída da área. Ele também deve rodar sobre G-code importado.
+- **Avisos de fabricabilidade:** já saem com código estável e texto em pt-BR (`TEXTO_NAO_CABE` com tamanho sugerido, `DETALHE_MENOR_QUE_FRESA` com % não cortado, `ELEMENTO_NAO_USINAVEL`, `ILHAS_SOLTAS`…). A IA deve ler esses códigos e propor a correção ("vou reduzir o texto para 16 mm. Ok?").
+- **Integração com o gSender:** preencha `maquina` com os parâmetros reais do firmware ($110–$112, $130–$132) e mande o G-code por `POST /api/gcode`.
 - **Fora do escopo da v1:** relevo artístico (heightmap), malhas STL convertidas em toolpath 3D, caixas com encaixe, 4º eixo. Pedidos assim recebem resposta amigável com uma alternativa dentro do escopo (ex.: silhueta gravada). Importar G-code pronto continua funcionando.
 - **Pronto quando:** "placa 20×10 cm, MDF 15 mm, 'Casa da Ana' em relevo de 3 mm, borda arredondada, 2 furos" gera um G-code que passa no verificador e é simulado corretamente no visualizador.
 
@@ -91,14 +101,11 @@ Implemente primeiro só este escopo. Ele cobre a maior parte do que um iniciante
 
 ### Pipeline técnico (CNC exige geometria precisa, não malha "artística")
 
-1. **LLM → código paramétrico.** A IA (Claude API, modelo mais recente com tool use) não gera malha. Ela gera um **programa paramétrico** em um kernel CAD que roda no navegador:
-   - Replicad/OpenCascade.js ou manifold-3d para sólidos
-   - SVG/paths para 2D/2.5D (placas, letreiros, encaixes)
-   - Saída num schema JSON validado: `{ params: [...], code: "...", stock: {...}, warnings: [...] }`
+1. **LLM → especificação paramétrica.** A IA (Claude API, modelo mais recente com tool use) não gera malha nem código. Na v1 ela preenche o `PlateSpecSchema` do `cam-engine`, que vira geometria 2.5D com opentype.js + Clipper2. Para fases futuras (caixas, peças), avalie um kernel CAD no navegador (Replicad/OpenCascade.js ou manifold-3d).
 2. **Relevos orgânicos (2.5D).** Para pedidos artísticos ("um leão em relevo"), gere uma imagem → mapa de profundidade (heightmap) → superfície 2.5D. É o tipo de modelo que uma fresa de 3 eixos corta bem.
 3. **Text-to-3D por malha** (opcional, para importar STL) entra só como modo "experimental", com aviso de que a malha será convertida em 2.5D.
 4. **Validação de fabricabilidade:** cabe no material/mesa; sem undercuts em 3 eixos; espessura mínima ≥ diâmetro da fresa; profundidade ≤ comprimento útil.
-5. **CAM no navegador:** gerar toolpaths (pocket, contorno, desbaste com waterline/raster, acabamento) e pós-processar para **G-code GRBL**. Mostre a simulação de remoção de material.
+5. **CAM no navegador:** na v1 é o `cam-engine` (pocket, perfil com abas, furos → G-code GRBL). Rode-o num Web Worker e mostre a simulação de remoção de material. Desbaste 3D (waterline/raster) fica para os relevos artísticos, fora da v1.
 6. **Envio:** `POST /api/gcode` e depois o fluxo normal (Posicionar → Cortar) pelo servidor do gSender.
 7. **Guardrails:**
    - A IA **nunca envia comandos para a máquina.** Ela só produz arquivos. Toda execução exige uma ação explícita do usuário.

@@ -1,0 +1,27 @@
+{
+  "placa": {
+    "tipo": "letreiro",
+    "largura": 260,
+    "altura": 110,
+    "espessura": 6,
+    "material": "compensado",
+    "texto": [
+      {
+        "conteudo": "Bem-vindos",
+        "fonte": "pacifico",
+        "tamanho": 40
+      }
+    ]
+  },
+  "ferramenta": {
+    "id": 1,
+    "nome": "Fresa reta 1/8\"",
+    "diametro": 3.175,
+    "canais": 2,
+    "comprimentoCorte": 12
+  },
+  "maquina": {
+    "cursoX": 400,
+    "cursoY": 400
+  }
+}

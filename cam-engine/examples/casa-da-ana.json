@@ -1,0 +1,17 @@
+{
+  "placa": {
+    "tipo": "placa",
+    "largura": 200,
+    "altura": 100,
+    "espessura": 15,
+    "material": "mdf",
+    "texto": [{ "conteudo": "Casa da Ana", "fonte": "archivo-black", "tamanho": 16, "modo": "relevo", "profundidade": 3 }],
+    "borda": { "tipo": "arredondada", "raio": 10 },
+    "moldura": 6,
+    "furos": [
+      { "x": 15, "y": 85, "diametro": 5 },
+      { "x": 185, "y": 85, "diametro": 5 }
+    ]
+  },
+  "ferramenta": { "id": 1, "nome": "Fresa reta 1/8\" longa", "diametro": 3.175, "canais": 2, "comprimentoCorte": 22 }
+}
