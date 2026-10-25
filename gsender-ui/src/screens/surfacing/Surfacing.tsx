@@ -161,6 +161,7 @@ export default function Surfacing() {
   const so = job.parametros.sobreposicao;
   const rows = job.linhas;
   const bitPos = (() => {
+    if (phase === "done") return null;
     if (phase !== "setup") {
       const z = m.workZero ?? { x: x0, y: y0, z: 0 };
       return { x: m.pos.x, y: m.pos.y, z: m.pos.z - z.z };

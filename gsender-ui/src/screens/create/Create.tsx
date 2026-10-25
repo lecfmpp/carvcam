@@ -453,4 +453,3 @@ function InlineText({ value, font, size, onDone }: { value: string; font: string
   );
 }
 
-export { toast };
