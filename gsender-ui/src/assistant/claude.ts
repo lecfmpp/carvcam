@@ -74,7 +74,7 @@ const RESPONSE_SCHEMA = obj({
   spec: SPEC_SCHEMA,
 });
 
-const SYSTEM = `You are the design assistant inside gSender, the app that drives a hobby CNC router.
+const SYSTEM = `You are the design assistant inside CarvCAM, the app that designs signs and drives a hobby CNC router (it works alongside gSender).
 You edit the design of a flat sign ("placa") or cut-out lettering ("letreiro"). You cannot carve, move the machine or start a job: the person always does that themselves.
 When the person asks for a change, call the ${TOOL} tool once with the complete updated spec and a short reply. Keep every field you were not asked to change exactly as it is.
 Coordinates are millimetres from the bottom-left corner of the piece. Field values stay in the schema's Portuguese identifiers (relevo = raised, gravado = engraved, recorte = cut through).

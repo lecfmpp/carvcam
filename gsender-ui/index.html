@@ -3,9 +3,111 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>gSender</title>
+    <meta name="theme-color" content="#111214" />
+    <title>CarvCAM</title>
+    <link rel="icon" type="image/svg+xml" href="./carvcam-icon.svg" />
+    <!--
+      Tela de entrada: aparece antes de qualquer JavaScript, sem nada da internet. A animação é a
+      do "CarvCAM Intro" (tábua sobe, fresa mergulha e abre o canal, cavacos, nome e linha de
+      corte), um pouco mais curta. A barra mostra o carregamento real (window.__boot, em main.tsx).
+    -->
+    <style>
+      html, body { margin: 0; background: #111214; }
+      #boot { position: fixed; inset: 0; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 30px;
+        background: radial-gradient(ellipse 55% 50% at 50% 45%, #1e2024 0%, #141517 60%, #111214 100%); color: #f5f3ef;
+        font-family: "Geist Sans", Geist, system-ui, -apple-system, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; transition: opacity 380ms ease-in, transform 380ms ease-in; }
+      #boot.is-out { opacity: 0; transform: scale(1.03); pointer-events: none; }
+      #boot .boot-tile { border-radius: 40px; box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5); animation: b-tile 420ms cubic-bezier(.2,.8,.2,1) both; }
+      #boot .boot-word { font-weight: 600; font-size: 44px; letter-spacing: -0.03em; line-height: 1; animation: b-word 380ms cubic-bezier(.2,.8,.2,1) 1250ms both; }
+      #boot .boot-word span { font-family: "Geist Mono", ui-monospace, monospace; font-weight: 500; }
+      #boot .boot-cut { position: relative; width: 220px; height: 2px; margin-top: 14px; }
+      #boot .boot-cut i { position: absolute; inset: 0; background: #ff5b1f; border-radius: 1px; transform-origin: left; animation: b-scale 520ms cubic-bezier(.6,0,.2,1) 1450ms both; }
+      #boot .boot-bar { width: 260px; display: flex; flex-direction: column; gap: 10px; align-items: center; animation: b-fade 300ms ease-out 300ms both; }
+      #boot .boot-track { width: 100%; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+      #boot .boot-fill { height: 100%; width: 0; background: #ff5b1f; border-radius: 2px; transition: width 260ms ease-out; }
+      #boot .boot-label { font-size: 13px; color: #a4a29d; min-height: 18px; text-align: center; }
+      #boot .boot-slow { font-size: 12px; color: #6f6d69; display: none; }
+      #boot.is-slow .boot-slow { display: block; }
+      @keyframes b-tile { 0% { opacity: 0; transform: scale(.82) translateY(14px); } 100% { opacity: 1; transform: none; } }
+      @keyframes b-word { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+      @keyframes b-fade { from { opacity: 0; } to { opacity: 1; } }
+      @keyframes b-scale { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+      @keyframes b-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+      @keyframes b-plunge { 0% { opacity: 0; transform: translate(-30px, -34px); } 25% { opacity: 1; transform: translate(-30px, -34px); } 55% { transform: translate(-30px, 0); } 100% { opacity: 1; transform: translate(0, 0); } }
+      @keyframes b-groove { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+      @keyframes b-chip { 0% { opacity: 0; transform: translate(14px, 10px); } 60% { opacity: 1; } 100% { opacity: 1; transform: none; } }
+      #boot .boot-rise { animation: b-rise 300ms cubic-bezier(.2,.8,.2,1) 200ms both; }
+      #boot .boot-groove { transform-box: fill-box; transform-origin: left center; animation: b-groove 430ms cubic-bezier(.45,0,.25,1) 900ms both; }
+      #boot .boot-bit { animation: b-plunge 980ms cubic-bezier(.45,0,.25,1) 320ms both; }
+      #boot .boot-chip1 { animation: b-chip 300ms cubic-bezier(.2,.8,.2,1) 1080ms both; }
+      #boot .boot-chip2 { animation: b-chip 320ms cubic-bezier(.2,.8,.2,1) 1170ms both; }
+      @media (prefers-reduced-motion: reduce) { #boot *, #boot { animation-duration: 1ms !important; animation-delay: 0ms !important; transition-duration: 1ms !important; } }
+    </style>
   </head>
   <body>
+    <div id="boot" role="progressbar" aria-label="Loading CarvCAM" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <div class="boot-tile">
+        <svg viewBox="0 0 100 100" width="180" height="180" style="display: block; overflow: visible" aria-hidden="true">
+          <defs><clipPath id="boot-tile"><rect width="100" height="100" rx="22.5" /></clipPath></defs>
+          <rect width="100" height="100" rx="22.5" fill="#FF5B1F" />
+          <g clip-path="url(#boot-tile)">
+            <g class="boot-rise">
+              <rect x="16" y="60" width="68" height="22" rx="4" fill="#111214" />
+              <path class="boot-groove" d="M12 59 H57 V64 A5 5 0 0 1 52 69 H12 Z" fill="#FF5B1F" />
+            </g>
+            <g class="boot-bit">
+              <g stroke="#FF5B1F" stroke-width="2.5">
+                <rect x="46.5" y="16" width="9" height="26" rx="1.5" fill="#111214" />
+                <path d="M45 42 H57 V65 L51 69.5 L45 65 Z" fill="#111214" stroke-linejoin="round" />
+              </g>
+              <g stroke="#FF5B1F" stroke-width="2" stroke-linecap="round"><path d="M46 51 L56 46.5" /><path d="M46 58.5 L56 54" /></g>
+            </g>
+            <g class="boot-chip1"><rect x="33" y="50" width="4.5" height="4.5" rx="1" fill="#111214" transform="rotate(20 35 52)" /></g>
+            <g class="boot-chip2"><rect x="25" y="44" width="3.5" height="3.5" rx="1" fill="#111214" transform="rotate(-15 27 46)" /></g>
+          </g>
+        </svg>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: center">
+        <div class="boot-word">Carv<span>CAM</span></div>
+        <div class="boot-cut"><i></i></div>
+      </div>
+      <div class="boot-bar">
+        <div class="boot-track"><div class="boot-fill"></div></div>
+        <div class="boot-label">Starting…</div>
+        <div class="boot-slow">Taking longer than usual. Everything runs on this computer, no internet needed.</div>
+      </div>
+    </div>
+    <script>
+      // Progresso da inicialização: main.tsx chama __boot.step(%, texto) e __boot.done().
+      (function () {
+        var el = document.getElementById("boot");
+        var fill = el.querySelector(".boot-fill");
+        var label = el.querySelector(".boot-label");
+        var t0 = performance.now();
+        var cur = 0;
+        var slow = setTimeout(function () { el.classList.add("is-slow"); }, 15000);
+        window.__boot = {
+          step: function (pct, text) {
+            cur = Math.max(cur, pct);
+            fill.style.width = cur + "%";
+            el.setAttribute("aria-valuenow", String(Math.round(cur)));
+            if (text) label.textContent = text;
+          },
+          // Fica pelo menos o tempo da animação (1,9 s) para a marca não piscar.
+          done: function () {
+            window.__boot.step(100, "Ready");
+            clearTimeout(slow);
+            var wait = Math.max(0, 1900 - (performance.now() - t0));
+            if (matchMedia("(prefers-reduced-motion: reduce)").matches) wait = 0;
+            setTimeout(function () {
+              el.classList.add("is-out");
+              setTimeout(function () { el.remove(); }, 420);
+            }, wait);
+          },
+        };
+        window.__boot.step(8, "Loading CarvCAM…");
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

@@ -31,6 +31,15 @@ export function runEngine(spec: PlateSpecInput, options: Omit<GenerateOptions, "
   });
 }
 
+/** Aquece o motor no worker (tela de entrada). */
+export function warmEngine(): Promise<EngineResponse> {
+  const id = nextId++;
+  return new Promise((resolve) => {
+    pending.set(id, resolve);
+    getWorker().postMessage({ id, warmup: true, spec: { largura: 1, altura: 1, espessura: 1 }, options: {}, simulate: false } satisfies EngineRequest);
+  });
+}
+
 /** Opções do motor para o projeto atual na máquina ativa. */
 export function engineOptions(design: Design, machineId: string, headId: string, preset: Preset): Omit<GenerateOptions, "fontes"> {
   return {

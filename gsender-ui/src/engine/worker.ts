@@ -21,6 +21,13 @@ const getFonts = () => (fonts ??= loadFonts((arquivo) => fetch(URLS[arquivo]).th
 self.onmessage = async (ev: MessageEvent<EngineRequest>) => {
   const req = ev.data;
   try {
+    if (req.warmup) {
+      // Fontes + uma peça mínima: compila os caminhos quentes do motor antes do primeiro uso.
+      const fontes = await getFonts();
+      generatePlate({ largura: 60, altura: 30, espessura: 6, texto: [{ conteudo: "Hi", tamanho: 12, modo: "gravado", profundidade: 1 }] }, { fontes });
+      (self as unknown as Worker).postMessage({ id: req.id, ok: true, result: null, sim: null } satisfies EngineResponse);
+      return;
+    }
     const result: GenerateResult = generatePlate(req.spec, { fontes: await getFonts(), ...req.options });
     let sim: EngineResponse["sim"] = null;
     if (req.simulate && result.gcode) {

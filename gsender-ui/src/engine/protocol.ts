@@ -9,6 +9,8 @@ export interface EngineRequest {
   simRes?: number;
   /** Modo Painel (gControl, processador modesto): simulação em resolução menor. */
   lowPower?: boolean;
+  /** Só aquece o motor (carrega fontes e roda uma peça mínima), na tela de entrada. */
+  warmup?: boolean;
 }
 
 /** Mapa de alturas do material depois do corte: 0 = face intacta, negativo = usinado. */

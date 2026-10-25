@@ -65,7 +65,10 @@ input, select, textarea { font: inherit; color: inherit; }
   border-bottom: 1px solid var(--line);
   background: rgba(17, 18, 20, 0.82); backdrop-filter: var(--blur);
 }
-.topbar__brand { font: 600 17px var(--font); letter-spacing: -0.02em; min-width: 120px; }
+.topbar__brand { min-width: 140px; display: flex; align-items: center; }
+.brand { display: inline-flex; align-items: center; gap: 10px; }
+.wordmark { font-family: var(--font); font-weight: 600; letter-spacing: -0.03em; color: var(--text); line-height: 1; }
+.wordmark__cam { font-family: var(--mono); font-weight: 500; letter-spacing: -0.02em; }
 .topbar__spacer { flex: 1; }
 .icon-btn {
   width: 44px; height: 44px; border: 0; border-radius: var(--radius-control); background: transparent;

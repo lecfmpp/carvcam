@@ -1,3 +1,4 @@
+import { Brand } from "./Brand";
 import { Check, ChevronDown, Maximize, Menu, Minimize, Monitor, Plus, Square } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -37,7 +38,9 @@ export function TopBar(props: { variant: "app" | "job" | "tool" | "onboarding"; 
           <Menu size={20} strokeWidth={1.5} />
         </button>
       ) : null}
-      <div className="topbar__brand">gSender</div>
+      <div className="topbar__brand">
+        <Brand size={28} />
+      </div>
 
       {props.variant === "app" ? (
         <nav aria-label="Main" className="navtabs" style={{ marginLeft: 20 }}>

@@ -26,7 +26,7 @@ export function postGrbl(header: PostHeader, ops: PostOperation[]): string {
   const out: string[] = [];
   const tools = [...new Map(ops.map((o) => [o.ferramenta.id, o.ferramenta])).values()];
   out.push(`; ${header.titulo}`);
-  out.push(`; Gerado por @gsender-next/cam-engine`);
+  out.push(`; Gerado por CarvCAM (cam-engine)`);
   out.push(`; Bloco: ${n(header.bloco.largura)} x ${n(header.bloco.altura)} x ${n(header.bloco.espessura)} mm`);
   out.push(`; Origem: X0 Y0 no canto inferior esquerdo do bloco, Z0 na face de cima`);
   for (const t of tools) out.push(`; T${t.id}: ${t.nome} (diametro ${n(t.diametro)} mm)`);
