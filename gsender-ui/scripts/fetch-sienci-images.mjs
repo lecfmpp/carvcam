@@ -4,6 +4,7 @@
 //
 //   npm run images:fetch            # só o que ainda não existe
 //   npm run images:fetch -- --force # baixa tudo de novo
+//   npm run images:fetch -- --only autospin-t1,altmill-4x4   # só esses produtos
 //   npm run images:fetch -- --from ~/Downloads/sienci
 //       # sem baixar: converte fotos que você salvou do site, uma por produto, com o id no nome
 //       # (ex.: autospin-t1.jpg, altmill-4x4.png). Os ids estão em src/lib/sienciProducts.json.
@@ -26,6 +27,8 @@ const origin = process.env.SIENCI_ORIGIN?.replace(/\/$/, "");
 const fix = (u) => (origin ? u.replace(/^https:\/\/sienci\.com/, origin) : u);
 const fromIdx = process.argv.indexOf("--from");
 const fromDir = fromIdx > 0 ? process.argv[fromIdx + 1]?.replace(/^~(?=\/)/, process.env.HOME ?? "~") : undefined;
+const onlyIdx = process.argv.indexOf("--only");
+const only = onlyIdx > 0 ? new Set((process.argv[onlyIdx + 1] ?? "").split(",").map((x) => x.trim()).filter(Boolean)) : null;
 const UA = "Mozilla/5.0 (CarvCAM image fetch; +https://sienci.com)";
 
 /** URL da imagem principal do produto na página (og:image; senão a primeira foto da galeria). */
@@ -78,6 +81,7 @@ const jobs = [...products.machines.map((m) => [m, 960]), ...products.heads.map((
 const seen = new Set();
 let ok = 0;
 for (const [item, width] of jobs) {
+  if (only && !only.has(item.id)) continue;
   if (seen.has(item.image)) continue;
   seen.add(item.image);
   try {
