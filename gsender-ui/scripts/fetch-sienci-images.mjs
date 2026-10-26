@@ -31,12 +31,23 @@ const onlyIdx = process.argv.indexOf("--only");
 const only = onlyIdx > 0 ? new Set((process.argv[onlyIdx + 1] ?? "").split(",").map((x) => x.trim()).filter(Boolean)) : null;
 const UA = "Mozilla/5.0 (CarvCAM image fetch; +https://sienci.com)";
 
-/** URL da imagem principal do produto na página (og:image; senão a primeira foto da galeria). */
+/** URL da imagem principal do produto na página (og:image, twitter:image, galeria ou JSON-LD). */
 export function productImage(html) {
-  const og = /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i.exec(html) ?? /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i.exec(html);
-  if (og) return og[1];
-  const gal = /woocommerce-product-gallery__image[^>]*>\s*<a[^>]+href=["']([^"']+\.(?:jpe?g|png|webp))["']/i.exec(html);
-  return gal?.[1] ?? null;
+  const pats = [
+    /<meta[^>]+(?:property|name)=["'](?:og:image(?::secure_url)?|twitter:image)["'][^>]*content=["']([^"']+)["']/i,
+    /<meta[^>]+content=["']([^"']+)["'][^>]*(?:property|name)=["'](?:og:image|twitter:image)["']/i,
+    /data-large_image=["']([^"']+)["']/i,
+    /woocommerce-product-gallery__image[^>]*>\s*<a[^>]+href=["']([^"']+\.(?:jpe?g|png|webp))["']/i,
+    /<img[^>]+class=["'][^"']*wp-post-image[^"']*["'][^>]+src=["']([^"']+)["']/i,
+    /<img[^>]+src=["']([^"']+)["'][^>]+class=["'][^"']*wp-post-image/i,
+    /"image"\s*:\s*(?:\[\s*)?(?:\{[^}]*?"url"\s*:\s*)?"(https?:[^"]+\.(?:jpe?g|png|webp)[^"]*)"/i,
+    /(https?:\/\/[^"' ]*\/wp-content\/uploads\/[^"' ]+\.(?:jpe?g|png|webp))/i,
+  ];
+  for (const re of pats) {
+    const m = re.exec(html);
+    if (m) return m[1].replace(/&amp;/g, "&").replace(/\\\//g, "/");
+  }
+  return null;
 }
 
 const exists = (p) => stat(p).then(() => true, () => false);
@@ -52,10 +63,17 @@ async function one(item, width) {
   if (!/\/product\//.test(item.url)) return { id: item.id, status: "skipped (no product page)" };
   const page = await fetch(fix(item.url), { headers: { "User-Agent": UA } });
   const html = await page.text();
-  if (/<title>Just a moment/i.test(html) || page.headers.get("cf-mitigated")) return { id: item.id, status: "blocked by Cloudflare check (save the photo in a browser and use --from)" };
+  if (/<title>(Just a moment|Attention Required)/i.test(html) || /challenge-platform|cf-chl-/.test(html) || page.headers.get("cf-mitigated")) return { id: item.id, status: "blocked by Cloudflare check (save the photo in a browser and use --from)" };
   if (!page.ok) return { id: item.id, status: `page ${page.status}` };
   const src = productImage(html);
-  if (!src) return { id: item.id, status: "no image on page" };
+  if (!src) {
+    // Guarda a página para entender o que veio no lugar do produto.
+    const dbg = join(root, "public", ".debug", `${item.id}.html`);
+    await mkdir(dirname(dbg), { recursive: true });
+    await writeFile(dbg, html);
+    const title = /<title>([^<]*)/i.exec(html)?.[1]?.trim() ?? "?";
+    return { id: item.id, status: `no image on page (HTTP ${page.status}, "${title.slice(0, 60)}", saved public/.debug/${item.id}.html)` };
+  }
   const img = await fetch(fix(new URL(src, item.url).toString()), { headers: { "User-Agent": UA } });
   if (!img.ok) return { id: item.id, status: `image ${img.status}` };
   return save(out, Buffer.from(await img.arrayBuffer()), width, item.id);
