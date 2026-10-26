@@ -56,7 +56,7 @@ export const CABECOTES: Record<CabecoteId, Cabecote> = {
         acessorio: { nome: "Pinça de precisão 1/8″ para Makita RT0701 (ou adaptador 1/4″→1/8″)", url: "https://sienci.com/product-category/routers-spindles/" },
       },
     ],
-    url: "https://resources.sienci.com/view/lm-routers-and-spindles/",
+    url: "https://sienci.com/product/makita-rt0701c-1-25-hp-110v-compact-router/",
   },
   "autospin-t1": {
     id: "autospin-t1",
@@ -85,13 +85,10 @@ export const CABECOTES: Record<CabecoteId, Cabecote> = {
     rpmMin: 7500,
     rpmMax: 24000,
     controleRpm: "gcode",
-    hastes: [HASTE_1_8, HASTE_1_4],
-    // ER20 aceita até 1/2″; pinças dos outros tamanhos são vendidas à parte.
-    hastesComAcessorio: [
-      { haste: HASTE_3_8, acessorio: { nome: "Pinça ER20 de precisão 3/8″", url: "https://sienci.com/product-tag/cnc-router-collets/" } },
-      { haste: HASTE_1_2, acessorio: { nome: "Pinça ER20 de precisão 1/2″", url: "https://sienci.com/product-tag/cnc-router-collets/" } },
-    ],
-    url: "https://sienci.com/product-category/routers-spindles/",
+    // O kit vem com pinças ER20 de 1/8″, 1/4″, 3/8″ e 1/2″.
+    hastes: [HASTE_1_8, HASTE_1_4, HASTE_3_8, HASTE_1_2],
+    hastesComAcessorio: [],
+    url: "https://sienci.com/product/altmill-1-5kw-er20-spindle-clear-cut-dust-shoe-kit/",
   },
   "spindle-2-2kw-er20": {
     id: "spindle-2-2kw-er20",
@@ -100,12 +97,9 @@ export const CABECOTES: Record<CabecoteId, Cabecote> = {
     rpmMin: 7500,
     rpmMax: 24000,
     controleRpm: "gcode",
-    hastes: [HASTE_1_8, HASTE_1_4],
-    hastesComAcessorio: [
-      { haste: HASTE_3_8, acessorio: { nome: "Pinça ER20 de precisão 3/8″", url: "https://sienci.com/product-tag/cnc-router-collets/" } },
-      { haste: HASTE_1_2, acessorio: { nome: "Pinça ER20 de precisão 1/2″", url: "https://sienci.com/product-tag/cnc-router-collets/" } },
-    ],
-    url: "https://sienci.com/product-category/routers-spindles/",
+    hastes: [HASTE_1_8, HASTE_1_4, HASTE_3_8, HASTE_1_2],
+    hastesComAcessorio: [],
+    url: "https://sienci.com/product/altmill-2-2kw-er20-spindle-clear-cut-dust-shoe-kit/",
   },
 };
 

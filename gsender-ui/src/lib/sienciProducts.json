@@ -10,6 +10,12 @@
     { "id": "longmill-mk2-30x30", "url": "https://resources.sienci.com/", "image": "machines/longmill-mk2.webp" },
     { "id": "longmill-mk2-48x30", "url": "https://resources.sienci.com/", "image": "machines/longmill-mk2.webp" }
   ],
+  "heads": [
+    { "id": "makita-rt0701", "url": "https://sienci.com/product/makita-rt0701c-1-25-hp-110v-compact-router/", "image": "heads/makita-rt0701.webp" },
+    { "id": "autospin-t1", "url": "https://sienci.com/product/autospin-t1-router/", "image": "heads/autospin-t1.webp" },
+    { "id": "spindle-1-5kw-er20", "url": "https://sienci.com/product/altmill-1-5kw-er20-spindle-clear-cut-dust-shoe-kit/", "image": "heads/spindle-1-5kw-er20.webp" },
+    { "id": "spindle-2-2kw-er20", "url": "https://sienci.com/product/altmill-2-2kw-er20-spindle-clear-cut-dust-shoe-kit/", "image": "heads/spindle-2-2kw-er20.webp" }
+  ],
   "bits": [
     { "id": "reta-1-16-downcut", "url": "https://sienci.com/product/1-16-flat-downcut-end-mill/", "image": "bits/reta-1-16-downcut.webp" },
     { "id": "reta-1-16-upcut", "url": "https://sienci.com/product/1-16-flat-upcut-end-mill/", "image": "bits/reta-1-16-upcut.webp" },

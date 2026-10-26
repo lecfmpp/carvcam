@@ -2,6 +2,7 @@ import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { sienciLink } from "../../lib/referral";
 import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { HeadCard } from "../../components/HeadCard";
 import { MachineCard } from "../../components/MachineCard";
 import { TopBar } from "../../components/TopBar";
 import { MACHINE_GROUPS } from "../../lib/machineInfo";
@@ -174,34 +175,10 @@ export default function Onboarding() {
                 {M.family} {M.size} works with these. We marked the one it usually ships with.
               </p>
             </div>
-            <div className="ws-grid2">
-              {M.heads.map((id) => {
-                const h = HEADS[id];
-                const collets = id === "makita-rt0701" ? "Collets: 1/4″ · 1/8″ collet sold separately" : h.kind === "Spindle" ? "ER20 collets: 1/8″, 1/4″ · 3/8″, 1/2″ sold separately" : "ER11 collets: 1/8″, 1/4″ included";
-                return (
-                  <button key={id} className="ws-card ws-head-card" aria-pressed={head === id} onClick={() => setHead(id)}>
-                    {h.auto ? (
-                      <div className="dial" style={{ width: 96, height: 96 }} aria-hidden="true">
-                        <span style={{ font: "600 22px var(--mono)" }}>AUTO</span>
-                      </div>
-                    ) : (
-                      <Dial size={96} />
-                    )}
-                    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 6, textAlign: "left" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                        <span className="ws-fam-name">{h.name}</span>
-                        {M.defaultHead === id ? <span className="ws-pill">Default for {M.family}</span> : null}
-                      </div>
-                      <span className="ws-fam-blurb" style={{ lineHeight: 1.45 }}>
-                        {h.note}
-                      </span>
-                      <span className="ws-fam-sizes">
-                        {collets} · {h.rpm[0].toLocaleString("en-US")}–{h.rpm[1].toLocaleString("en-US")} RPM
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
+            <div className="hgrid" role="radiogroup" aria-label="Router or spindle">
+              {M.heads.map((id) => (
+                <HeadCard key={id} id={id} selected={head === id} onSelect={() => setHead(id)} badge={M.defaultHead === id ? `Default for ${M.family}` : undefined} placement="onboarding" />
+              ))}
             </div>
           </div>
         ) : null}

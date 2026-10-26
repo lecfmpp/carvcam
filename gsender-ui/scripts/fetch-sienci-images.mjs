@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Baixa a foto oficial de cada máquina e fresa da Sienci Labs (a imagem principal da página do
+// Baixa a foto oficial de cada máquina, router/spindle e fresa da Sienci Labs (a imagem principal da página do
 // produto, og:image) e salva em WebP leve em public/, nos caminhos de src/lib/sienciProducts.json.
 //
 //   npm run images:fetch            # só o que ainda não existe
@@ -47,7 +47,7 @@ async function one(item, width) {
   return { id: item.id, status: `saved ${(webp.length / 1024).toFixed(0)} KB` };
 }
 
-const jobs = [...products.machines.map((m) => [m, 960]), ...products.bits.map((b) => [b, 600])];
+const jobs = [...products.machines.map((m) => [m, 960]), ...products.heads.map((h) => [h, 800]), ...products.bits.map((b) => [b, 600])];
 const seen = new Set();
 let ok = 0;
 for (const [item, width] of jobs) {

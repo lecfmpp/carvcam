@@ -11,7 +11,7 @@
  *     VITE_SIENCI_AFFILIATE_ID=123      # o seu código
  */
 
-export type Placement = "machine_card" | "machine_settings" | "bit_library" | "store_bits" | "bit_suggestion" | "accessory" | "onboarding";
+export type Placement = "machine_card" | "machine_settings" | "head_card" | "bit_library" | "store_bits" | "bit_suggestion" | "accessory" | "onboarding";
 
 const AFF_PARAM = (import.meta.env.VITE_SIENCI_AFFILIATE_PARAM as string | undefined)?.trim() || "";
 const AFF_ID = (import.meta.env.VITE_SIENCI_AFFILIATE_ID as string | undefined)?.trim() || "";
