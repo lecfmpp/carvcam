@@ -2,10 +2,15 @@ import { usePanelMode } from "../../lib/panel";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Seg } from "../../components/ui";
+import { ArrowUpRight } from "lucide-react";
+import { BitCard } from "../../components/BitCard";
+import { MachineCard } from "../../components/MachineCard";
+import { affiliateConfigured, sienciLink } from "../../lib/referral";
+import { bitImage, STORE_BITS, STORE_CATEGORY_URL } from "../../lib/storeBits";
 import { TopBar } from "../../components/TopBar";
 import { engineOptions, runEngine } from "../../engine/useEngine";
 import type { SimGrid } from "../../engine/protocol";
-import { BITS, bitById, compat, HEADS, machineById, MACHINES, materialById, PROJECTS, projectFits, TRACK, type HeadId, type Intent, type Machine, type Project } from "../../lib/catalog";
+import { BITS, bitById, compat, HEADS, machineById, MACHINES, materialById, PROJECTS, projectFits, TRACK, type Bit, type HeadId, type Intent, type Machine, type Project } from "../../lib/catalog";
 import { useDesign, type Design } from "../../state/design";
 import { useActiveMachine, useWorkshop } from "../../state/workshop";
 import { SimCanvas } from "../../stage/SimCanvas";
@@ -268,11 +273,11 @@ function Library() {
   const list = tab === "mine" ? filtered.filter((b) => bits.includes(b.id)) : filtered;
 
   return (
-    <div className="ws-page ws-page--wide" style={{ gap: 20 }}>
-      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 20 }}>
+    <div className="ws-page ws-page--wide" style={{ gap: 24 }}>
+      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 20, flexWrap: "wrap" }}>
         <div className="ws-head">
           <h1 className="ws-title ws-title--sm">Bits</h1>
-          <p className="ws-lead ws-lead--sm">Badges are checked against your {head.name}.</p>
+          <p className="ws-lead ws-lead--sm">Mark the bits you own so CarvCAM only suggests those. Fit is checked against your {head.name}.</p>
         </div>
         <div role="tablist" className="ws-tabs">
           {(
@@ -288,29 +293,69 @@ function Library() {
         </div>
       </div>
       <IntentChips value={intent} onChange={setIntent} />
-      {list.length === 0 ? (
-        <div style={{ padding: 24, borderRadius: 14, border: "1px dashed rgba(255,255,255,.16)", font: "400 14px var(--font)", color: "var(--text-3)" }}>No bits here yet. Switch to All Sienci bits and add the ones you have.</div>
-      ) : null}
-      <div className="ws-grid4">
-        {list.map((b) => {
-          const on = bits.includes(b.id);
-          return (
-            <div key={b.id} className={`ws-card ws-bit ${on ? "is-on" : ""}`}>
-              <BitCardBody bit={b} head={headId} corner={on ? <span className="ws-inmine">In my bits</span> : null} />
-              <div style={{ display: "flex", gap: 6, marginTop: "auto" }}>
-                <button className="btn btn--outline" style={{ flex: 1, height: 40, font: "500 13px var(--font)", background: "transparent" }} onClick={() => toggleBit(b.id)}>
-                  {on ? "Remove from my bits" : "Add to my bits"}
-                </button>
-                <a className="btn btn--quiet" style={{ height: 40, padding: "0 12px", font: "500 13px var(--font)", textDecoration: "none", color: "#D6D3CD" }} href={b.storeUrl} target="_blank" rel="noreferrer">
-                  See in store
-                </a>
-              </div>
+
+      <section className="bsection" aria-label="Bits CarvCAM works with">
+        <div className="bsection__head">
+          <h2 className="bsection__title">{tab === "mine" ? "In my workshop" : "Works with CarvCAM"}</h2>
+          <span className="bsection__note">Speeds and feeds come from the Sienci table for each of these.</span>
+        </div>
+        {list.length === 0 ? (
+          <div style={{ padding: 24, borderRadius: 14, border: "1px dashed rgba(255,255,255,.16)", font: "400 14px var(--font)", color: "var(--text-3)" }}>
+            No bits here yet. Switch to All Sienci bits and mark the ones you have.
+          </div>
+        ) : null}
+        <div className="bgrid">
+          {list.map((b) => {
+            const c = compat(b, headId);
+            return (
+              <BitCard
+                key={b.id}
+                bit={{ id: b.id, name: b.name, kind: bitKind(b), profile: b.profile, d: b.d, shank: b.shank, cut: b.cut, flutes: b.flutes, use: b.use, url: b.storeUrl, image: bitImage(b.id) }}
+                placement="bit_library"
+                compat={{ level: c.level, label: c.level === "fits" ? `Fits your ${head.name}` : c.label }}
+                owned={bits.includes(b.id)}
+                onToggle={() => toggleBit(b.id)}
+              />
+            );
+          })}
+        </div>
+      </section>
+
+      {tab === "all" ? (
+        <section className="bsection" aria-label="More from the Sienci store">
+          <div className="bsection__head">
+            <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
+              <h2 className="bsection__title">More from the Sienci store</h2>
+              <span className="bsection__note">3D carving, bowls, coated bits. CarvCAM doesn't plan toolpaths for these yet.</span>
             </div>
-          );
-        })}
-      </div>
+            <a className="bsection__all" href={sienciLink(STORE_CATEGORY_URL, "store_bits", "all-bits")} target="_blank" rel="noreferrer">
+              Browse all bits <ArrowUpRight size={14} />
+            </a>
+          </div>
+          <div className="bgrid">
+            {STORE_BITS.map((b) => (
+              <BitCard key={b.id} bit={b} placement="store_bits" />
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      <p className="bdisclosure">
+        {affiliateConfigured
+          ? "Links to sienci.com carry a CarvCAM referral code. Sienci Labs may pay CarvCAM a commission on purchases, at no extra cost to you."
+          : "Links to sienci.com tell Sienci Labs you came from CarvCAM."}
+      </p>
     </div>
   );
+}
+
+/** Tipo da fresa em uma linha, para o card. */
+function bitKind(b: Bit) {
+  if (b.profile === "v") return `V-bit · ${b.angle ?? 60}°`;
+  if (b.profile === "ball") return "Ball nose · upcut";
+  if (b.profile === "compression") return "Compression";
+  if (b.profile === "surfacing") return "Surfacing";
+  return `Flat · ${b.flute}`;
 }
 
 // ---------------------------------------------------------------- Settings
@@ -320,11 +365,9 @@ function Settings() {
   const { machine, head, headId } = useActiveMachine();
   const { machines, active, setHead, removeMachine } = useWorkshop();
   const rows = [
-    { k: "Machine", v: `${machine.family} ${machine.size}` },
-    { k: "Work area", v: `${machine.area[0]} × ${machine.area[1]} mm · Z ${machine.z} mm` },
-    { k: "Max speed", v: `${machine.maxSpeed.toLocaleString("en-US")} mm/min` },
     { k: "Spins the bit", v: `${head.name} · ${head.auto ? "automatic speed" : "dial by hand"}` },
-    { k: "Controller", v: machine.controller },
+    { k: "Profile travel", v: `${machine.area[0]} × ${machine.area[1]} mm · Z ${machine.z} mm` },
+    { k: "Profile max speed", v: `${machine.maxSpeed.toLocaleString("en-US")} mm/min` },
   ];
   return (
     <div className="ws-page ws-page--narrow" style={{ paddingTop: 36, gap: 20 }}>
@@ -332,6 +375,7 @@ function Settings() {
         <div className="ws-kicker">Settings</div>
         <h1 className="ws-title ws-title--sm">My machine</h1>
       </div>
+      <MachineCard id={machine.id} wide placement="machine_settings" />
       <div className="ws-panel" style={{ overflow: "hidden" }}>
         {rows.map((r) => (
           <div key={r.k} className="ws-row">
@@ -341,7 +385,7 @@ function Settings() {
         ))}
       </div>
       <div style={{ font: "400 13px var(--font)", color: "var(--text-4)" }}>
-        These values come from the machine profile ({cm(machine.area)}) and can't be edited here. Firmware settings live in Settings → Advanced.
+        CarvCAM checks every project against the travel in the machine profile ({cm(machine.area)}). Firmware settings live in Settings → Advanced.
       </div>
       {machine.heads.length > 1 ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>

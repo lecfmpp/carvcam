@@ -104,6 +104,7 @@ export interface Bit {
   shank: "1/8" | "1/4";
   cut: number;
   angle?: number;
+  flutes: number;
   uses: Intent[];
   use: string;
   kit: boolean;
@@ -145,6 +146,7 @@ export const BITS: Bit[] = sienci.FRESAS.map((f) => {
     shank: Math.abs(f.haste - 3.175) < 0.01 ? "1/8" : "1/4",
     cut: f.comprimentoCorte,
     angle: f.angulo,
+    flutes: f.canais,
     uses: t.uses,
     use: t.use,
     kit: sienci.STARTER_SET.includes(f.id),

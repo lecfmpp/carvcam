@@ -1,8 +1,11 @@
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
+import { sienciLink } from "../../lib/referral";
 import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { MachineCard } from "../../components/MachineCard";
 import { TopBar } from "../../components/TopBar";
-import { BITS, FAMILIES, HEADS, INTENTS, KIT, MACHINES, machineById, type Family, type HeadId, type Intent, type MachineId } from "../../lib/catalog";
+import { MACHINE_GROUPS } from "../../lib/machineInfo";
+import { BITS, HEADS, INTENTS, KIT, MACHINES, machineById, type HeadId, type Intent, type MachineId } from "../../lib/catalog";
 import { detectGsenderProfile } from "../../lib/gsenderProfile";
 import { toast } from "../../state/ui";
 import { useWorkshop } from "../../state/workshop";
@@ -15,7 +18,6 @@ const STEPS: [View, string][] = [
   ["head", "Router"],
   ["bits", "Bits"],
 ];
-const MAX_AREA = Math.max(...MACHINES.map((m) => m.area[1]));
 
 /** Primeiro uso: máquina → o que gira a fresa → fresas → pronto. `?add=1` acrescenta outra máquina. */
 export default function Onboarding() {
@@ -26,7 +28,7 @@ export default function Onboarding() {
   const detected = useMemo(() => (adding ? null : detectGsenderProfile()), [adding]);
 
   const [view, setView] = useState<View>("machine");
-  const [family, setFamily] = useState<Family | null>(null);
+  const [showOlder, setShowOlder] = useState(false);
   const [machineId, setMachineId] = useState<MachineId | null>(null);
   const [head, setHead] = useState<HeadId | null>(null);
   const [bits, setBits] = useState<string[]>(ws.onboarded ? ws.bits : []);
@@ -41,7 +43,6 @@ export default function Onboarding() {
   const pickMachine = (id: MachineId) => {
     const m = machineById(id);
     setMachineId(id);
-    setFamily(m.family);
     setHead((h) => (h && m.heads.includes(h) ? h : m.defaultHead));
   };
 
@@ -127,51 +128,37 @@ export default function Onboarding() {
                 </button>
               </div>
             ) : null}
-            <div className="ws-grid3">
-              {FAMILIES.map((f) => {
-                const sizes = MACHINES.filter((m) => m.family === f.id);
-                const on = family === f.id;
-                return (
-                  <button
-                    key={f.id}
-                    className="ws-card"
-                    aria-pressed={on}
-                    onClick={() => {
-                      pickMachine(f.defaultSize);
-                      setShowDetected(false);
-                    }}
-                  >
-                    <div className="ws-rects" aria-hidden="true">
-                      {sizes.map((s) => (
-                        <div
-                          key={s.id}
-                          className={`ws-rect ${on && s.id === machineId ? "is-on" : ""}`}
-                          style={{ width: Math.max(18, (s.area[0] / MAX_AREA) * 170), height: Math.max(16, (s.area[1] / MAX_AREA) * 110) }}
+            {MACHINE_GROUPS.map((g) => {
+              const open = !g.collapsed || showOlder || g.ids.includes(machineId as MachineId);
+              return (
+                <section key={g.title} className="mgroup" aria-label={g.title}>
+                  <div className="mgroup__head">
+                    <h2 className="mgroup__title">{g.title}</h2>
+                    <span className="mgroup__note">{g.note}</span>
+                  </div>
+                  {open ? (
+                    <div className="mgrid" role="radiogroup" aria-label={g.title}>
+                      {g.ids.map((id) => (
+                        <MachineCard
+                          key={id}
+                          id={id}
+                          placement="onboarding"
+                          selected={machineId === id}
+                          onSelect={() => {
+                            pickMachine(id);
+                            setShowDetected(false);
+                          }}
                         />
                       ))}
                     </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                      <span className="ws-fam-name">{f.id}</span>
-                      <span className="ws-fam-blurb">{f.blurb}</span>
-                      <span className="ws-fam-sizes">{sizes.map((s) => s.size).join(" · ")}</span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <div className="ws-kicker">Size</div>
-              <div className="ws-sizes">
-                {family
-                  ? MACHINES.filter((m) => m.family === family).map((m) => (
-                      <button key={m.id} className="ws-card ws-size" aria-pressed={m.id === machineId} onClick={() => pickMachine(m.id)}>
-                        <span style={{ font: "600 16px var(--mono)" }}>{m.size}</span>
-                        <span style={{ font: "400 13px var(--font)", color: "var(--text-3)" }}>{cm(m.area)}</span>
-                      </button>
-                    ))
-                  : null}
-              </div>
-            </div>
+                  ) : (
+                    <button className="mgroup__toggle" onClick={() => setShowOlder(true)}>
+                      I have a {g.title} ({g.ids.map((id) => MACHINES.find((m) => m.id === id)!.size).join(", ")})
+                    </button>
+                  )}
+                </section>
+              );
+            })}
             <button className="ws-quiet-link" onClick={() => toast("Generic GRBL machines skip the profile. You will enter the bed size in Settings → Advanced.", 3200)}>
               Other machine (generic GRBL)
             </button>
@@ -283,7 +270,7 @@ export default function Onboarding() {
                   <div className="ws-warn">
                     <AlertTriangle size={16} color="var(--paused)" strokeWidth={1.75} />
                     <span style={{ flex: 1 }}>You haven't marked the 22 mm surfacing bit.</span>
-                    <a href="https://sienci.com/product/22mm-surfacing-bit/" target="_blank" rel="noreferrer">
+                    <a href={sienciLink("https://sienci.com/product/22mm-surfacing-bit/", "onboarding", "aplainar-22mm")} target="_blank" rel="noreferrer">
                       <button>See in store</button>
                     </a>
                   </div>

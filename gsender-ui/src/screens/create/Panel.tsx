@@ -1,4 +1,5 @@
 import type { PlateSpecInput } from "@gsender-next/cam-engine";
+import { sienciLink } from "../../lib/referral";
 import { AlertCircle, AlertTriangle, ArrowRight, CheckCircle2, ChevronDown, ChevronRight, ChevronUp, Circle, Copy, Eye, EyeOff, FileUp, Heart, Hexagon, ImagePlus, Layers, Move, Wand2, Minus, MoveVertical, PenTool, Plus, Shapes, Square, Star, Trash2, Type, XCircle } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
@@ -53,7 +54,7 @@ export function CreatePanel(p: Props) {
     } else if (a.kind === "bit") {
       patch({ bit: a.bit });
       toast(`Switched to the ${bitById(a.bit)?.name ?? "new"} bit.`);
-    } else window.open(a.url, "_blank", "noopener");
+    } else window.open(sienciLink(a.url, "bit_suggestion"), "_blank", "noopener");
   };
 
   const status = p.errors ? (

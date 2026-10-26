@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "local": "vite build && vite preview --open"
+    "local": "vite build && vite preview --open",
+    "images:fetch": "node scripts/fetch-sienci-images.mjs"
   },
   "license": "GPL-3.0-only",
   "dependencies": {
@@ -33,6 +34,7 @@
     "@types/react-dom": "^18.3.7",
     "@types/three": "^0.170.0",
     "@vitejs/plugin-react": "^4.3.4",
+    "sharp": "^0.33.5",
     "typescript": "^5.9.3",
     "vite": "^5.4.11",
     "vitest": "^3.2.7"

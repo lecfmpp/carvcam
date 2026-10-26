@@ -21,6 +21,12 @@ npm run dev        # desenvolvimento em http://localhost:5173
 npm run build      # typecheck + build de produção
 ```
 
+## Máquinas, fresas e links da Sienci
+- **Cards de máquina** (onboarding e Settings › My machine): `src/components/MachineCard.tsx`, fichas em `src/lib/machineInfo.ts` (páginas de produto da Sienci, out/2026).
+- **Biblioteca de fresas** (My bits): as que o CarvCAM usa e "More from the Sienci store" (`src/lib/storeBits.ts`).
+- **Fotos:** WebP em `public/machines/` e `public/bits/`. `npm run images:fetch` baixa a foto principal de cada página de produto (`src/lib/sienciProducts.json`) e converte para WebP leve (precisa de acesso ao sienci.com). Sem a foto, o card mostra um desenho da máquina ou a silhueta da fresa.
+- **Links:** todo link para o sienci.com passa por `sienciLink()` (`src/lib/referral.ts`), que acrescenta `utm_source=carvcam&utm_medium=app&utm_campaign=<lugar>&utm_content=<produto>`. As UTMs só identificam a origem; a comissão vem do código de afiliado. Depois de aprovado no programa da Sienci, preencha `VITE_SIENCI_AFFILIATE_PARAM` e `VITE_SIENCI_AFFILIATE_ID` (veja `.env.example`).
+
 ## Marca e tela de entrada
 - Logo **CarvCAM** (`src/components/Brand.tsx`, `public/carvcam-icon.svg`) na barra do topo e como ícone da aba.
 - Tela de entrada (`index.html`): aparece antes de qualquer JavaScript, com a animação da logo e uma barra de progresso das etapas reais (interface, fontes, motor de CAM aquecido no worker, telas). Nada vem da internet. Se algo demorar mais de 15 s, avisa; se falhar, o app abre assim mesmo.

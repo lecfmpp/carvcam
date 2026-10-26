@@ -1,4 +1,5 @@
 import { generateSurfacing, ToolSchema, type SurfacingResult } from "@gsender-next/cam-engine";
+import { sienciLink } from "../../lib/referral";
 import { AlertTriangle, Check, CheckCircle2, Pause, Play } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -390,7 +391,7 @@ export default function Surfacing() {
               <div role="status" className="sf-note" style={{ alignItems: "center", padding: 12, background: "rgba(242,193,78,.07)", border: "1px solid rgba(242,193,78,.3)", fontSize: 13 }}>
                 <AlertTriangle size={16} color="var(--paused)" strokeWidth={1.75} style={{ flex: "none" }} />
                 <span style={{ flex: 1 }}>This bit isn't in My bits. You can still continue if you have it.</span>
-                <a href={bit.storeUrl} target="_blank" rel="noreferrer" className="btn btn--sm" style={{ height: 32, border: "1px solid rgba(242,193,78,.45)", textDecoration: "none", color: "var(--text)" }}>
+                <a href={sienciLink(bit.storeUrl, "bit_suggestion", bit.id)} target="_blank" rel="noreferrer" className="btn btn--sm" style={{ height: 32, border: "1px solid rgba(242,193,78,.45)", textDecoration: "none", color: "var(--text)" }}>
                   See in store
                 </a>
               </div>
