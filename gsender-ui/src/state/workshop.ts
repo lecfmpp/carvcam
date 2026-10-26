@@ -12,6 +12,10 @@ export interface WorkshopState {
   mode: "simple" | "pro";
   /** Modo Painel (tela touch do gControl): automático, sempre ligado ou desligado. */
   panel: "auto" | "on" | "off";
+  /** Ligações já conferidas no assistente "Connect" (chave: máquina|cabeçote|controladora|cabo). */
+  wired: string[];
+  /** Escolhas do assistente por máquina: controladora (MK2 tem duas) e cabo. */
+  link: Record<string, { controller: string; link: "usb" | "ethernet" }>;
 
   finishOnboarding(machine: MachineId, head: HeadId, bits: string[]): void;
   skipOnboarding(): void;
@@ -24,6 +28,8 @@ export interface WorkshopState {
   markDone(trackId: string): void;
   setMode(mode: "simple" | "pro"): void;
   setPanel(panel: "auto" | "on" | "off"): void;
+  markWired(key: string): void;
+  setLink(machine: string, v: { controller: string; link: "usb" | "ethernet" }): void;
 }
 
 export const useWorkshop = create<WorkshopState>()(
@@ -36,6 +42,8 @@ export const useWorkshop = create<WorkshopState>()(
       trackDone: [],
       mode: "simple",
       panel: "auto",
+      wired: [],
+      link: {},
 
       finishOnboarding: (machine, head, bits) => set({ onboarded: true, machines: [{ id: machine, head }], active: 0, bits }),
       skipOnboarding: () => set({ onboarded: true }),
@@ -60,6 +68,10 @@ export const useWorkshop = create<WorkshopState>()(
       },
       setMode: (mode) => set({ mode }),
       setPanel: (panel) => set({ panel }),
+      markWired: (key) => {
+        if (!get().wired.includes(key)) set({ wired: [...get().wired, key] });
+      },
+      setLink: (machine, v) => set({ link: { ...get().link, [machine]: v } }),
     }),
     { name: "gsender-workshop", version: 1 },
   ),

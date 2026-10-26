@@ -5,6 +5,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { machineById, machineName, HEADS } from "../lib/catalog";
 import { usePanelMode } from "../lib/panel";
 import { useMachine } from "../machine/store";
+import { openConnect } from "../state/ui";
 import { useActiveMachine, useWorkshop } from "../state/workshop";
 import { Seg } from "./ui";
 
@@ -226,6 +227,14 @@ export function StatusPill() {
     done: ["pill--ready", "Done"],
   };
   const [cls, label] = map[s.status];
+  // Desconectada: o selo vira atalho para o assistente de conexão.
+  if (s.status === "disconnected")
+    return (
+      <button className={`pill pill--button ${cls}`} onClick={openConnect} title="Connect your machine">
+        <span className="pill__dot" />
+        {label} · Connect
+      </button>
+    );
   return (
     <div role="status" className={`pill ${cls}`}>
       <span className="pill__dot" />

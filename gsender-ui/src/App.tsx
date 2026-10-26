@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
 import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
+import { ConnectWizardHost } from "./components/ConnectWizard";
 import { Toasts } from "./components/ui";
 import { usePanelMode } from "./lib/panel";
 import { useDesign } from "./state/design";
@@ -40,6 +41,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
+      <ConnectWizardHost />
       <Toasts />
     </HashRouter>
   );

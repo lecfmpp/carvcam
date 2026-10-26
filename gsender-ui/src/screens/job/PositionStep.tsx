@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Seg, SidePanel, VideoCard } from "../../components/ui";
 import { machineName, materialById } from "../../lib/catalog";
 import { useMachine, workPos } from "../../machine/store";
-import { toast } from "../../state/ui";
+import { openConnect, toast } from "../../state/ui";
 import { useWorkshop } from "../../state/workshop";
 import { fitScale, Stage } from "../../stage/Stage";
 import type { JobCtx } from "./Job";
@@ -63,7 +63,7 @@ export function PositionStep({ ctx }: { ctx: JobCtx }) {
 
   let primary: { label: string; click(): void; enabled: boolean } = { label: "", click: () => {}, enabled: false };
   let hint = "";
-  if (sub === "connect") primary = { label: m.status === "connecting" ? "Connecting…" : "Connect", click: () => m.connect("COM3"), enabled: m.status !== "connecting" };
+  if (sub === "connect") primary = { label: m.status === "connecting" ? "Connecting…" : "Connect", click: openConnect, enabled: m.status !== "connecting" };
   if (sub === "home") primary = { label: m.status === "homing" ? "Finding home…" : "Find home", click: () => m.home(), enabled: m.status === "idle" };
   if (sub === "stock") primary = { label: "My board is clamped", click: () => flow.set({ stockOk: true }), enabled: true };
   if (sub === "zero") {
@@ -186,17 +186,14 @@ export function PositionStep({ ctx }: { ctx: JobCtx }) {
 
         {sub === "connect" ? (
           <div className="job-sec">
-            <div className="job-body">{m.status === "connecting" ? `Connecting to ${machineName(machine)}…` : "Found one machine on USB. Turn it on and plug in the cable if it is not listed."}</div>
+            <div className="job-body">{m.status === "connecting" ? `Connecting to ${machineName(machine)}…` : "We'll show you where each cable goes, connect, and test that the machine really answers."}</div>
             <div className="port">
               <Plug size={20} strokeWidth={1.5} color="var(--text-3)" />
               <span style={{ display: "flex", flexDirection: "column" }}>
                 <span style={{ font: "500 14px var(--font)" }}>{machineName(machine)}</span>
-                <span className="mono tiny muted">USB · COM3 · grblHAL 1.1</span>
+                <span className="mono tiny muted">Power · E-stop · router · USB or Ethernet</span>
               </span>
             </div>
-            <button className="link" style={{ alignSelf: "flex-start", color: "var(--text-2)" }} onClick={() => toast("Network connections arrive with the gSender server connection.")}>
-              Other port or network (IP)
-            </button>
           </div>
         ) : null}
 

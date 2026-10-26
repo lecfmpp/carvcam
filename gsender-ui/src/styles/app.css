@@ -115,6 +115,8 @@ input, select, textarea { font: inherit; color: inherit; }
   font: 500 13px var(--font); color: var(--text-2); white-space: nowrap;
 }
 .pill__dot { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--text-4); }
+.pill--button { cursor: pointer; }
+.pill--button:hover { border-color: rgba(255, 91, 31, 0.6); color: var(--text); }
 .pill--ready { border-color: rgba(94, 221, 176, 0.45); background: rgba(94, 221, 176, 0.08); color: var(--ready-text); }
 .pill--ready .pill__dot { background: var(--ready); border-color: var(--ready); }
 .pill--running { border-color: rgba(110, 168, 255, 0.5); background: rgba(110, 168, 255, 0.1); color: var(--running-text); }

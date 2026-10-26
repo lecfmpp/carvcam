@@ -8,7 +8,7 @@ import { TopBar } from "../../components/TopBar";
 import { Seg, SidePanel, Stepper, VideoCard } from "../../components/ui";
 import { bitById, PRESET_TO_SPEED, type Preset } from "../../lib/catalog";
 import { useMachine } from "../../machine/store";
-import { toast } from "../../state/ui";
+import { openConnect, toast } from "../../state/ui";
 import { useActiveMachine, useWorkshop } from "../../state/workshop";
 import { ToolpathOverlay, useSegments } from "../../stage/Board";
 import { Stage } from "../../stage/Stage";
@@ -114,7 +114,7 @@ export default function Surfacing() {
           fixLabel: m.status === "connecting" ? "Connecting…" : "Connect",
           fix: () => {
             m.setBed({ x: aw, y: ah, z: machine.z });
-            m.connect("COM3");
+            openConnect();
           },
         },
     m.homed
