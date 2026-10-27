@@ -14,7 +14,7 @@ const { open } = require('./lib.cjs');
   await bb('height', slider);
   const setR = (v) => slider.evaluate((el, v) => { const s = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set; s.call(el, v); el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); }, v);
   console.log('range', await slider.evaluate((el) => [el.min, el.max, el.value]));
-  // espera o preview do corte assentar (a fonte nova carrega e o "≈N% stays" baixa)
+  // wait for the cut preview to settle (the new font loads and the "≈N% stays" drops)
   const settle = async () => { let last = '', same = 0; for (let i = 0; i < 8 && same < 3; i++) { await p.waitForTimeout(350); const v = await p.getByText(/stays/).first().innerText().catch(() => ''); const n = parseInt((v.match(/(\d+)%/) || [])[1] || '0'); if (v === last && n < 10) same++; else same = 0; last = v; } };
   const font = p.locator('.create-font').nth(2);
   await bb('fontScript', font);
@@ -51,7 +51,7 @@ const { open } = require('./lib.cjs');
     await p.locator('.cw__nav .btn--primary').click(); await p.waitForTimeout(450); i++;
   }
   await p.waitForTimeout(1500);
-  // vídeo: o cartão do simulador vira a porta USB detectada (o simulador roda por baixo)
+  // video only: the simulator card becomes the detected USB port (the simulator runs underneath)
   await p.evaluate(() => {
     const ports = document.querySelector('.cw__ports');
     [...ports.querySelectorAll('.cw__port:not(.cw__port--sim)')].forEach((e) => e.remove());

@@ -1,7 +1,7 @@
-// Páginas "CarvCAM vs X". Os fatos dos concorrentes (preços, limites, relatos de usuários, FAQ, fontes)
-// vêm de research/competitors.json, conferido em 2026-10-27 nas páginas oficiais e fóruns citados.
-// Aqui fica só o texto editorial de cada página e o lado CarvCAM da comparação.
-// Células da tabela: "yes" / "no" / "part" viram ícones; o resto é texto.
+// "CarvCAM vs X" pages. Competitor facts (prices, limits, user reports, FAQ, sources)
+// come from research/competitors.json, checked on 2026-10-27 against the official pages and cited forums.
+// This file only holds each page's editorial copy and the CarvCAM side of the comparison.
+// Table cells: "yes" / "no" / "part" become icons; anything else is text.
 import { readFileSync } from "node:fs";
 
 const research = JSON.parse(readFileSync(new URL("./research/competitors.json", import.meta.url), "utf8"));
@@ -197,12 +197,12 @@ const pages = [
   },
 ];
 
-// Junta o texto editorial com os fatos pesquisados.
+// Merges the editorial copy with the researched facts.
 export const comparisons = pages.map((p) => {
   const r = R[p.slug];
   const platformsShort = { easel: "Browser", gsender: "Windows, Mac, Linux, Pi", "carbide-create": "Windows, Mac", vcarve: "Windows only", "fusion-360": "Windows, Mac", "carveco-maker": "Windows" }[p.slug];
   return { ...p, platformsShort, maker: r.maker, type: r.type, pricing: r.pricing, limits: r.limits, painPoints: r.pain_points, stronger: r.stronger, faq: r.faq.map((f) => [f.q, f.a]), sources: r.sources, keywords: r.keywords };
 });
 
-// Outras opções, citadas no guia "melhor software" (uma linha cada).
+// Other options, mentioned in the "best software" guide (one line each).
 export const others = ["ugs", "kiri-moto", "estlcam"].map((s) => ({ slug: s, name: R[s].name, type: R[s].type, price: R[s].pricing.map((x) => x.price).join(" · "), platforms: R[s].platforms, source: R[s].sources[0] }));

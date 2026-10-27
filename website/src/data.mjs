@@ -1,19 +1,19 @@
-// Conteúdo do site. Cada lista gera páginas (máquinas, recursos, comparações, guias).
-// Fatos sobre concorrentes: só o que foi conferido nas páginas oficiais em out/2026 (ver `sources`).
+// Site content. Each list generates pages (machines, features, comparisons, guides).
+// Competitor facts: only what was checked on the official pages in Oct 2026 (see `sources`).
 
 export const site = {
   name: "CarvCAM",
-  // TODO: domínio final.
-  // Netlify define URL no build (o endereço principal do site); fora dele, o domínio final.
+  // TODO: final domain.
+  // Netlify sets URL during the build (the site's primary address); outside it, the final domain.
   url: (process.env.SITE_URL || process.env.URL || "https://www.carvcam.com").replace(/\/$/, ""),
   download: "/download/",
-  // Instaladores publicados pelo CI (desktop/, tag v*) com nome fixo na Release mais recente do
-  // GitHub: o link sempre baixa a versão nova, sem mudar o site a cada lançamento.
+  // Installers published by CI (desktop/, tag v*) under a fixed name on the latest GitHub
+  // Release: the link always downloads the newest version, without changing the site on every release.
   downloads: {
     windows: "https://github.com/lecfmpp/carvcam/releases/latest/download/CarvCAM-Windows-64Bit.exe",
     appimage: "https://github.com/lecfmpp/carvcam/releases/latest/download/CarvCAM-Linux-x86_64.AppImage",
     deb: "https://github.com/lecfmpp/carvcam/releases/latest/download/CarvCAM-Linux-amd64.deb",
-    // Raspberry Pi: 64 bits (Pi 4 e 5 com o Raspberry Pi OS 64-bit) e 32 bits (armv7l)
+    // Raspberry Pi: 64-bit (Pi 4 and 5 on Raspberry Pi OS 64-bit) and 32-bit (armv7l)
     piDeb: "https://github.com/lecfmpp/carvcam/releases/latest/download/CarvCAM-Linux-arm64.deb",
     piAppImage: "https://github.com/lecfmpp/carvcam/releases/latest/download/CarvCAM-Linux-arm64.AppImage",
     pi32Deb: "https://github.com/lecfmpp/carvcam/releases/latest/download/CarvCAM-Linux-armv7l.deb",

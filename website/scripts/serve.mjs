@@ -1,4 +1,4 @@
-// Servidor simples para ver dist/ como no ar: node scripts/serve.mjs [porta]
+// Simple server to view dist/ as it would be live: node scripts/serve.mjs [port]
 import { createServer } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import { extname, join } from "node:path";

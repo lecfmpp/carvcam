@@ -1,5 +1,5 @@
-// Converte as capturas de tela do app (PNG) em WebP leves para o site, em dois tamanhos.
-//   node scripts/images.mjs <pasta-com-pngs>
+// Converts the app screenshots (PNG) into lightweight WebP for the site, in two sizes.
+//   node scripts/images.mjs <folder-with-pngs>
 import { readdir, mkdir } from "node:fs/promises";
 import { join, basename } from "node:path";
 import sharp from "sharp";

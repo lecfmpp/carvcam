@@ -1,15 +1,15 @@
-# Clipes dos recursos (home)
+# Feature clips (home page)
 
-Gravações de tela simuladas, em loop, para as quatro linhas de recursos da home (Design, Prepare,
-Connect, Position & carve). Mesmo motor e mesmas capturas do vídeo do hero (`../hero-demo/assets/shots`),
-sem abertura e sem legenda: o texto do site ao lado já explica. O último quadro volta à pose do primeiro,
-então o loop não salta.
+Simulated, looping screen recordings for the four feature rows on the home page (Design, Prepare,
+Connect, Position & carve). Same engine and same screenshots as the hero video (`../hero-demo/assets/shots`),
+with no intro and no captions: the site copy next to them already explains. The last frame returns to the
+pose of the first, so the loop doesn't jump.
 
 ```
-node render.mjs              # todas as cenas; ou: node render.mjs connect
+node render.mjs              # all scenes; or: node render.mjs connect
 ```
 
-Saída em `website/assets/video/feature-<cena>.mp4` (1280×800, sem áudio, ~0,5–0,7 MB) + `-poster.webp`.
-São MP4 e não GIF de propósito: o mesmo clipe em GIF passaria de 6 MB e pesaria no carregamento (e no
-Google). No site eles se comportam como GIF (mudos, em loop, sem controles), só baixam quando chegam
-perto da tela e ficam parados para quem pede menos movimento.
+Output goes to `website/assets/video/feature-<scene>.mp4` (1280×800, no audio, ~0.5–0.7 MB) + `-poster.webp`.
+They are MP4 rather than GIF on purpose: the same clip as a GIF would be over 6 MB and weigh down page load
+(and Google). On the site they behave like GIFs (muted, looping, no controls), only download when they get
+close to the viewport, and stay still for people who ask for reduced motion.

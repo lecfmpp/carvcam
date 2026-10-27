@@ -1,5 +1,7 @@
 const { chromium } = require('playwright');
 const fs = require('fs');
+// Seed state for the app's persisted stores. Keys and ids (e.g. 'reta-1-8-upcut', spec.largura) must match
+// gsender-ui's stored schema exactly, so they follow whatever names the app uses.
 const WS = JSON.stringify({ state: { onboarded: true, machines: [{ id: 'longmill-mk3-30x30', head: 'autospin-t1' }], active: 0, bits: ['reta-1-8-upcut','vbit-60-15mm','reta-1-16-downcut'], trackDone: [], mode: 'simple', panel: 'off', wired: [], link: {} }, version: 1 });
 async function open() {
   const browser = await chromium.launch();

@@ -1,4 +1,4 @@
-# Site estático: o build gera dist/ a partir de src/ (sem framework, sem dependências de runtime).
+# Static site: the build generates dist/ from src/ (no framework, no runtime dependencies).
 [build]
   base = "website"
   command = "node build.mjs"
@@ -7,7 +7,7 @@
 [build.environment]
   NODE_VERSION = "20"
 
-# HTML sempre revalida (deploys aparecem na hora); o resto do cache é longo.
+# HTML always revalidates (deploys show up immediately); everything else is cached for a long time.
 [[headers]]
   for = "/*"
   [headers.values]
@@ -38,7 +38,7 @@
   [headers.values]
     Cache-Control = "public, max-age=86400, stale-while-revalidate=604800"
 
-# Versões em Markdown e o índice para agentes (llms.txt)
+# Markdown versions and the index for agents (llms.txt)
 [[headers]]
   for = "/*.md"
   [headers.values]

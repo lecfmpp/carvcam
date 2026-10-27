@@ -1,7 +1,7 @@
-// Renderiza os clipes dos recursos da home (clip.html?scene=...) quadro a quadro e gera, para cada um,
-// assets/video/feature-<cena>.mp4 (1280x800, sem áudio, em loop) + o pôster .webp.
+// Renders the home page feature clips (clip.html?scene=...) frame by frame and produces, for each one,
+// assets/video/feature-<scene>.mp4 (1280x800, no audio, looping) + the .webp poster.
 //   node render.mjs [design prepare connect carve]
-// Usa o playwright instalado globalmente e o ffmpeg do sistema.
+// Uses the globally installed playwright and the system ffmpeg.
 import { createRequire } from "node:module";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";

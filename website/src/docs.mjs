@@ -1,14 +1,14 @@
-// Documentação (docs/): o manual do usuário v1.0 reescrito para a web, em páginas curtas de passo a passo.
-// Cada página é uma lista de blocos:
-//   ["p", texto]                       parágrafo
-//   ["h2", título]                     seção (entra no "On this page")
-//   ["steps", [[título, texto, print?], ...]]
-//   ["callout", "tip" | "note" | "warn", título, texto]
-//   ["table", [cabeçalhos], [[células], ...]]
-//   ["shot", print, legenda]           print de assets/screens
-//   ["clip", cena, legenda]            clipe em loop de assets/video/feature-<cena>.mp4
-//   ["cards", [[título, texto, link], ...]]
-// Texto aceita **negrito**, `código` e [link](/docs/pagina/).
+// Documentation (docs/): the v1.0 user manual rewritten for the web, as short step-by-step pages.
+// Each page is a list of blocks:
+//   ["p", text]                        paragraph
+//   ["h2", title]                      section (listed in "On this page")
+//   ["steps", [[title, text, screenshot?], ...]]
+//   ["callout", "tip" | "note" | "warn", title, text]
+//   ["table", [headers], [[cells], ...]]
+//   ["shot", screenshot, caption]      screenshot from assets/screens
+//   ["clip", scene, caption]           looping clip from assets/video/feature-<scene>.mp4
+//   ["cards", [[title, text, link], ...]]
+// Text supports **bold**, `code` and [link](/docs/page/).
 
 export const docSections = [
   { name: "Get started", pages: ["quickstart", "install", "workshop", "how-it-works"] },

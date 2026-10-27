@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 """
-Trilha original do hero (gerador do hero do Tá no Caixa, reaproveitado no CarvCAM): "light corporate / feel-good" de SaaS.
+Original hero soundtrack (the Tá no Caixa hero generator, reused for CarvCAM): "light corporate / feel-good" SaaS.
 
-Referências de mercado (trilhas de demo de produto): 95-125 BPM, piano e plucks de marimba
-em primeiro plano, pulso eletrônico suave, baixo redondo, palmas/estalos como textura e
-muito espaço. Nada de serra/chiptune.
+Market references (product demo soundtracks): 95-125 BPM, piano and marimba plucks
+up front, soft electronic pulse, round bass, claps/snaps as texture and
+plenty of space. No saw waves/chiptune.
 
-16 compassos a ~123,9 BPM = exatamente 31,000 s (o tamanho do vídeo). Um acorde por compasso
-(C - G - Am - F x3, fecha em C - G - F - G). Arranjo que acompanha o vídeo:
-  1-2   piano solo + pad                      3-7   kick em meio-tempo, shaker e baixo
-  8-12  four-on-the-floor, palmas, marimba    13-14 clímax (marimba dobrada, sinos)
-  15-16 respiro: piano + pad + sino -> fecha na logo e volta ao início
+16 bars at ~123.9 BPM = exactly 31.000 s (the length of the video). One chord per bar
+(C - G - Am - F x3, closing on C - G - F - G). Arrangement that follows the video:
+  1-2   solo piano + pad                      3-7   half-time kick, shaker and bass
+  8-12  four-on-the-floor, claps, marimba     13-14 climax (doubled marimba, bells)
+  15-16 breather: piano + pad + bell -> closes on the logo and loops back to the start
 
-Sintetizada em numpy (sem samples, sem licença, sem atribuição). O pattern é renderizado 3x e o
-miolo recortado, então reverb e delay fecham o loop sem emenda.
+Synthesized in numpy (no samples, no license, no attribution). The pattern is rendered 3x and the
+middle is cut out, so reverb and delay close the loop seamlessly.
 
     python3 gen_saas.py out.wav
 """
@@ -26,7 +26,7 @@ SR = 44100
 BARS = 18
 DUR = 34.875
 BAR = DUR / BARS
-BEAT = BAR / 4            # ~0,5536 s (~108,4 BPM)
+BEAT = BAR / 4            # ~0.5536 s (~108.4 BPM)
 E8 = BEAT / 2
 S16 = BEAT / 4
 LOOP_N = int(round(DUR * SR))
@@ -49,9 +49,9 @@ def hp(x, fc, order=2):
     return signal.lfilter(b, a, x)
 
 
-# ---- instrumentos --------------------------------------------------------
+# ---- instruments --------------------------------------------------------
 def epiano(freq, dur, amp):
-    """Piano elétrico macio (FM estilo Rhodes): sino suave no ataque, corpo redondo."""
+    """Soft electric piano (Rhodes-style FM): gentle bell on the attack, round body."""
     n = int(dur * SR)
     t = np.arange(n) / SR
     idx = 1.6 * np.exp(-t / 0.18) + 0.25
@@ -67,7 +67,7 @@ def epiano(freq, dur, amp):
 
 
 def marimba(freq, dur, amp):
-    """Marimba/kalimba: parciais de barra de madeira, decaimento curto."""
+    """Marimba/kalimba: wooden bar partials, short decay."""
     n = int(dur * SR)
     t = np.arange(n) / SR
     y = (np.sin(2 * np.pi * freq * t) * np.exp(-t / 0.32)
@@ -97,7 +97,7 @@ def sub_bass(freq, dur, amp):
 
 
 def pad_chord(freqs, dur, amp):
-    """Pad de senos com leve coro (sem serra): macio e aberto."""
+    """Sine pad with light chorus (no saw): soft and open."""
     n = int(dur * SR)
     t = np.arange(n) / SR
     outL = np.zeros(n)
@@ -128,7 +128,7 @@ def shaker(amp):
 
 
 def clap(amp):
-    """Palma + estalo, macios (referência de identidades sonoras com claps/snaps)."""
+    """Soft clap + snap (a nod to sonic brand identities with claps/snaps)."""
     n = int(0.25 * SR)
     t = np.arange(n) / SR
     y = np.zeros(n)
@@ -147,20 +147,20 @@ def swell(secs, amp):
     return lp(y, 9000) * amp
 
 
-# ---- partitura -----------------------------------------------------------
-# (nome, baixo, notas do piano [4 tons], pad [3 tons])
+# ---- score --------------------------------------------------------------
+# (name, bass, piano notes [4 tones], pad [3 tones])
 CH = {
     "C": (36, [60, 64, 67, 72], [55, 60, 64]),
     "G": (43, [59, 62, 67, 71], [55, 59, 62]),
     "Am": (45, [57, 60, 64, 69], [57, 60, 64]),
     "F": (41, [57, 60, 65, 69], [53, 57, 60]),
 }
-# compasso 0 = abertura da marca, 1-16 = vídeo, 17 = fechamento da marca (resolve em C e volta pro 0)
+# bar 0 = brand intro, 1-16 = video, 17 = brand outro (resolves on C and loops back to 0)
 PROG = ["C"] + ["C", "G", "Am", "F"] * 3 + ["C", "G", "F", "G"] + ["C"]
 PIANO_PATTERN = [0, 1, 2, 3, 2, 3, 2, 1]
 PIANO_PATTERN_B = [0, 2, 1, 3, 2, 1, 3, 2]
 
-MEL = {  # (colcheia 0-7, duração em colcheias, MIDI)
+MEL = {  # (eighth note 0-7, duration in eighth notes, MIDI)
     "C": [(0, 2, 76), (2, 1, 79), (3, 1, 76), (4, 2, 74), (6, 2, 72)],
     "G": [(0, 2, 74), (2, 1, 71), (3, 1, 74), (4, 3, 79)],
     "Am": [(0, 2, 72), (2, 1, 76), (3, 1, 72), (4, 2, 69), (6, 2, 76)],
@@ -196,31 +196,31 @@ for loop in range(N_LOOPS):
         # pad
         L, R = pad_chord([mtof(m) for m in padn], BAR * 1.05, 0.04 if n <= 2 or n >= 15 else 0.03)
         put("pad", L, t0, y2=R)
-        # piano: mão esquerda + arpejo de colcheias
+        # piano: left hand + eighth-note arpeggio
         pat = PIANO_PATTERN_B if 8 <= n <= 14 else PIANO_PATTERN
         piano_amp = 0.3 if n <= 2 else (0.26 if n >= 15 else 0.28)
         put("piano", epiano(mtof(bnote + 12), BAR * 0.9, piano_amp * 0.4), t0, -0.1)
-        if n == 17:  # fechamento: acorde rolado e longo, o piano respira
+        if n == 17:  # outro: long rolled chord, the piano breathes
             for k, m in enumerate(keys):
                 put("piano", epiano(mtof(m), 3.2, piano_amp * 0.8), t0 + k * 0.07, 0.1 * (k - 1.5))
         for s in (range(8) if n != 17 else ()):
             acc = 1.0 if s % 4 == 0 else (0.8 if s % 2 == 0 else 0.62)
             put("piano", epiano(mtof(keys[pat[s]]), 0.9, piano_amp * acc),
                 t0 + s * E8, 0.15 if s % 2 else -0.05)
-        # baixo
+        # bass
         if 3 <= n <= 14:
-            # groove sincopado (1, 2&, 3&, 4) com oitava no fim da frase
+            # syncopated groove (1, 2&, 3&, 4) with an octave at the end of the phrase
             for pos, nt in ((0, bnote), (3 * E8, bnote), (5 * E8, bnote + 12), (7 * E8, bnote + 7 if name in ("C", "Am") else bnote)):
                 put("bass", sub_bass(mtof(nt), 0.3, 0.26), t0 + pos, 0.0)
-        # bateria: meio-tempo na construção, four-on-the-floor com palmas na parte principal
+        # drums: half-time in the build-up, four-on-the-floor with claps in the main section
         if 3 <= n <= 14:
             for b in ((0, 1, 2, 3) if n >= 8 else (0, 2)):
                 put("drums", kick(0.38), t0 + b * BEAT, 0.0)
                 kick_times.append(t0 + b * BEAT)
             if n >= 8:
-                for s in range(16):  # shaker em semicolcheias, acento fora do tempo
+                for s in range(16):  # sixteenth-note shaker, off-beat accent
                     put("drums", shaker(0.05 if s % 4 == 2 else (0.03 if s % 2 == 0 else 0.022)), t0 + s * S16, 0.3)
-                for b in range(4):  # contratempo aberto
+                for b in range(4):  # open off-beat
                     put("drums", shaker(0.07), t0 + b * BEAT + BEAT / 2, -0.25)
             else:
                 for s in range(8):
@@ -230,16 +230,16 @@ for loop in range(N_LOOPS):
                 put("drums", clap(0.8), t0 + b * BEAT, 0.0)
         if n == 7:
             put("drums", swell(BAR, 0.1), t0, 0.0)
-        if n == 0:  # sobe junto com a transição sol -> mar e abre o app
+        if n == 0:  # rises with the sun -> sea transition and opens the app
             put("drums", swell(BAR * 0.55, 0.08), t0 + BAR * 0.45, 0.0)
             put("mallet", bell(mtof(84), 1.8, 0.05), t0 + 0.05, 0.2)
-        if n == 16:  # o sol cresce de novo: swell para o fechamento da marca
+        if n == 16:  # the sun grows again: swell into the brand outro
             put("drums", swell(BAR * 0.5, 0.08), t0 + BAR * 0.5, 0.0)
-        if n == 17:  # sino do símbolo (quadrado, traço, nome) e fecha em C
+        if n == 17:  # logo bell (square, stroke, name) and close on C
             put("mallet", bell(mtof(84), 2.6, 0.07), t0 + 0.2, 0.2)
             put("mallet", bell(mtof(79), 2.6, 0.06), t0 + 0.9, -0.2)
             put("mallet", bell(mtof(72), 2.8, 0.06), t0 + 1.4, 0.0)
-        # marimba (hook) e sinos
+        # marimba (hook) and bells
         if 8 <= n <= 16:
             m_amp = 0.36 if n <= 14 else 0.24
             for step, ln, midi in MEL[name]:
@@ -252,7 +252,7 @@ for loop in range(N_LOOPS):
             put("mallet", bell(mtof(79), 2.4, 0.08), t0 + BEAT, 0.2)
             put("mallet", bell(mtof(72), 2.4, 0.06), t0 + 2.5 * BEAT, -0.2)
 
-# sidechain leve: kick "respira" pad e baixo
+# light sidechain: the kick makes the pad and bass "breathe"
 sc = np.ones(TOTAL)
 tt = np.arange(int(0.4 * SR)) / SR
 curve = 1 - 0.35 * np.exp(-tt / 0.1)
@@ -264,7 +264,7 @@ for nm in ("pad", "bass"):
     bus[nm][0] *= sc
     bus[nm][1] *= sc
 
-# delay ping-pong suave (colcheia pontuada) na marimba e no piano
+# soft ping-pong delay (dotted eighth) on the marimba and piano
 d = int(0.75 * BEAT * SR)
 src = 0.5 * (bus["mallet"][0] + bus["mallet"][1]) + 0.18 * (bus["piano"][0] + bus["piano"][1])
 dl = np.zeros(TOTAL)

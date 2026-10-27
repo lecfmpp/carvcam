@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=1920, height=1200" />
-    <!-- Clipes curtos dos recursos da home: o mesmo motor do vídeo do hero (prints reais, câmera com zoom,
-         cursor e cliques), sem abertura nem legenda, e em loop sem emenda. clip.html?scene=design|prepare|connect|carve -->
+    <!-- Short clips for the home page features: the same engine as the hero video (real screenshots, zooming camera,
+         cursor and clicks), with no intro or captions, and a seamless loop. clip.html?scene=design|prepare|connect|carve -->
     <script src="../hero-demo/assets/gsap.min.js"></script>
     <style>
       * {
@@ -78,7 +78,7 @@
   <body>
     <div id="cam"></div>
     <script>
-      const K = 1920 / 1440; // CSS px do app -> px do vídeo
+      const K = 1920 / 1440; // app CSS px -> video px
       const W = 1920;
       const H = 1200;
       const cam = document.getElementById("cam");
@@ -92,7 +92,7 @@
         connect: ["c0-wiz", "c1-step0", "c1-step0-t0", "c1-step1", "c1-step1-t0", "c1-step2", "c1-step2-t0", "c1-step3", "c1-step3-t0", "c2-ports", "c2-pick", "c3-connecting", "c4-verify", "c5-yes1", "c6-spinning", "c7-ok"],
         carve: ["d6-check", "d6-check-in", ...RUN, "e-done"],
       }[scene];
-      // o primeiro print entra de novo por cima no fim: o loop fecha sem salto
+      // the first screenshot comes back on top at the end: the loop closes without a jump
       [...SHOTS, SHOTS[0]].forEach((id, i) => {
         const im = document.createElement("img");
         im.className = "shot";
@@ -118,7 +118,7 @@
         '<svg viewBox="0 0 34 34"><path d="M3 3 L3 26 L9.2 20.4 L13.6 30.4 L18.4 28.3 L14 18.4 L22.4 18.2 Z" fill="#fff" stroke="#111214" stroke-width="2" stroke-linejoin="round"/></svg>';
       cam.appendChild(cursor);
 
-      /* helpers (os mesmos do hero) */
+      /* helpers (the same as the hero) */
       const main = gsap.timeline({ paused: true });
       const tl = main;
       let t = 0;
@@ -186,12 +186,12 @@
         tl.fromTo(el, { opacity: 0, scale: 0.97 }, { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(2)" }, at);
         tl.to(el, { opacity: 0, duration: 0.5, ease: "power1.in" }, at + hold);
       };
-      // fim do loop: câmera e cursor voltam à pose inicial enquanto o primeiro print reaparece
+      // end of the loop: camera and cursor return to the starting pose while the first screenshot reappears
       const START = { cx: 0, cy: 0 };
       const begin = (x, y) => {
         cx = START.cx = x;
         cy = START.cy = y;
-        // pose inicial fora da timeline: um set no tempo 0 não é aplicado ao buscar o quadro 0
+        // starting pose outside the timeline: a set at time 0 is not applied when seeking to frame 0
         gsap.set(cursor, { x: x * K, y: y * K });
         gsap.set(cam, { x: 0, y: 0, scale: 1 });
         prevShot = document.getElementById("s-" + SHOTS[0]);
@@ -205,7 +205,7 @@
         t += 0.25;
       };
 
-      /* alvos (px CSS do app, de capture/targets.json) */
+      /* targets (app CSS px, from capture/targets.json) */
       const B = {
         addText: [1043, 715, 69, 34],
         content: [1058, 447, 330, 40],

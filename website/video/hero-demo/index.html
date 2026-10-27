@@ -45,7 +45,7 @@
         background: #111214;
         font-family: "Geist", system-ui, sans-serif;
       }
-      /* "câmera": tudo que é da tela do app (prints + cursor + destaques) mora aqui e recebe o zoom */
+      /* "camera": everything that belongs to the app screen (screenshots + cursor + highlights) lives here and gets the zoom */
       #cam {
         position: absolute;
         left: 0;
@@ -101,7 +101,7 @@
         height: 100%;
         transform-origin: 3px 3px;
       }
-      /* legendas fixas (não recebem zoom) */
+      /* fixed captions (not zoomed) */
       .cap {
         position: absolute;
         left: 50%;
@@ -134,7 +134,7 @@
         font-size: 24px;
         font-weight: 500;
       }
-      /* ===== marca: abertura e fechamento ===== */
+      /* ===== brand: intro and outro ===== */
       #scene {
         position: absolute;
         inset: 0;
@@ -254,7 +254,7 @@
         font-size: 34px;
         letter-spacing: -0.015em;
       }
-      #outro .filete {
+      #outro .rule {
         width: 120px;
         height: 6px;
         border-radius: 3px;
@@ -270,7 +270,7 @@
   </head>
   <body>
     <div id="root" data-composition-id="main" data-start="0" data-duration="34.875" data-width="1920" data-height="1200">
-      <!-- abertura: o ícone se monta (tábua, fresa descendo, cavacos) e o nome entra inteiro: CarvCAM -->
+      <!-- intro: the icon assembles itself (board, bit plunging, chips) and the name comes in whole: CarvCAM -->
       <div id="intro">
         <svg class="sig" id="sigI" viewBox="0 0 392 100" aria-label="CarvCAM"></svg>
       </div>
@@ -285,7 +285,7 @@
         <div class="cap" id="cap4"><em>4</em>Press start. Watch it carve.</div>
       </div>
 
-      <!-- fechamento: laranja -> branco e a mesma assinatura, agora com a chamada -->
+      <!-- outro: orange -> white and the same signature, now with the call to action -->
       <div class="disc orange" id="d1O"></div>
       <div class="disc white" id="d2O"></div>
       <div id="outro">
@@ -298,7 +298,7 @@
           </div>
           <div class="row" id="orow">
             <div class="cta" id="octa">Download for Windows <span>→</span></div>
-            <div class="filete" id="ofil"></div>
+            <div class="rule" id="orule"></div>
             <div class="site" id="osite">carvcam.com</div>
           </div>
         </div>
@@ -306,12 +306,12 @@
     </div>
 
     <script>
-      const K = 1920 / 1440; // CSS px do app -> px do vídeo
+      const K = 1920 / 1440; // app CSS px -> video px
       const W = 1920;
       const H = 1200;
       const cam = document.getElementById("cam");
 
-      /* 0) assinatura: ícone oficial (mesmos paths de carvcam-icon.svg) em partes animáveis + "CarvCAM" numa palavra só */
+      /* 0) signature: official icon (same paths as carvcam-icon.svg) split into animatable parts + "CarvCAM" as one word */
       const sigSVG = (sfx) => `
         <defs><clipPath id="nm${sfx}"><rect x="112" y="0" width="420" height="100" /></clipPath></defs>
         <rect id="sq${sfx}" width="100" height="100" rx="22.5" fill="#FF5B1F" />
@@ -333,7 +333,7 @@
       document.getElementById("sigI").innerHTML = sigSVG("I");
       document.getElementById("sigO").innerHTML = sigSVG("O");
 
-      /* 1) camadas: prints reais do app, na ordem cronológica (a de cima sempre cobre a de baixo) */
+      /* 1) layers: real app screenshots in chronological order (the upper one always covers the one below) */
       const SHOTS = [
         "a0-blank", "a1-text", "a2-t1", "a2-t2", "a2-t3", "a2-t4", "a3-font", "a3-h1", "a3-h2", "a3-h3",
         "b0-prepare", "b1-play1", "b1-play2", "b1-play3", "b1-play4", "b1-play5", "b1-play6", "b1-playend", "b2-3d",
@@ -353,7 +353,7 @@
         cam.appendChild(im);
       });
 
-      /* 2) overlays dentro da câmera */
+      /* 2) overlays inside the camera */
       const box = (b, pad = 0) => {
         const d = document.createElement("div");
         d.className = "hl";
@@ -374,13 +374,13 @@
         '<svg viewBox="0 0 34 34"><path d="M3 3 L3 26 L9.2 20.4 L13.6 30.4 L18.4 28.3 L14 18.4 L22.4 18.2 Z" fill="#fff" stroke="#111214" stroke-width="2" stroke-linejoin="round"/></svg>';
       cam.appendChild(cursor);
 
-      /* 3) helpers de timeline */
-      const SPEED = 1.45; // ritmo do vídeo: 1.45x mais ágil que a cadência "natural" escrita abaixo
+      /* 3) timeline helpers */
+      const SPEED = 1.45; // video pace: 1.45x faster than the "natural" timing written below
       const main = gsap.timeline({ paused: true });
       const tl = gsap.timeline();
       let t = 0;
       let cx = 760,
-        cy = 470; // posição do cursor em px CSS do app
+        cy = 470; // cursor position in app CSS px
       const ctr = (b) => [b[0] + b[2] / 2, b[1] + b[3] / 2];
 
       const camMoves = [];
@@ -391,7 +391,7 @@
         y = Math.min(0, Math.max(H - H * s, y));
         camMoves.push({ at, dur, x, y, s, ease });
       };
-      // uma só câmera: cada movimento termina onde o próximo começa (sem tweens brigando)
+      // a single camera: each move ends where the next one starts (no competing tweens)
       const buildCam = () => {
         camMoves.sort((a, b) => a.at - b.at);
         camMoves.forEach((m, i) => {
@@ -403,7 +403,7 @@
         });
       };
       const move = (px, py, dur) => {
-        // x e y com eases diferentes desenham uma curva natural, não uma reta robótica
+        // x and y with different eases trace a natural curve, not a robotic straight line
         tl.to(cursor, { x: px * K, duration: dur, ease: "sine.inOut" }, t);
         tl.to(cursor, { y: py * K, duration: dur, ease: "power2.out" }, t);
         cx = px;
@@ -434,8 +434,8 @@
         release();
         t += 0.06;
       };
-      // cada print cobre a tela inteira: quando o novo termina de entrar, o anterior sai do compositor
-      // (64 imagens 2880x1800 visíveis ao mesmo tempo derrubam o Chrome por memória)
+      // each screenshot covers the whole screen: once the new one has finished coming in, the previous one leaves the compositor
+      // (64 visible 2880x1800 images at once crash Chrome out of memory)
       let prevShot = null;
       const retire = (at) => {
         if (prevShot) tl.set(prevShot, { visibility: "hidden" }, at);
@@ -463,7 +463,7 @@
         tl.to("#" + id, { opacity: 0, y: -14, duration: 0.3, ease: "power2.in" }, outAt);
       };
 
-      /* alvos (px CSS do app, medidos nas telas reais por capture/cap.cjs -> targets.json) */
+      /* targets (app CSS px, measured on the real screens by capture/cap.cjs -> targets.json) */
       const B = {
         addText: [1043, 715, 69, 34],
         content: [1058, 447, 330, 40],
@@ -486,10 +486,10 @@
         touch: [1267, 731, 123, 36],
         chkin: [1330, 333, 60, 36],
       };
-      // polegar do "Letter height" (range 8..70, trilho de 330 px em x=1060)
+      // "Letter height" thumb (range 8..70, 330 px track at x=1060)
       const thumbX = (v) => 1060 + 8 + ((v - 8) / 62) * 314;
 
-      /* ===== A · desenho: texto, fonte, tamanho ===== */
+      /* ===== A · design: text, font, size ===== */
       show("a0-blank", 0);
       tl.set(cursor, { x: cx * K, y: cy * K }, 0);
       tl.fromTo(cursor, { opacity: 0 }, { opacity: 1, duration: 0.4 }, 0.3);
@@ -528,7 +528,7 @@
       camTo(t - 0.1, 1.0, 560, 470, 1.35);
       t += 1.3;
 
-      /* ===== B · preparar: caminho da fresa e 3D ===== */
+      /* ===== B · prepare: toolpath and 3D ===== */
       cap("cap2", t + 0.2, t + 6.4);
       camTo(t, 0.9, 1180, 760, 1.4);
       moveTo(B.cont, 0.8);
@@ -550,7 +550,7 @@
       camTo(t + 0.1, 1.1, 460, 520, 1.45);
       t += 1.2;
 
-      /* ===== C · conectar: cabos, porta e testes ===== */
+      /* ===== C · connect: cables, port and tests ===== */
       cap("cap3", t + 0.3, t + 9.6);
       camTo(t, 0.9, 1200, 200, 1.5);
       moveTo(B.pill, 0.8);
@@ -609,7 +609,7 @@
       move(1180, 220, 0.8);
       t += 0.9;
 
-      /* ===== D · posicionar e cortar ===== */
+      /* ===== D · position and carve ===== */
       cap("cap4", t + 0.3, t + 11.0);
       show("d0-home", t, 0.3);
       camTo(t, 1.0, 1100, 640, 1.3);
@@ -659,15 +659,15 @@
 
       buildCam();
       tl.timeScale(SPEED);
-      const INTRO = 2.0; // onde o vídeo "de verdade" começa (segundos reais)
-      const TOTAL = 34.875; // 18 compassos da trilha
-      const tOut = INTRO + tl.duration() / SPEED; // quando o fechamento começa
+      const INTRO = 2.0; // where the "real" video starts (real seconds)
+      const TOTAL = 34.875; // 18 bars of the soundtrack
+      const tOut = INTRO + tl.duration() / SPEED; // when the outro starts
       main.add(tl, INTRO);
 
-      /* ===== marca: movimento cubic-bezier(.2,.8,.2,1), sem quicar ===== */
+      /* ===== brand: cubic-bezier(.2,.8,.2,1) motion, no bounce ===== */
       const OUT = "power4.out"; // ≈ cubic-bezier(.2,.8,.2,1)
       const tl0 = main;
-      // monta o ícone: quadrado -> tábua entra -> fresa desce e abre o canal -> cavacos saltam -> nome entra inteiro
+      // builds the icon: square -> board slides in -> bit plunges and opens the groove -> chips fly -> name comes in whole
       const buildLogo = (sfx, at) => {
         tl0.fromTo("#sq" + sfx, { opacity: 0, scale: 0.7, svgOrigin: "50 50" }, { opacity: 1, scale: 1, svgOrigin: "50 50", duration: 0.3, ease: OUT }, at);
         tl0.fromTo("#board" + sfx, { opacity: 0, x: -14 }, { opacity: 1, x: 0, duration: 0.3, ease: OUT }, at + 0.2);
@@ -678,25 +678,25 @@
         );
         tl0.fromTo("#nmt" + sfx, { x: -150, opacity: 0 }, { x: 0, opacity: 1, duration: 0.5, ease: OUT }, at + 0.85);
       };
-      // transição: disco laranja cresce do centro, o segundo cobre
+      // transition: orange disc grows from the center, the second one covers it
       const cover = (a, b, at) => {
         tl0.fromTo(a, { scale: 0 }, { scale: 1, duration: 0.5, ease: OUT }, at);
         tl0.fromTo(b, { scale: 0 }, { scale: 1, duration: 0.5, ease: OUT }, at + 0.22);
       };
 
-      // abertura
+      // intro
       buildLogo("I", 0.12);
       cover("#d1I", "#d2I", 1.45);
       tl0.fromTo("#scene", { clipPath: "circle(0% at 50% 50%)" }, { clipPath: "circle(80% at 50% 50%)", duration: 0.6, ease: "power3.inOut" }, 1.85);
 
-      // fechamento
+      // outro
       cover("#d1O", "#d2O", tOut);
       tl0.set("#outro", { visibility: "visible" }, tOut + 0.5);
       tl0.fromTo("#ocircle", { scale: 0 }, { scale: 1, duration: 0.8, ease: OUT }, tOut + 0.6);
       buildLogo("O", tOut + 0.6);
       ["#tag1", "#tag2"].forEach((id, i) => tl0.fromTo(id, { yPercent: 110 }, { yPercent: 0, duration: 0.55, ease: OUT }, tOut + 2.05 + i * 0.14));
       tl0.fromTo("#octa", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.45, ease: OUT }, tOut + 2.55);
-      tl0.fromTo("#ofil", { opacity: 0, scaleX: 0, transformOrigin: "0 50%" }, { opacity: 1, scaleX: 1, duration: 0.5, ease: OUT }, tOut + 2.7);
+      tl0.fromTo("#orule", { opacity: 0, scaleX: 0, transformOrigin: "0 50%" }, { opacity: 1, scaleX: 1, duration: 0.5, ease: OUT }, tOut + 2.7);
       tl0.fromTo("#osite", { opacity: 0, x: -16 }, { opacity: 1, x: 0, duration: 0.45, ease: OUT }, tOut + 2.8);
       window.__total = tOut;
       window.__timelines = window.__timelines || {};

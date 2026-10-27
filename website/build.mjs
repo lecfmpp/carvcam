@@ -1,7 +1,7 @@
-// Gera o site estático em dist/: página inicial, download, hubs e páginas por máquina, recurso,
-// comparação e guia, mais sitemap.xml, robots.txt e dados estruturados (JSON-LD).
-//   node build.mjs            → links limpos (/features/v-carve/) para publicar
-//   node build.mjs --preview  → links para index.html, para abrir sem servidor
+// Builds the static site into dist/: home page, download, hubs and one page per machine, feature,
+// comparison and guide, plus sitemap.xml, robots.txt and structured data (JSON-LD).
+//   node build.mjs            → clean links (/features/v-carve/) for publishing
+//   node build.mjs --preview  → links to index.html, to open without a server
 import { cp, mkdir, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { faq, features, howtos, machines, nav, site } from "./src/data.mjs";
@@ -15,9 +15,9 @@ const pages = [];
 /* ---------------- helpers ---------------- */
 const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 let depth = 0;
-/** Define a profundidade da página antes do corpo ser montado (o corpo usa links relativos). */
+/** Sets the page depth before the body is assembled (the body uses relative links). */
 const at = (p) => ((depth = p.split("/").filter(Boolean).length - (p.endsWith(".html") ? 1 : 0)), p);
-/** Caminho do site ("/features/x/") → link relativo à página atual. */
+/** Site path ("/features/x/") → link relative to the current page. */
 const href = (p) => {
   if (/^(https?:|mailto:|#)/.test(p)) return p;
   const [path, hash] = p.split("#");
@@ -29,7 +29,7 @@ const href = (p) => {
 const asset = (p) => "../".repeat(depth) + p.replace(/^\//, "");
 const shot = (name, alt, { eager = false, cls = "shot" } = {}) =>
   `<div class="${cls}"><img src="${asset(`/assets/screens/${name}.webp`)}" srcset="${asset(`/assets/screens/${name}-800.webp`)} 800w, ${asset(`/assets/screens/${name}.webp`)} 1440w" sizes="(max-width: 900px) 100vw, 1160px" width="1440" height="900" alt="${esc(alt)}" ${eager ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async"></div>`;
-// Clipe em loop (gravação simulada da tela): leve como vídeo, comporta-se como um GIF. Só baixa perto da tela.
+// Looping clip (simulated screen recording): light as a video, behaves like a GIF. Only loads near the viewport.
 const clip = (name, alt) =>
   `<div class="shot shot--video"><video class="lazyclip" muted loop playsinline preload="none" width="1280" height="800" poster="${asset(`/assets/video/feature-${name}-poster.webp`)}" data-src="${asset(`/assets/video/feature-${name}.mp4`)}" aria-label="${esc(alt)}"></video></div>`;
 const ICON_LINUX = `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2c-2.2 0-3.6 1.9-3.6 4.5 0 1.3.3 2.3-.6 3.6C6.4 12 5 14 5 16.6c0 .7.1 1.3.4 1.9-.9.4-1.9.9-1.9 1.8 0 1.2 2.2 1.2 3.6 1.4 1 .1 1.8.3 2.6.3.9 0 1.5-.4 2.3-.4s1.4.4 2.3.4c.8 0 1.6-.2 2.6-.3 1.4-.2 3.6-.2 3.6-1.4 0-.9-1-1.4-1.9-1.8.3-.6.4-1.2.4-1.9 0-2.6-1.4-4.6-2.8-6.5-.9-1.3-.6-2.3-.6-3.6C15.6 3.9 14.2 2 12 2Zm-1.6 4.2c.4 0 .7.5.7 1.1s-.3 1.1-.7 1.1-.7-.5-.7-1.1.3-1.1.7-1.1Zm3.2 0c.4 0 .7.5.7 1.1s-.3 1.1-.7 1.1-.7-.5-.7-1.1.3-1.1.7-1.1ZM12 9.4c.9 0 2 .5 2 .9s-1.1 1.1-2 1.1-2-.7-2-1.1.9-.9 2-.9Z"/></svg>`;
@@ -78,7 +78,7 @@ ${body}
 </main>
 ${footer()}
 <script>(() => {
-  // Botões de download: Windows por padrão; no Linux vira o AppImage; no Mac leva à página de downloads.
+  // Download buttons: Windows by default; on Linux they become the AppImage; on Mac they go to the downloads page.
   const ua = navigator.userAgent, linux = /Linux/.test(ua) && !/Android|CrOS/.test(ua), mac = /Macintosh|Mac OS X/.test(ua) && !/iPhone|iPad/.test(ua);
   if (!linux && !mac) return;
   const icon = ${JSON.stringify(ICON_LINUX)};
@@ -93,8 +93,8 @@ ${footer()}
   pages.push({ path, html, title, description, body });
 }
 
-/* ---------------- Agent-ready: Markdown de cada página, llms.txt e llms-full.txt ---------------- */
-// Converte o corpo (HTML gerado acima, sem cabeçalho/rodapé) em Markdown simples para agentes e LLMs.
+/* ---------------- Agent-ready: Markdown for every page, llms.txt and llms-full.txt ---------------- */
+// Converts the body (HTML generated above, without header/footer) into plain Markdown for agents and LLMs.
 function htmlToMd(html, path) {
   const abs = (u) => (/^(https?:|mailto:)/.test(u) ? u : site.url + new URL(u.replace(/index\.html$/, ""), site.url + path).pathname);
   let t = html
@@ -120,7 +120,7 @@ function htmlToMd(html, path) {
     .replace(/<\/(p|div|section|figure|figcaption|ul|ol|table|details)>/g, "\n")
     .replace(/<[^>]+>/g, "")
     .replace(/&nbsp;/g, " ").replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
-  // a linha de cabeçalho da tabela vem antes do |---| com o número certo de colunas
+  // the table header row goes before the |---| with the right number of columns
   t = t.replace(/(\n\|[^\n]*\|)\s*\n\|---\|/g, (_, h) => `${h}\n|${" --- |".repeat((h.match(/\|/g).length - 1))}`);
   return t.split("\n").map((l) => l.replace(/[ \t]+/g, " ").trim()).join("\n").replace(/\n{3,}/g, "\n\n").trim();
 }
@@ -400,7 +400,7 @@ ${finalCta()}`,
 /* ---------------- Compare ---------------- */
 const vsUrl = (c) => `/compare/carvcam-vs-${c.slug}/`;
 const host = (u) => { try { return new URL(u).hostname.replace(/^www\./, ""); } catch { return u; } };
-// Título legível a partir do endereço de um fórum ou artigo: "forum.sienci.com: Easel connecting to SLB".
+// Readable title from a forum or article URL: "forum.sienci.com: Easel connecting to SLB".
 const urlTitle = (u) => {
   try {
     const x = new URL(u);
@@ -411,7 +411,7 @@ const urlTitle = (u) => {
     return `${host(u)}: ${words.charAt(0).toUpperCase()}${words.slice(1)}`;
   } catch { return u; }
 };
-// Citação numerada: cada fonte usada na página vira [n], com a lista no fim.
+// Numbered citations: each source used on the page becomes [n], with the list at the end.
 function citer() {
   const list = [];
   const cite = (url, title) => {
@@ -540,7 +540,7 @@ ${finalCta()}`,
     });
   }
 
-  // Página-hub comercial ("best software for LongMill").
+  // Commercial hub page ("best software for LongMill").
   const { list, cite } = citer();
   const pick = (slug) => comparisons.find((c) => c.slug === slug);
   const rec = sienciRecs.find((r) => /most of our customers/.test(r.text));
@@ -638,7 +638,7 @@ ${finalCta()}`,
 }
 
 /* ---------------- Docs ---------------- */
-// Texto dos docs: escapa e depois aplica **negrito**, `código` e [link](/caminho/).
+// Docs text: escapes, then applies **bold**, `code` and [link](/path/).
 const md = (t) =>
   esc(t)
     .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
@@ -705,7 +705,7 @@ const LAZY_CLIPS = `<script>(() => {
   vids.forEach((v) => io.observe(v));
 })();</script>`;
 
-// Busca dos docs: índice pequeno embutido em cada página (funciona sem servidor e offline).
+// Docs search: small index embedded in every page (works without a server and offline).
 function docSearch(id) {
   const idx = docOrder.map((d) => ({
     t: d.title,
@@ -739,7 +739,7 @@ ${docSearch("dq")}
 }
 
 function docPages() {
-  // Página inicial dos docs
+  // Docs home page
   layout({
     path: at("/docs/"),
     title: "CarvCAM Docs: Guides for LongMill and AltMill",
@@ -831,7 +831,7 @@ await cp(new URL("./assets/", import.meta.url).pathname, join(OUT, "assets"), { 
 await cp(new URL("./src/styles.css", import.meta.url).pathname, join(OUT, "assets/site.css"));
 const urls = pages.filter((p) => !p.path.endsWith(".html"));
 await writeFile(join(OUT, "sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((p) => `<url><loc>${site.url}${p.path}</loc><lastmod>2026-10-27</lastmod></url>`).join("\n")}\n</urlset>\n`);
-// Markdown de cada página + índices para agentes
+// Markdown for every page + indexes for agents
 const mdPages = urls.map((p) => ({ ...p, md: `# ${p.title}\n\n> ${p.description}\n\nSource: ${site.url}${p.path}\n\n${htmlToMd(p.body, p.path)}\n` }));
 for (const p of mdPages) await writeFile(join(OUT, p.path, "index.md"), p.md);
 const group = (pre) => mdPages.filter((p) => p.path.startsWith(pre));
@@ -861,7 +861,7 @@ ${group("/learn/").map(line).join("\n")}
 `,
 );
 await writeFile(join(OUT, "llms-full.txt"), [...group("/docs/"), ...group("/compare/"), ...group("/learn/")].map((p) => p.md).join("\n\n---\n\n"));
-// Robôs: tudo liberado, inclusive crawlers de IA e agentes de busca.
+// Robots: everything allowed, including AI crawlers and search agents.
 const bots = ["GPTBot", "OAI-SearchBot", "ChatGPT-User", "ClaudeBot", "Claude-User", "Claude-SearchBot", "PerplexityBot", "Perplexity-User", "Google-Extended", "Applebot-Extended", "CCBot", "Amazonbot", "Bingbot", "DuckAssistBot", "meta-externalagent", "MistralAI-User"];
-await writeFile(join(OUT, "robots.txt"), `User-agent: *\nAllow: /\n\n${bots.map((b) => `User-agent: ${b}`).join("\n")}\nAllow: /\n\n# Para agentes e LLMs: ${site.url}/llms.txt\nSitemap: ${site.url}/sitemap.xml\n`);
+await writeFile(join(OUT, "robots.txt"), `User-agent: *\nAllow: /\n\n${bots.map((b) => `User-agent: ${b}`).join("\n")}\nAllow: /\n\n# For agents and LLMs: ${site.url}/llms.txt\nSitemap: ${site.url}/sitemap.xml\n`);
 console.log(`${pages.length} pages → dist/${PREVIEW ? " (preview links)" : ""}`);
