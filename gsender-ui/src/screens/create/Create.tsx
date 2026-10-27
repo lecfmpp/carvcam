@@ -11,6 +11,9 @@ import {
   AlignStartHorizontal,
   AlignStartVertical,
   AlignVerticalDistributeCenter,
+  AlertTriangle,
+  ChevronDown,
+  ChevronUp,
   Circle,
   Copy,
   FileUp,
@@ -27,6 +30,9 @@ import { useEffect, useMemo, useRef, useState, type PointerEvent as RPointerEven
 import { TopBar } from "../../components/TopBar";
 import { useEngine } from "../../engine/useEngine";
 import { bitById, materialById, THROUGH_COLOR, type Material } from "../../lib/catalog";
+import { profileOutlines, TAB_COLOR, TAB_EDGE, tabMarks } from "../../stage/tabs";
+import { TabsLayer } from "../../stage/TabsLayer";
+import { cornerNote, issuesNote, legendRows, stepoverNote, type LegendKey, type LegendRow } from "./legend";
 import { useDesign } from "../../state/design";
 import { useActiveMachine, useWorkshop } from "../../state/workshop";
 import { Board } from "../../stage/Board";
@@ -43,7 +49,7 @@ import { toast } from "../../state/ui";
 import { addCurve, addElement, alignElements, deleteElement, patchElement, type CurveNode, duplicateElement, elementBoxes, elementOf, fontOf, margin, moveElement, parseId, type Align, type Box, type ElementId, type Tool } from "./elements";
 import { buildIssues, type UiIssue } from "./issues";
 import { useIssueCtx } from "./IssueCard";
-import { useUi } from "../../state/ui";
+import { useCanvasPrefs, useUi } from "../../state/ui";
 import { CreatePanel } from "./Panel";
 import { importSvgFile, isSvgFile, pickSvgFile } from "./svgImport";
 import "./create.css";
@@ -111,11 +117,29 @@ export default function Create() {
     () => buildIssues(eng.result, issueCtx),
     // Warnings refer to the spec that produced the result; recompute only when it changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [eng.result, bit, ownedBits, machine, issueCtx.useBit2, issueCtx.bit2, issueCtx.keepOut, issueCtx.canUndo, issueCtx.hasLastGood],
+    [eng.result, bit, ownedBits, machine, issueCtx.useBit2, issueCtx.bit2, issueCtx.keepOut, issueCtx.canUndo, issueCtx.hasLastGood, issueCtx.tabs],
   );
   const errors = issues.filter((i) => i.level === "error").length;
   const warnings = issues.filter((i) => i.level === "warning").length;
   const boxes = useMemo(() => elementBoxes(spec, result), [spec, result]);
+  const patchDesign = useDesign((s) => s.patch);
+  const legendOpen = useCanvasPrefs((s) => s.legendOpen);
+  // Holding tabs: the engine's (for the simulation) and the ones to draw (Manual follows the design at once).
+  const simTabs = useMemo(() => tabMarks({ ...design.tabs, mode: "auto" }, result), [design.tabs, result]);
+  const tabMarksNow = useMemo(() => tabMarks(design.tabs, result), [design.tabs, result]);
+  const tabOutlines = useMemo(() => profileOutlines(result), [result]);
+  /** Legend link: scroll the first card into view and focus it. */
+  const showIssue = (i: UiIssue | undefined) => {
+    if (!i) return;
+    if (i.target && i.level !== "error") setFocusKey(i.key);
+    const el = document.querySelector<HTMLElement>(`[data-issue-key="${CSS.escape(i.key)}"]`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.focus({ preventScroll: true });
+    el.classList.remove("is-flash");
+    void el.offsetWidth;
+    el.classList.add("is-flash");
+  };
 
   // Multi-select (Shift+click): `sel` is the primary element (the one in the panel); `extra`, the rest.
   const [extra, setExtra] = useState<ElementId[]>([]);
@@ -259,25 +283,36 @@ export default function Create() {
           <>
             <ToolRail tool={tool} setTool={setTool} onImport={() => void pickSvgFile().then(importSvg)} />
             {dropping ? <div className="create-drop">Drop an SVG or DXF to carve it, or a picture to trace over, on the {spec.type === "lettering" ? "board" : "sign"}</div> : null}
-            <Legend spec={spec} result={result} material={material} pro={mode === "pro"} bitD={bit?.d} flagged={issues.length} />
+            <Legend
+              rows={legendRows({ result, thickness: spec.thickness, tabs: result?.tabs?.length ?? 0, leftover: issues.some((i) => i.pct !== undefined && !!i.target && boxes.has(i.target)) })}
+              material={material}
+              corner={cornerNote(bit)}
+              stepover={mode === "pro" ? stepoverNote(result, bit?.d) : null}
+              issues={issuesNote(errors, issues.length)}
+              issueLevel={errors ? "error" : "warning"}
+              onIssues={() => showIssue(issues[0])}
+            />
           </>
         }
         bottomLeft={<AssistantBar inputRef={assistantInput} issues={issues} bitName={bit?.name ?? "bit"} materialName={`${spec.thickness} mm ${material.id}`} machineName={machineName(machine)} />}
         render={(api) => {
           if (api.view === "3d") {
             return eng.sim ? (
-              <ThreeView sim={eng.sim} thickness={block.thickness} material={material} board={{ width: block.width, height: block.height }} zoom={api.zoom} spin={api.spin} size={api.size} />
+              <ThreeView sim={eng.sim} thickness={block.thickness} material={material} board={{ width: block.width, height: block.height }} zoom={api.zoom} spin={api.spin} size={api.size} tabs={simTabs} />
             ) : (
               <div className="muted">Simulating the cut…</div>
             );
           }
-          const s = fitScale(api.size, block.width, block.height, { x: 260, y: 280 });
+          // The open legend takes the top-right corner: the board centers in the space left of it.
+          const side = legendOpen && result ? LEGEND_SPACE : 0;
+          const s = fitScale({ w: api.size.w - side, h: api.size.h }, block.width, block.height, { x: side ? 220 : 260, y: 280 });
           return (
+            <div style={{ marginRight: side, transition: "margin 180ms var(--ease)" }}>
             <Board width={block.width} height={block.height} scale={s} zoom={api.zoom} showOrigin={false}>
               <StageRulers width={block.width} height={block.height} scale={s} zoom={api.zoom} />
               <div className="create-piece" style={pieceMask(result, bit?.d ?? 3.175)}>
                 {eng.sim ? (
-                  <SimCanvas sim={eng.sim} thickness={block.thickness} material={material} scale={s} board={{ width: block.width, height: block.height }} />
+                  <SimCanvas sim={eng.sim} thickness={block.thickness} material={material} scale={s} board={{ width: block.width, height: block.height }} tabs={simTabs} />
                 ) : null}
                 {(!eng.sim || eng.busy || !sameBlock) && result ? <VectorPreview result={result} material={material} faded={!!eng.sim} lineWidth={bit?.profile === "v" ? 0.6 : (bit?.d ?? 3.175)} /> : null}
                 {!result ? <div style={{ position: "absolute", inset: m * s, background: material.face, borderRadius: 4 }} /> : null}
@@ -323,7 +358,20 @@ export default function Create() {
                 onDuplicate={duplicate}
                 onDelete={remove}
               />
+              {result && sameBlock && tabMarksNow.length ? (
+                <TabsLayer
+                  marks={tabMarksNow}
+                  width={block.width}
+                  height={block.height}
+                  scale={s}
+                  tabHeight={design.tabs.height}
+                  outlines={tabOutlines}
+                  positions={design.tabs.mode === "manual" ? design.tabs.positions : undefined}
+                  onChange={design.tabs.mode === "manual" ? (positions) => patchDesign({ tabs: { ...design.tabs, positions } }) : undefined}
+                />
+              ) : null}
             </Board>
+            </div>
           );
         }}
       />
@@ -363,30 +411,55 @@ function ToolRail({ tool, setTool, onImport }: { tool: Tool; setTool(t: Tool): v
   );
 }
 
-function Legend({ spec, result, material, pro, bitD, flagged }: { spec: PlateSpecInput; result: GenerateResult | null; material: Material; pro: boolean; bitD?: number; flagged: number }) {
-  const depths = [result?.layout.relief?.depth ?? 0, ...(result?.layout.engraved.map((g) => g.depth) ?? [])].filter((d) => d > 0 && d < spec.thickness);
-  const lowered = depths.length ? Math.max(...depths) : 0;
-  const sign = spec.type !== "lettering";
-  const rows: [string, React.CSSProperties][] = [
-    ["Face, not cut", { background: material.face }],
-    ...(sign ? ([[lowered ? `Lowered · ${fmt(lowered)} mm` : "Lowered", { background: material.recess }]] as [string, React.CSSProperties][]) : []),
-    ["Cut through", { background: THROUGH_COLOR, borderColor: "rgba(255,255,255,.18)" }],
-    ...(sign ? ([["Holding tabs", { background: material.side }]] as [string, React.CSSProperties][]) : []),
-    ["Material left", { background: "repeating-linear-gradient(135deg,#F2C14E 0 2px,transparent 2px 5px)", borderColor: "#F2C14E" }],
-  ];
+/** Room the open legend needs on the right of the stage (its width plus margins), px. */
+const LEGEND_SPACE = 272;
+
+/** What each colour on the canvas means, in plain words; only what this design actually has. Collapsible. */
+function Legend(p: { rows: LegendRow[]; material: Material; corner: string | null; stepover: string | null; issues: string | null; issueLevel: "error" | "warning"; onIssues(): void }) {
+  const open = useCanvasPrefs((s) => s.legendOpen);
+  const setOpen = useCanvasPrefs((s) => s.setLegendOpen);
+  const sw: Record<LegendKey, React.CSSProperties> = {
+    face: { background: p.material.face },
+    lowered: { background: p.material.recess },
+    through: { background: THROUGH_COLOR, borderColor: "rgba(255,255,255,.4)" },
+    tabs: { background: TAB_COLOR, borderColor: TAB_EDGE, borderWidth: 2 },
+    leftover: { background: "repeating-linear-gradient(135deg,#F2C14E 0 2px,transparent 2px 5px)", borderColor: "#F2C14E" },
+  };
+  if (!p.rows.length) return null;
+  if (!open)
+    return (
+      <button className="create-legend create-legend--closed" aria-expanded={false} onClick={() => setOpen(true)} title="Show what the colours mean">
+        <span className="create-legend__minisw" aria-hidden>
+          {p.rows.map((r) => (
+            <span key={r.key} style={sw[r.key]} />
+          ))}
+        </span>
+        Legend
+        <ChevronDown size={14} strokeWidth={2} />
+      </button>
+    );
   return (
-    <div className="create-legend" aria-label="Legend">
-      {rows.map(([label, style]) => (
-        <div key={label} className="create-legend__row">
-          <span className="create-legend__sw" style={style} />
-          {label}
+    <div className="create-legend" role="region" aria-label="What the colours mean">
+      <button className="create-legend__head" aria-expanded onClick={() => setOpen(false)} title="Hide the legend">
+        What the colours mean
+        <ChevronUp size={14} strokeWidth={2} />
+      </button>
+      {p.rows.map((r) => (
+        <div key={r.key} className={`create-legend__row create-legend__row--${r.key}`}>
+          <span className="create-legend__sw" style={sw[r.key]} />
+          {r.label}
         </div>
       ))}
-      {pro && bitD ? (
-        <div className="create-legend__pro mono">
-          Bit ⌀ {fmt(bitD)} mm · inside corners r {fmt(bitD / 2)}
-          <br />
-          Stepover 40% · {flagged} check{flagged === 1 ? "" : "s"} flagged
+      {p.corner || p.stepover || p.issues ? (
+        <div className="create-legend__notes">
+          {p.corner ? <div>{p.corner}</div> : null}
+          {p.stepover ? <div>{p.stepover}</div> : null}
+          {p.issues ? (
+            <button className={`create-legend__issues create-legend__issues--${p.issueLevel}`} onClick={p.onIssues}>
+              <AlertTriangle size={13} strokeWidth={2} />
+              {p.issues}: show me
+            </button>
+          ) : null}
         </div>
       ) : null}
     </div>

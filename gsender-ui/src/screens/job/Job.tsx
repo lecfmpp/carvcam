@@ -2,7 +2,7 @@ import type { GenerateResult } from "@gsender-next/cam-engine";
 import { useEffect, useMemo, useRef } from "react";
 import { TopBar, type JobStep } from "../../components/TopBar";
 import type { SimGrid } from "../../engine/protocol";
-import { engineKey, useEngine } from "../../engine/useEngine";
+import { engineKey, tabCount, useEngine } from "../../engine/useEngine";
 import type { Head, HeadId, Machine, Preset } from "../../lib/catalog";
 import { useMachine } from "../../machine/store";
 import { useDesign, type Design } from "../../state/design";
@@ -25,8 +25,9 @@ export interface JobCtx {
   headId: HeadId;
   preset: Preset;
   groups: OpGroup[];
-  /** Tabs actually used (0 when the piece has no outer cut). */
   hasProfile: boolean;
+  /** Holding tabs the cut leaves (0 when the piece has no outer cut or no tabs). */
+  tabs: number;
   lettering: boolean;
 }
 
@@ -60,8 +61,9 @@ export default function Job({ step }: { step: JobStep }) {
 
   const lettering = design.spec.type === "lettering";
   const hasProfile = !!result?.operations.some((o) => o.type === "profile");
-  const groups = useMemo(() => (result?.gcode ? groupOps(result, design.tabs.count, lettering) : []), [result, design.tabs.count, lettering]);
-  const ctx: JobCtx = { design, result, sim, busy: eng.busy && !result, error: eng.busy ? null : eng.error, machine, head, headId, preset, groups, hasProfile, lettering };
+  const tabs = hasProfile ? (result?.tabs?.length ?? tabCount(design.tabs)) : 0;
+  const groups = useMemo(() => (result?.gcode ? groupOps(result, tabs, lettering) : []), [result, tabs, lettering]);
+  const ctx: JobCtx = { design, result, sim, busy: eng.busy && !result, error: eng.busy ? null : eng.error, machine, head, headId, preset, groups, hasProfile, tabs, lettering };
 
   const zeroSet = useFlow((s) => s.zeroSet);
   const reachable: JobStep[] = ["create", "prepare"];

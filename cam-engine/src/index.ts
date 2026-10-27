@@ -1,4 +1,5 @@
-export { generatePlate, type GenerateOptions, type GenerateResult, type OperationInfo } from "./generate.js";
+export { generatePlate, DEFAULT_TAB_WIDTH, MIN_TAB_WIDTH, type GenerateOptions, type GenerateResult, type OperationInfo } from "./generate.js";
+export { canonicalOutline, outerOutlines, pointAtFraction, fractionOnOutline, nearestTabFraction, type TabPlacement, type OutlinePoint } from "./cam/tabs.js";
 export { verifyGcode, type VerifyLimits, type VerifyResult, type Problem } from "./verify.js";
 export { simulate, Heightmap } from "./sim/heightmap.js";
 export { loadFonts, FONT_FILES } from "./fonts.js";

@@ -57,6 +57,7 @@ const W: Warning[] = [
   { code: "KEEP_OUT_OVERLAP", severity: "error", message: "x", element: T0, data: { zone: "Clamp 1", zoneIndex: 0 } },
   { code: "KEEP_OUT_TOO_TALL", severity: "error", message: "x", data: { travelHeight: 90, travelZ: 80 } },
   { code: "INVALID_SPEC", severity: "error", message: "x" },
+  { code: "TAB_TOO_NARROW", severity: "warning", message: "x", data: { width: 2, minWidth: 3, suggestedWidth: 6 } },
 ];
 
 /** Bit problems: the way out must include a bit (owned) or a store link (not owned). */
@@ -157,6 +158,14 @@ describe("no dead ends", () => {
     expect(one(W[15], ONLY_DEFAULT).apply).toMatchObject({ kind: "spec", label: "Engrave it instead" });
     const out = one(W[10], ONLY_DEFAULT).apply;
     expect(out?.kind === "spec" && out.spec.holes?.[0].x).toBeGreaterThanOrEqual(5);
+  });
+
+  it("tabs too thin to hold widen to the suggested width in one click", () => {
+    const tabs = { count: 4, height: 3, width: 2, mode: "auto" as const };
+    const w = W.find((x) => x.code === "TAB_TOO_NARROW")!;
+    const i = buildIssues(result([w]), { ...ctx(ONLY_DEFAULT), tabs })[0];
+    expect(i.apply).toEqual({ kind: "design", label: "Make them 6 mm wide", patch: { tabs: { ...tabs, width: 6 } } });
+    expect(i.alts.some((a) => a.kind === "go" && a.to === "tabs")).toBe(true);
   });
 
   it("engine crashes and failed safety checks always offer a way back", () => {

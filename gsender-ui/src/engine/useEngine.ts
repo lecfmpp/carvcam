@@ -70,11 +70,24 @@ export function engineOptions(design: Design, machineId: string, headId: string,
       cutoutBit: design.useBit2 && design.bit2 ? design.bit2 : undefined,
       speed: PRESET_TO_SPEED[preset],
     },
-    tabs: { count: design.tabs.count, height: design.tabs.height },
+    tabs: engineTabs(design.tabs),
     title: design.name,
     ...(design.keepOut?.length ? { keepOut: design.keepOut } : {}),
   };
 }
+
+/** The engine's tab option. Width 6 and Auto give exactly the G-code of before tabs were editable. */
+export function engineTabs(t: Design["tabs"]): NonNullable<GenerateOptions["tabs"]> {
+  return {
+    count: t.count,
+    height: t.height,
+    width: t.width ?? 6,
+    ...(t.mode === "manual" ? { positions: t.positions ?? [] } : {}),
+  };
+}
+
+/** Tabs the job will have (before the engine drops any that do not fit). */
+export const tabCount = (t: Design["tabs"]) => (t.mode === "manual" ? (t.positions?.length ?? 0) : t.count);
 
 /** Everything that changes the generated job (used to know when to regenerate). */
 export function engineKey(design: Design, machineId: string, headId: string, preset?: Preset) {

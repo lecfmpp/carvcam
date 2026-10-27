@@ -2,14 +2,15 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import type { SimGrid } from "../engine/protocol";
 import { THROUGH_COLOR, type Material } from "../lib/catalog";
+import { TAB_COLOR, tabMask, type TabMark } from "./tabs";
 
 /**
  * 3D view of the simulated part: the height map becomes a lit mesh, with studio lighting
  * and a contact shadow. Drag to orbit; the 360° button does a full turn.
  */
-export function ThreeView(props: { sim: SimGrid; thickness: number; material: Material; board: { width: number; height: number }; zoom: number; spin: number; size: { w: number; h: number }; marker?: { x: number; y: number; z: number } | null }) {
+export function ThreeView(props: { sim: SimGrid; thickness: number; material: Material; board: { width: number; height: number }; zoom: number; spin: number; size: { w: number; h: number }; marker?: { x: number; y: number; z: number } | null; /** Holding tabs, drawn in the tab colour. */ tabs?: TabMark[] }) {
   const host = useRef<HTMLDivElement>(null);
-  const ctx = useRef<{ renderer: THREE.WebGLRenderer; scene: THREE.Scene; camera: THREE.PerspectiveCamera; mesh?: THREE.Mesh; marker: THREE.Mesh; yaw: number; tilt: number; dist: number; raf?: number } | null>(null);
+  const ctx = useRef<{ renderer: THREE.WebGLRenderer; scene: THREE.Scene; camera: THREE.PerspectiveCamera; mesh?: THREE.Mesh; marker: THREE.Mesh; pins: THREE.Group; yaw: number; tilt: number; dist: number; raf?: number } | null>(null);
 
   // Scene (once).
   useEffect(() => {
@@ -33,7 +34,9 @@ export function ThreeView(props: { sim: SimGrid; thickness: number; material: Ma
     marker.rotation.x = -Math.PI / 2;
     marker.visible = false;
     scene.add(marker);
-    ctx.current = { renderer, scene, camera, marker, yaw: -14, tilt: 52, dist: 1 };
+    const pins = new THREE.Group();
+    scene.add(pins);
+    ctx.current = { renderer, scene, camera, marker, pins, yaw: -14, tilt: 52, dist: 1 };
 
     let drag: { x: number; y: number; yaw: number; tilt: number } | null = null;
     const down = (e: PointerEvent) => {
@@ -93,14 +96,17 @@ export function ThreeView(props: { sim: SimGrid; thickness: number; material: Ma
     const recess = new THREE.Color(material.recess);
     const side = new THREE.Color(material.side);
     const through = new THREE.Color(THROUGH_COLOR);
+    const tab = new THREE.Color(TAB_COLOR);
+    const mask = props.tabs?.length ? tabMask(sim, props.tabs) : null;
     for (let j = 0; j < ny; j++) {
       for (let i = 0; i < nx; i++) {
-        const v = h[j * step * cols + i * step];
+        const cell = j * step * cols + i * step;
+        const v = h[cell];
         const k = (j * nx + i) * 3;
         pos[k] = x0 + i * step * res;
         pos[k + 1] = y0 + j * step * res;
         pos[k + 2] = Math.max(-thickness, v);
-        const cc = v <= -thickness + 0.02 ? through : v > -0.02 ? face : -v > thickness * 0.55 ? side : recess;
+        const cc = v <= -thickness + 0.02 ? through : v > -0.02 ? face : mask?.[cell] ? tab : -v > thickness * 0.55 ? side : recess;
         col[k] = cc.r;
         col[k + 1] = cc.g;
         col[k + 2] = cc.b;
@@ -125,7 +131,7 @@ export function ThreeView(props: { sim: SimGrid; thickness: number; material: Ma
     c.scene.add(c.mesh);
     draw();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [props.sim, props.thickness, props.material]);
+  }, [props.sim, props.thickness, props.material, JSON.stringify(props.tabs ?? [])]);
 
   useEffect(() => {
     const c = ctx.current;
@@ -147,6 +153,27 @@ export function ThreeView(props: { sim: SimGrid; thickness: number; material: Ma
     draw();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.marker?.x, props.marker?.y, props.marker?.z]);
+
+  // Holding tabs: the tab tops are coloured in the mesh, and a small amber pin over each one makes
+  // them easy to find from any angle (they sit deep in the cut).
+  const tabsKey = JSON.stringify(props.tabs ?? []);
+  useEffect(() => {
+    const c = ctx.current;
+    if (!c) return;
+    for (const ch of [...c.pins.children]) {
+      c.pins.remove(ch);
+      (ch as THREE.Mesh).geometry.dispose();
+    }
+    const mat = new THREE.MeshStandardMaterial({ color: TAB_COLOR, emissive: 0x6b3500, roughness: 0.5 });
+    for (const t of props.tabs ?? []) {
+      const pin = new THREE.Mesh(new THREE.ConeGeometry(2, 6, 18), mat);
+      pin.rotation.x = -Math.PI / 2;
+      pin.position.set(t.x, t.y, 5);
+      c.pins.add(pin);
+    }
+    draw();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tabsKey]);
 
   // 360° turn (respects prefers-reduced-motion).
   useEffect(() => {

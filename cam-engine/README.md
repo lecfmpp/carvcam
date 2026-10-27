@@ -21,7 +21,7 @@ It has no UI dependency. It runs in Node (tests, CLI, gSender's server) and in t
 | **Icons** (heart, star, house, leaf) | parametric polygons |
 | **Holes and slots** for mounting or hanging | peck drilling when the hole is the bit's diameter, otherwise a pocket |
 | **Pocket** (relief, engraving) | concentric Clipper2 offset rings, from the inside out, staying at depth between rings when it is safe |
-| **Outer profile cut with tabs** | depth passes; the bit lifts over the tabs on the final passes |
+| **Outer profile cut with tabs** | depth passes; the bit lifts over the tabs on the final passes. `tabs: { count, width, height }` spreads them evenly; `tabs.positions` (fractions 0–1 of each outer outline, counter-clockwise from its lowest-left point; see `src/cam/tabs.ts`) places them by hand. The result lists the tabs it left in `result.tabs` |
 | **Two bits** (e.g. 1/16" engraves, 1/8" cuts out) | tool change with `T# M6`, handled by gSender |
 | **Cutting parameters** per material | RPM, feed rate = chip load × flutes × RPM, plunge rate, stepdown and stepover |
 | **Verifier** | allowed commands only, mm/absolute, no `$`, no G0 inside the material, area/Z/feed/RPM limits; estimated time |
@@ -34,7 +34,7 @@ Every warning has a stable `code` (for the UI and the AI to react to), a human-r
 - `TEXT_DOES_NOT_FIT`: includes the suggested size in `data.suggestedSize`.
 - `ELEMENT_NOT_MACHINABLE`: the strokes are thinner than the bit and nothing would be cut.
 - `DETAIL_SMALLER_THAN_BIT`: reports the % of the area that will not be cut.
-- `DEPTH_EXCEEDS`, `TOOL_TOO_SHORT`, `HOLE_SMALLER_THAN_BIT`, `OUTSIDE_PART`, `LOOSE_ISLANDS`, `PART_LARGER_THAN_MACHINE`, `VBIT_ENGRAVE_ONLY`, `SMALL_PART_WITHOUT_TABS`.
+- `DEPTH_EXCEEDS`, `TOOL_TOO_SHORT`, `HOLE_SMALLER_THAN_BIT`, `OUTSIDE_PART`, `LOOSE_ISLANDS`, `PART_LARGER_THAN_MACHINE`, `VBIT_ENGRAVE_ONLY`, `SMALL_PART_WITHOUT_TABS`, `TAB_TOO_NARROW`.
 
 With any warning of severity `error`, `generatePlate` returns no G-code (`ok: false`, `gcode: ""`).
 

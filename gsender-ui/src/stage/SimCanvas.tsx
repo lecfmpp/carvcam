@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { SimGrid } from "../engine/protocol";
 import { THROUGH_COLOR, type Material } from "../lib/catalog";
+import { TAB_COLOR, tabMask, type TabMark } from "./tabs";
 
 /**
  * Top view of the simulated cut: each height-map cell becomes a pixel, colored by
@@ -14,10 +15,13 @@ export function SimCanvas(props: {
   scale: number;
   /** Clips the drawing to the stock area (without the simulation's extra border). */
   board: { width: number; height: number };
+  /** Holding tabs the engine left: drawn in the tab colour so they stand out. */
+  tabs?: TabMark[];
   style?: React.CSSProperties;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const { sim, thickness, material, board } = props;
+  const tabsKey = JSON.stringify(props.tabs ?? []);
 
   useEffect(() => {
     const cv = ref.current;
@@ -31,6 +35,8 @@ export function SimCanvas(props: {
     const recess = hex(material.recess);
     const side = hex(material.side);
     const through = hex(THROUGH_COLOR);
+    const tab = hex(TAB_COLOR);
+    const mask = props.tabs?.length ? tabMask(sim, props.tabs) : null;
     const deep = thickness * 0.55;
     for (let j = 0; j < rows; j++) {
       // Canvas Y points down; the machine's points up.
@@ -48,6 +54,7 @@ export function SimCanvas(props: {
         let c: number[];
         if (v <= -thickness + 0.02) c = through;
         else if (v > -0.02) c = face;
+        else if (mask?.[k]) c = tab;
         else if (-v > deep) c = side;
         else c = mix(face, recess, Math.min(1, -v / Math.max(0.5, Math.min(deep, 4))));
         // Shading: compare with the upper-left neighbor.
@@ -61,7 +68,8 @@ export function SimCanvas(props: {
       }
     }
     ctx.putImageData(img, 0, 0);
-  }, [sim, thickness, material, board.width, board.height]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sim, thickness, material, board.width, board.height, tabsKey]);
 
   const w = sim.cols * sim.res * props.scale;
   const hpx = sim.rows * sim.res * props.scale;

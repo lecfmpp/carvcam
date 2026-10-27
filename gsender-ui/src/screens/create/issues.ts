@@ -78,6 +78,8 @@ export interface IssueCtx {
   thicknesses?: number[];
   canUndo?: boolean;
   hasLastGood?: boolean;
+  /** Holding tabs as set in Prepare (for the tab cards' one-click fixes). */
+  tabs?: Design["tabs"];
 }
 
 /** Every action on a card, including the ones in the bit recommendation. */
@@ -269,6 +271,7 @@ export const MAPPED_CODES = [
   "PART_LARGER_THAN_MACHINE",
   "DIFFERENT_DEPTHS",
   "SMALL_PART_WITHOUT_TABS",
+  "TAB_TOO_NARROW",
   "VBIT_ENGRAVE_ONLY",
   "BIT_NEEDS_ACCESSORY",
   "BIT_NOT_SUPPORTED",
@@ -469,6 +472,16 @@ function mapWarning(a: Warning, k: number, ctx: IssueCtx): UiIssue {
         detail: "They come loose at the end of the cut. Put double-sided tape under them before you start.",
         alts: [{ kind: "go", to: "tabs", label: "Check holding tabs" }],
       };
+    case "TAB_TOO_NARROW": {
+      const width = Number(a.data?.suggestedWidth) || 6;
+      return {
+        ...base,
+        title: "The holding tabs are too thin to hold",
+        detail: `At ${fmt(Number(a.data?.width) || 0)} mm they can snap during the last pass and let the piece shift into the bit.`,
+        apply: ctx.tabs ? { kind: "design", label: `Make them ${fmt(width)} mm wide`, patch: { tabs: { ...ctx.tabs, width } } } : undefined,
+        alts: [{ kind: "go", to: "tabs", label: "Edit holding tabs" }],
+      };
+    }
     case "VBIT_ENGRAVE_ONLY": {
       const mode = String(el?.mode ?? "relief");
       const depth = Math.min(Number(el?.depth ?? 2) || 2, floor1(spec.thickness * 0.4));

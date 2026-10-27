@@ -31,6 +31,7 @@ export function useIssueCtx(): IssueCtx {
     thicknesses: materialById(design.material).thick,
     canUndo,
     hasLastGood: !!lastGood && lastGood !== design,
+    tabs: design.tabs,
   };
 }
 
@@ -122,7 +123,7 @@ export function IssueCard({ issue: i, focused, onFocus, onRun, onSelect }: { iss
   );
   const hasActions = !!i.apply || i.alts.length > 0 || !!i.rec || showFocus;
   return (
-    <div className={`create-issue create-issue--${i.level}`} data-code={i.code} onClick={(e) => (e.target as HTMLElement).closest("button,a") || onSelect?.()}>
+    <div className={`create-issue create-issue--${i.level}`} data-code={i.code} data-issue-key={i.key} tabIndex={-1} onClick={(e) => (e.target as HTMLElement).closest("button,a") || onSelect?.()}>
       <Issue kind={i.level} eyebrow={EYEBROW[i.level]} title={i.title} body={i.detail || undefined} fix={i.suggestion} actions={hasActions ? actions : undefined} />
     </div>
   );

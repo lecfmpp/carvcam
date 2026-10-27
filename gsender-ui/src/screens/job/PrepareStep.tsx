@@ -4,10 +4,13 @@ import { templateFields } from "@gsender-next/cam-engine";
 import { ProBadge } from "../../account/ProGate";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Issue, SidePanel, Stepper, VideoCard } from "../../components/ui";
-import { engineKey, engineOptions, runEngine } from "../../engine/useEngine";
+import { Issue, Seg, SidePanel, Stepper, VideoCard } from "../../components/ui";
+import { engineKey, engineOptions, runEngine, tabCount } from "../../engine/useEngine";
 import { BITS, bitById, machineName, materialById, PRESET_LABEL, type Preset } from "../../lib/catalog";
-import { useDesign } from "../../state/design";
+import { MAX_TABS, useDesign, type Tabs } from "../../state/design";
+import { toast } from "../../state/ui";
+import { evenPositions, positionsFromResult, profileOutlines, TAB_COLOR, TAB_EDGE, tabLimits, tabMarks } from "../../stage/tabs";
+import { TabsLayer } from "../../stage/TabsLayer";
 import { useWorkshop } from "../../state/workshop";
 import { Board, LayoutOverlay, ToolpathOverlay, useSegments } from "../../stage/Board";
 import { KeepOutLayer } from "../../stage/KeepOutLayer";
@@ -121,9 +124,26 @@ export function PrepareStep({ ctx }: { ctx: JobCtx }) {
   const blocking = useMemo(
     () => buildIssues(result, issueCtx).filter((i) => i.level === "error"),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [result, issueCtx.ownedBits, issueCtx.keepOut, issueCtx.canUndo, issueCtx.hasLastGood, issueCtx.headId],
+    [result, issueCtx.ownedBits, issueCtx.keepOut, issueCtx.canUndo, issueCtx.hasLastGood, issueCtx.headId, issueCtx.tabs],
   );
-  const maxTabH = Math.max(0.5, Math.min(5, (design.spec.thickness ?? 6) - 1));
+  const tabs = design.tabs;
+  const limits = tabLimits(design.spec.thickness ?? 6);
+  const nTabs = tabCount(tabs);
+  const placedTabs = result?.tabs?.length ?? 0;
+  const outlines = useMemo(() => profileOutlines(result), [result]);
+  const marks = useMemo(() => tabMarks(tabs, result), [tabs, result]);
+  const simTabs = useMemo(() => tabMarks({ ...tabs, mode: "auto" }, result), [tabs, result]);
+  const setTabs = (t: Partial<Tabs>) => patch({ tabs: { ...tabs, ...t } });
+  /** Canvas edits: a drag on an Auto tab switches to Manual, starting from where the tabs are now. */
+  const editTabs = (positions: number[]) => {
+    if (tabs.mode !== "manual") toast("Tabs switched to Manual: drag them, click the outline to add one.");
+    setTabs({ mode: "manual", positions });
+  };
+  const setMode = (mode: Tabs["mode"]) => {
+    if (mode === tabs.mode) return;
+    if (mode === "manual") setTabs({ mode, positions: tabs.positions?.length ? tabs.positions : positionsFromResult(result, tabs.count) });
+    else setTabs({ mode, count: Math.min(MAX_TABS, tabs.positions?.length || tabs.count) });
+  };
 
   return (
     <>
@@ -147,12 +167,25 @@ export function PrepareStep({ ctx }: { ctx: JobCtx }) {
           const oh = zoneOverhang(zones, b);
           const s = fitScale(api.size, b.width + 2 * oh.x, b.height + 2 * oh.y);
           const mat = materialById(design.material);
-          if (api.view === "3d" && sim) return <ThreeView sim={sim} thickness={b.thickness} material={mat} board={{ width: b.width, height: b.height }} zoom={api.zoom} spin={api.spin} size={api.size} />;
+          if (api.view === "3d" && sim) return <ThreeView sim={sim} thickness={b.thickness} material={mat} board={{ width: b.width, height: b.height }} zoom={api.zoom} spin={api.spin} size={api.size} tabs={simTabs} />;
           return (
             <Board width={b.width} height={b.height} scale={s} zoom={api.zoom} rulers={rulersOn} label={`Board ${fmtN(b.width)} × ${fmtN(b.height)} mm`}>
               <div className={`job-face ${mat.grain ? "job-face--grain" : ""}`} style={{ background: mat.face }} />
               {segs.length ? <ToolpathOverlay segments={segs} width={b.width} height={b.height} scale={s} played={played} opacity={0.75} /> : <LayoutOverlay layout={result!.layout} scale={s} />}
               {zones.length ? <KeepOutLayer zones={zones} scale={s} frame={{ width: b.width, height: b.height }} /> : null}
+              {ctx.hasProfile && marks.length + outlines.length ? (
+                <TabsLayer
+                  marks={marks}
+                  width={b.width}
+                  height={b.height}
+                  scale={s}
+                  tabHeight={tabs.height}
+                  outlines={outlines}
+                  positions={tabs.mode === "manual" ? (tabs.positions ?? []) : undefined}
+                  onChange={editTabs}
+                  autoPositions={() => positionsFromResult(result, tabs.count)}
+                />
+              ) : null}
               <StageRulers width={b.width} height={b.height} scale={s} zoom={api.zoom} />
             </Board>
           );
@@ -216,28 +249,71 @@ export function PrepareStep({ ctx }: { ctx: JobCtx }) {
         </section>
 
         {ctx.hasProfile ? (
-          <section className="job-sec">
-            <div className="job-label">Holding tabs</div>
-            <div className="job-grid2">
-              <label className="job-mini">
-                How many
-                <Stepper label="tabs" value={design.tabs.count} min={0} max={8} onChange={(v) => patch({ tabs: { ...design.tabs, count: v } })} />
-              </label>
+          <section className="job-sec job-tabs" aria-labelledby="tabs-label">
+            <div className="job-tabs__head">
+              <span className="job-tabs__sw" style={{ background: TAB_COLOR, borderColor: TAB_EDGE }} aria-hidden />
+              <div className="job-label" id="tabs-label">
+                Holding tabs
+              </div>
+              <Seg<Tabs["mode"]>
+                label="Tab placement"
+                value={tabs.mode}
+                onChange={setMode}
+                options={[
+                  ["auto", "Auto"],
+                  ["manual", "Manual"],
+                ]}
+              />
+            </div>
+            <div className="job-note">Small bridges of wood that keep the piece attached to the board until the end. You saw them off afterwards.</div>
+            <div className="job-grid2 job-grid2--tabs">
+              {tabs.mode === "auto" ? (
+                <label className="job-mini">
+                  How many
+                  <Stepper label="tabs" value={tabs.count} min={0} max={MAX_TABS} onChange={(v) => setTabs({ count: v })} />
+                </label>
+              ) : (
+                <div className="job-mini job-tabs__manual">
+                  How many
+                  <div className="job-tabs__count">
+                    <b>{nTabs}</b> placed
+                    <button className="btn btn--outline btn--sm" onClick={() => setTabs({ positions: evenPositions(Math.max(1, nTabs || 4)) })}>
+                      Spread evenly
+                    </button>
+                  </div>
+                </div>
+              )}
               <label className="job-mini">
                 Height
-                <Stepper label="tab height" value={design.tabs.height} unit="mm" step={0.5} min={0.5} max={maxTabH} onChange={(v) => patch({ tabs: { ...design.tabs, height: v } })} />
+                <Stepper label="tab height" value={tabs.height} unit="mm" step={0.5} min={limits.minHeight} max={limits.maxHeight} onChange={(v) => setTabs({ height: v })} />
+              </label>
+              <label className="job-mini">
+                Width
+                <Stepper label="tab width" value={tabs.width} unit="mm" step={0.5} min={limits.minWidth} max={limits.maxWidth} onChange={(v) => setTabs({ width: v })} />
               </label>
             </div>
-            {design.tabs.count === 0 ? (
+            {tabs.height >= limits.maxHeight ? <div className="job-fine">{limits.heightNote}</div> : null}
+            {tabs.width <= limits.minWidth ? <div className="job-fine">{limits.widthNote}</div> : null}
+            {tabs.mode === "manual" ? (
+              <div className="job-fine">
+                On the preview: drag a tab along the outline, click the outline to add one, double-click a tab to remove it.
+                {outlines.length > 1 ? " The same spots are used on every piece." : ""}
+              </div>
+            ) : (
+              <div className="job-fine">Spread evenly around the outline. Drag one on the preview to place them yourself.</div>
+            )}
+            {nTabs === 0 ? (
               <div role="status" className="job-warn">
                 <AlertTriangle size={16} color="var(--paused)" strokeWidth={1.75} />
                 <span>
                   <b>Warning:</b> without tabs the piece comes loose at the end. Hold it with double-sided tape.
                 </span>
               </div>
-            ) : (
-              <div className="job-note">Tabs keep the piece attached to the board until the end. You cut them off afterwards.</div>
-            )}
+            ) : result && placedTabs < nTabs * Math.max(1, outlines.length) && placedTabs > 0 ? (
+              <div className="job-fine">
+                {placedTabs} of {nTabs * Math.max(1, outlines.length)} tabs fit: tabs too close together, or on a piece too small for them, are left out.
+              </div>
+            ) : null}
           </section>
         ) : null}
 

@@ -1,5 +1,5 @@
 import { AlertTriangle, ArrowDown, ArrowUp, Check, OctagonAlert, Pause, Printer } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Banner, Seg, SidePanel, VideoCard } from "../../components/ui";
 import { dialFor, materialById, TRACK } from "../../lib/catalog";
@@ -12,6 +12,7 @@ import { KeepOutLayer } from "../../stage/KeepOutLayer";
 import { SimCanvas } from "../../stage/SimCanvas";
 import { fitScale, Stage } from "../../stage/Stage";
 import { ThreeView } from "../../stage/ThreeView";
+import { tabMarks } from "../../stage/tabs";
 import type { JobCtx } from "./Job";
 import { bitNameFor, fmtMin, rpmText, useFlow } from "./jobUtil";
 import { zoneIssues, zoneOverhang } from "./zones";
@@ -79,6 +80,7 @@ export function CarveStep({ ctx }: { ctx: JobCtx }) {
   const phase: Phase = m.status === "running" ? "running" : m.status === "paused" ? "paused" : m.status === "toolchange" ? "toolchange" : m.status === "alarm" ? "alarm" : m.status === "done" ? "done" : "check";
   const b = result?.layout.stock;
   const mat = materialById(design.material);
+  const simTabs = useMemo(() => tabMarks({ ...design.tabs, mode: "auto" }, result), [design.tabs, result]);
   const job = m.job;
   const progress = job && phase !== "check" ? Math.min(1, m.elapsed / Math.max(1, job.total)) : 0;
 
@@ -141,8 +143,8 @@ export function CarveStep({ ctx }: { ctx: JobCtx }) {
           : flow.routerOn
             ? { label: `Dial on ${dial?.dial ?? 3} · router on`, sub: `${rpmText(dial?.rpm ?? rpm)} on the Makita`, ok: true, dial: dial?.dial ?? 3 }
             : { label: `Turn the dial to ${dial?.dial ?? 3} · ${rpmText(dialFor(ctx.headId, dial?.rpm ?? rpm)?.rpm ?? rpm)}`, sub: "Then switch the Makita on. Its speed is set by hand.", ok: false, fix: ["It's on", () => flow.set({ routerOn: true })], dial: dial?.dial ?? 3 },
-        ctx.hasProfile && design.tabs.count > 0
-          ? { label: `${design.tabs.count} holding tabs`, sub: `${design.tabs.count} tabs, ${design.tabs.height} mm high`, ok: true }
+        ctx.hasProfile && ctx.tabs > 0
+          ? { label: `${ctx.tabs} holding tabs`, sub: `${ctx.tabs} tabs, ${design.tabs.width ?? 6} mm wide × ${design.tabs.height} mm high`, ok: true }
           : { label: "Piece held down", sub: ctx.hasProfile ? "Double-sided tape under the board" : "Clamped on the bed; nothing gets cut loose", ok: true },
         ...(zones.length
           ? [
@@ -316,13 +318,13 @@ export function CarveStep({ ctx }: { ctx: JobCtx }) {
           const oh = zoneOverhang(zones, b);
           const s = fitScale(api.size, b.width + 2 * oh.x, b.height + 2 * oh.y);
           if ((api.view === "3d" || phase === "done") && sim)
-            return <ThreeView sim={sim} thickness={b.thickness} material={mat} board={{ width: b.width, height: b.height }} zoom={api.zoom} spin={api.spin + doneSpin} size={api.size} />;
+            return <ThreeView sim={sim} thickness={b.thickness} material={mat} board={{ width: b.width, height: b.height }} zoom={api.zoom} spin={api.spin + doneSpin} size={api.size} tabs={simTabs} />;
           const live = phase !== "check" && carved;
           return (
             <Board width={b.width} height={b.height} scale={s} zoom={api.zoom} label={`Board ${fmtN(b.width)} × ${fmtN(b.height)} mm`}>
               <div className={`job-face ${mat.grain ? "job-face--grain" : ""}`} style={{ background: mat.face }} />
               {live ? (
-                <SimCanvas sim={{ x0: carved.x0, y0: carved.y0, cols: carved.cols, rows: carved.rows, res: carved.res, h: carved.h }} thickness={b.thickness} material={mat} scale={s} board={{ width: b.width, height: b.height }} />
+                <SimCanvas sim={{ x0: carved.x0, y0: carved.y0, cols: carved.cols, rows: carved.rows, res: carved.res, h: carved.h }} thickness={b.thickness} material={mat} scale={s} board={{ width: b.width, height: b.height }} tabs={simTabs} />
               ) : (
                 <ToolpathOverlay segments={segs} width={b.width} height={b.height} scale={s} opacity={0.75} />
               )}
@@ -615,7 +617,7 @@ export function CarveStep({ ctx }: { ctx: JobCtx }) {
               <div className="illus">line illustration · flush-cut saw through a tab, then sanding block along the edge</div>
               <ol className="finish__steps">
                 <li>Vacuum the dust, then lift the board off the bed.</li>
-                <li>{ctx.hasProfile && design.tabs.count ? `Cut the ${design.tabs.count} tabs with a flush-cut saw or a utility knife and pop the piece out.` : ctx.hasProfile ? "Peel the piece off the tape." : "Unclamp the board."}</li>
+                <li>{ctx.hasProfile && ctx.tabs ? `Cut the ${ctx.tabs} tab${ctx.tabs === 1 ? "" : "s"} (${design.tabs.width ?? 6} mm wide, the amber marks on the preview) with a flush-cut saw or a utility knife and pop the piece out.` : ctx.hasProfile ? "Peel the piece off the tape." : "Unclamp the board."}</li>
                 <li>Sand the edges and the tab marks with 120, then 220 grit.</li>
               </ol>
             </div>

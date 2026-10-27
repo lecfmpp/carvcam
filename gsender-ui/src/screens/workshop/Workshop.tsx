@@ -11,7 +11,7 @@ import { TopBar } from "../../components/TopBar";
 import { engineOptions, runEngine } from "../../engine/useEngine";
 import type { SimGrid } from "../../engine/protocol";
 import { BITS, bitById, compat, HEADS, machineById, MACHINES, materialById, PROJECTS, projectFits, TRACK, type Bit, type HeadId, type Intent, type Machine, type Project } from "../../lib/catalog";
-import { useDesign, type Design } from "../../state/design";
+import { defaultTabs, useDesign, type Design } from "../../state/design";
 import { useActiveMachine, useWorkshop } from "../../state/workshop";
 import { SimCanvas } from "../../stage/SimCanvas";
 import { IntentChips } from "./Onboarding";
@@ -44,7 +44,7 @@ function projectDesign(p: Project): Design {
     bit2: p.bits[1],
     useBit2: p.bits.length > 1,
     preset: p.speed,
-    tabs: { count: 4, height: Math.min(3, Math.round(p.spec.thickness * 0.35 * 10) / 10) },
+    tabs: defaultTabs(p.spec.thickness),
   };
 }
 

@@ -34,7 +34,8 @@ export interface SetupSheet {
   toolSteps: string[];
   ops: { n: number; label: string; t: number; bit: string; depth: number; min: number }[];
   totalMin: number;
-  tabs: { count: number; height: number } | null;
+  /** Holding tabs: how many the cut leaves, their size, and Auto/Manual placement; marks for the drawing. */
+  tabs: { count: number; height: number; width: number; manual: boolean; marks: { x: number; y: number; angle: number; width: number; kerf: number }[] } | null;
   zones: KeepOutZone[];
   /** Top view in mm, Y up: SVG path data for the part outline and the cuts. */
   drawing: { outline: string; cuts: string; through: string };
@@ -120,12 +121,34 @@ export function buildSetupSheet(input: {
     toolSteps,
     ops,
     totalMin: (result.verification?.stats.estimatedTimeSec ?? ops.reduce((a, o) => a + o.min * 60, 0)) / 60,
-    tabs: hasProfile && design.tabs.count > 0 ? { ...design.tabs } : null,
+    tabs: sheetTabs(design, result, hasProfile),
     zones,
     drawing: { outline, cuts, through },
     checklist,
     verified: !!result.ok,
   };
+}
+
+/** Tabs as the job will cut them (the engine's count when it reports them). */
+function sheetTabs(design: Design, result: GenerateResult, hasProfile: boolean): SetupSheet["tabs"] {
+  const t = design.tabs;
+  const asked = t.mode === "manual" ? (t.positions?.length ?? 0) : t.count;
+  const placed = result.tabs ?? [];
+  const count = placed.length || asked;
+  if (!hasProfile || count === 0) return null;
+  return {
+    count,
+    height: t.height,
+    width: t.width ?? 6,
+    manual: t.mode === "manual",
+    marks: placed.map((m) => ({ x: r1(m.x), y: r1(m.y), angle: m.angle, width: m.width, kerf: m.kerf })),
+  };
+}
+
+/** "4 tabs · 6 mm wide × 3 mm high (placed by hand)". */
+export function tabsText(t: SetupSheet["tabs"]): string {
+  if (!t) return "None";
+  return `${t.count} tab${t.count === 1 ? "" : "s"} · ${t.width} mm wide × ${t.height} mm high${t.manual ? " (placed by hand)" : ""}`;
 }
 
 const esc = (s: string | number) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
@@ -168,6 +191,9 @@ export function sheetSvg(s: SetupSheet) {
 <path d="${s.drawing.outline}" fill="none" stroke="#111" stroke-width="${r1(0.45 * k)}" stroke-dasharray="${r1(1.6 * k)} ${r1(0.8 * k)}"/>
 <path d="${s.drawing.cuts}" fill="#c9a47b" fill-rule="evenodd" stroke="#6b4a2a" stroke-width="${r1(0.2 * k)}"/>
 <path d="${s.drawing.through}" fill="#333" fill-rule="evenodd"/>
+${(s.tabs?.marks ?? [])
+  .map((m) => `<rect x="${r1(-m.width / 2)}" y="${r1(-m.kerf / 2)}" width="${r1(m.width)}" height="${r1(m.kerf)}" fill="#FFB020" stroke="#6B3500" stroke-width="${r1(0.3 * k)}" transform="translate(${r1(m.x)} ${r1(H - m.y)}) rotate(${r1(-m.angle)})"/>`)
+  .join("")}
 ${zones}
 <line x1="0" y1="${H}" x2="${ax}" y2="${H}" stroke="#111" stroke-width="${r1(0.5 * k)}" marker-end="url(#arr)"/>
 <line x1="0" y1="${H}" x2="0" y2="${r1(H - ax)}" stroke="#111" stroke-width="${r1(0.5 * k)}" marker-end="url(#arr)"/>
@@ -232,7 +258,7 @@ footer { margin-top: 10px; font-size: 8pt; color: #777; border-top: 1px solid #d
 <h2>Stock</h2>
 <dl><dt>Material</dt><dd>${esc(s.material)}</dd><dt>Board</dt><dd>${s.stock.width} × ${s.stock.height} mm</dd><dt>Thickness</dt><dd>${s.stock.thickness} mm</dd>
 <dt>Zero</dt><dd>X0 Y0 bottom-left, Z0 top</dd>
-<dt>Tabs</dt><dd>${s.tabs ? `${s.tabs.count} × ${s.tabs.height} mm high` : "None"}</dd>
+<dt>Tabs</dt><dd>${esc(tabsText(s.tabs))}</dd>
 <dt>Time</dt><dd>${minText(s.totalMin)} estimated</dd></dl>
 <h2>Bits, in order</h2>
 <ol>${s.toolSteps.map((t) => `<li>${esc(t)}</li>`).join("")}</ol>

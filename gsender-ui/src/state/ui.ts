@@ -49,8 +49,11 @@ interface CanvasPrefs {
   rulers: boolean | null;
   /** Snapping grid step in mm. */
   snapGrid: number;
+  /** The colour legend on the Create canvas is expanded. */
+  legendOpen: boolean;
   setRulers(on: boolean): void;
   setSnapGrid(mm: number): void;
+  setLegendOpen(open: boolean): void;
 }
 
 export const useCanvasPrefs = create<CanvasPrefs>()(
@@ -58,9 +61,11 @@ export const useCanvasPrefs = create<CanvasPrefs>()(
     (set) => ({
       rulers: null,
       snapGrid: 1,
+      legendOpen: true,
       setRulers: (rulers) => set({ rulers }),
       setSnapGrid: (snapGrid) => set({ snapGrid }),
+      setLegendOpen: (legendOpen) => set({ legendOpen }),
     }),
-    { name: "carvcam-canvas", partialize: (s) => ({ rulers: s.rulers, snapGrid: s.snapGrid }) },
+    { name: "carvcam-canvas", partialize: (s) => ({ rulers: s.rulers, snapGrid: s.snapGrid, legendOpen: s.legendOpen }) },
   ),
 );

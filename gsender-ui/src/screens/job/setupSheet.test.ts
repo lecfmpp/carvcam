@@ -34,6 +34,18 @@ const groups = [
   { label: "Cut out with 4 tabs", tool: 2, raw: [1], sec: 900 },
 ];
 
+describe("setup sheet tabs", () => {
+  const withTabs = { ...result, tabs: [0, 1, 2].map((i) => ({ x: 10 * i, y: 5, angle: 90, t: i / 3, outline: 0, width: 8, height: 4, kerf: 3.175 })) } as GenerateResult;
+  const d: Design = { ...design, tabs: { count: 4, height: 4, width: 8, mode: "manual", positions: [0.1, 0.4, 0.7] } };
+  it("shows the tabs the cut leaves, their size and how they were placed, and draws them", () => {
+    const s = buildSetupSheet({ design: d, result: withTabs, groups, machine: "m", head: { name: "h", auto: true }, bitName: () => "b" });
+    expect(s.tabs).toMatchObject({ count: 3, width: 8, height: 4, manual: true });
+    const html = setupSheetHtml(s);
+    expect(html).toContain("3 tabs · 8 mm wide × 4 mm high (placed by hand)");
+    expect(html.match(/fill="#FFB020"/g)).toHaveLength(3);
+  });
+});
+
 describe("setup sheet", () => {
   const sheet = buildSetupSheet({ design, result, groups, machine: "LongMill MK2 30×30", head: { name: "Makita RT0701", auto: false }, bitName: (t) => (t === 1 ? "1/16″ flat" : "1/8″ flat"), date: new Date(2026, 9, 27) });
 
@@ -52,7 +64,7 @@ describe("setup sheet", () => {
       [2, 15.3, 15],
     ]);
     expect(sheet.totalMin).toBe(25);
-    expect(sheet.tabs).toEqual({ count: 4, height: 3 });
+    expect(sheet.tabs).toMatchObject({ count: 4, height: 3, width: 6, manual: false });
     expect(sheet.date).toBe("Oct 27, 2026");
   });
 

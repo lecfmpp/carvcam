@@ -286,3 +286,13 @@
 .zman { display: flex; align-items: center; gap: 8px; }
 .jog__btn--zh { width: 72px; height: 52px; flex-direction: column; gap: 2px; font: 500 12px var(--mono); }
 .zman__read { margin-left: auto; display: flex; gap: 8px; align-items: baseline; font: 500 18px var(--mono); color: var(--text); }
+
+/* ---------- holding tabs ---------- */
+.job-tabs__head { display: flex; align-items: center; gap: 8px; }
+.job-tabs__head .job-label { flex: 1; margin: 0; }
+.job-tabs__head .seg { flex: none; }
+.job-tabs__sw { width: 14px; height: 14px; border-radius: 4px; border: 2px solid; box-sizing: border-box; flex: none; }
+.job-tabs__count { display: flex; align-items: center; gap: 10px; height: 44px; font: 400 13px var(--font); color: var(--text-2); }
+.job-tabs__count b { font: 600 16px var(--font); color: var(--text); }
+.job-tabs__count .btn { margin-left: auto; }
+.job-tabs__manual { grid-column: 1 / -1; }

@@ -1,5 +1,6 @@
 import { area, intersection, offset, pathArea, perimeter, pointInRegion, segmentInside, simplify, type Pt, type Region } from "../geometry/clip.js";
 import { depthLevels, dist, PathBuilder, rotateToNearest } from "./builder.js";
+import { canonicalOutline, nearestTabFraction, outerOutlines, pointAtFraction, projectOnPath } from "./tabs.js";
 
 export type Direction = "conventional" | "climb";
 
@@ -76,11 +77,27 @@ export interface ProfileOpts {
   direction: Direction;
   /** Side of the bit relative to the region: outside (the part stays) or inside (the region drops out). */
   side: "outside" | "inside";
-  tabs?: { count: number; width: number; height: number; thickness: number };
+  /**
+   * Holding tabs on the outer outlines (outside profiles only). `width` is the wood left along the
+   * edge. Without `positions` the tabs are spread evenly (`count` per outline). With `positions`
+   * (fractions 0–1 of each outer outline of `region`, see cam/tabs.ts) one tab goes at each position
+   * on every outline and `count` is ignored; tabs that would overlap a previous one are skipped.
+   */
+  tabs?: { count: number; width: number; height: number; thickness: number; positions?: number[] };
+}
+
+/** A tab the profile left: center on the bit path, direction, and where it sits on the part outline. */
+export interface ProfileTab {
+  x: number;
+  y: number;
+  angle: number;
+  outline: number;
+  t: number;
 }
 
 export interface ProfileResult {
   outlinesWithoutTabs: number;
+  tabs: ProfileTab[];
 }
 
 /**
@@ -90,15 +107,37 @@ export interface ProfileResult {
 export function profile(b: PathBuilder, region: Region, o: ProfileOpts): ProfileResult {
   const paths = simplify(offset(region, o.side === "outside" ? o.radius : -o.radius));
   let outlinesWithoutTabs = 0;
+  const placed: ProfileTab[] = [];
   const levels = depthLevels(o.depth, o.stepdown);
+  const manual = o.tabs?.positions;
+  const tabCount = manual ? manual.length : (o.tabs?.count ?? 0);
+  // Manual tabs: the requested spots on the part's outer outlines.
+  const targets = manual && o.side === "outside" ? outerOutlines(region).flatMap((ol) => manual.map((t) => pointAtFraction(canonicalOutline(ol), t))) : [];
+  const outerPaths = paths.filter((p) => pathArea(p) > 0);
 
   const ordered = nearestOrder(paths, b, (p) => (pathArea(p) < 0 ? 0 : 1));
   for (const raw of ordered) {
     const isOuter = pathArea(raw) > 0;
-    const path = rotateToNearest(orient(raw, o.direction, o.side === "outside" ? "profile" : "pocket"), b);
-    const wantTabs = o.side === "outside" && isOuter && o.tabs && o.tabs.count > 0;
-    const tabs = wantTabs ? tabWindows(path, o.tabs!.count, o.tabs!.width + 2 * o.radius) : [];
+    let path = rotateToNearest(orient(raw, o.direction, o.side === "outside" ? "profile" : "pocket"), b);
+    const wantTabs = o.side === "outside" && isOuter && o.tabs && tabCount > 0;
+    let tabs: Window[] = [];
+    if (wantTabs) {
+      const len = o.tabs!.width + 2 * o.radius;
+      if (!manual) tabs = tabWindows(path, o.tabs!.count, len);
+      else {
+        // Each target goes to the bit path nearest to it.
+        const mine = targets.filter((q) => nearestPath(outerPaths, q) === raw);
+        const placedMan = manualWindows(path, mine, len);
+        path = placedMan.path;
+        tabs = placedMan.windows;
+      }
+    }
     if (wantTabs && tabs.length === 0) outlinesWithoutTabs++;
+    for (const [w0, w1] of tabs) {
+      const c = pointAtArc(path, (w0 + w1) / 2);
+      const on = nearestTabFraction(region, c);
+      placed.push({ x: c.x, y: c.y, angle: c.angle, outline: on?.outline ?? 0, t: on?.t ?? 0 });
+    }
     const tabTop = o.tabs ? -(o.tabs.thickness - o.tabs.height) : 0;
 
     b.travel(path[0]);
@@ -112,7 +151,7 @@ export function profile(b: PathBuilder, region: Region, o: ProfileOpts): Profile
     }
     b.retract();
   }
-  return { outlinesWithoutTabs };
+  return { outlinesWithoutTabs, tabs: placed };
 }
 
 /** Hole exactly the size of the bit: peck drilling, rising to clear the chips. */
@@ -365,6 +404,87 @@ function tabWindows(path: Pt[], n: number, len: number): Window[] {
     const c = ((i + 0.5) * per) / count;
     return [c - len / 2, c + len / 2] as Window;
   });
+}
+
+/** The outer bit path nearest to a point. */
+function nearestPath(paths: Pt[][], q: Pt): Pt[] | undefined {
+  let best: Pt[] | undefined;
+  let bd = Infinity;
+  for (const p of paths) {
+    const d = projectOnPath(p, q).dist;
+    if (d < bd) {
+      bd = d;
+      best = p;
+    }
+  }
+  return best;
+}
+
+/** Point and direction (degrees) at arc length `s` of a closed path. */
+function pointAtArc(path: Pt[], s: number): Pt & { angle: number } {
+  let acc = 0;
+  for (let i = 0; i < path.length; i++) {
+    const a = path[i];
+    const c = path[(i + 1) % path.length];
+    const seg = dist(a, c);
+    if (acc + seg >= s || i === path.length - 1) {
+      const k = seg > 0 ? Math.max(0, Math.min(1, (s - acc) / seg)) : 0;
+      return { x: a.x + (c.x - a.x) * k, y: a.y + (c.y - a.y) * k, angle: (Math.atan2(c.y - a.y, c.x - a.x) * 180) / Math.PI };
+    }
+    acc += seg;
+  }
+  return { ...path[0], angle: 0 };
+}
+
+/**
+ * Windows for manual tabs: one per target (projected on the path), in path order, skipping any
+ * that would overlap the previous one. When a window would straddle the path's start, the path
+ * is restarted in the middle of the widest gap, so the plunge never lands on a tab.
+ */
+function manualWindows(path: Pt[], targets: Pt[], len: number): { path: Pt[]; windows: Window[] } {
+  const per = perimeter(path);
+  if (!targets.length || per < len * 2.5) return { path, windows: [] };
+  const centers = targets.map((q) => projectOnPath(path, q).s).sort((a, c) => a - c);
+  const kept: number[] = [];
+  for (const c of centers) {
+    const prev = kept[kept.length - 1];
+    if (prev !== undefined && c - prev < len) continue;
+    if (kept.length && kept[0] + per - c < len) continue;
+    kept.push(c);
+  }
+  const wraps = kept.some((c) => c - len / 2 < 0 || c + len / 2 > per);
+  if (!wraps) return { path, windows: kept.map((c) => [c - len / 2, c + len / 2] as Window) };
+  // Restart in the middle of the widest gap between tabs.
+  let start = 0;
+  let gap = -1;
+  kept.forEach((c, i) => {
+    const next = i + 1 < kept.length ? kept[i + 1] : kept[0] + per;
+    if (next - c > gap) {
+      gap = next - c;
+      start = (c + (next - c) / 2) % per;
+    }
+  });
+  const rotated = restartAt(path, start);
+  const windows = kept.map((c) => (((c - start) % per) + per) % per).sort((a, c) => a - c).map((c) => [c - len / 2, c + len / 2] as Window);
+  return { path: rotated, windows };
+}
+
+/** The same closed path, starting at arc length `s` (a vertex is inserted there). */
+function restartAt(path: Pt[], s: number): Pt[] {
+  let acc = 0;
+  for (let i = 0; i < path.length; i++) {
+    const a = path[i];
+    const c = path[(i + 1) % path.length];
+    const seg = dist(a, c);
+    if (acc + seg >= s) {
+      const k = seg > 0 ? (s - acc) / seg : 0;
+      const p = { x: a.x + (c.x - a.x) * k, y: a.y + (c.y - a.y) * k };
+      const rest = [...path.slice(i + 1), ...path.slice(0, i + 1)];
+      return [p, ...rest.filter((q) => dist(q, p) > 1e-6)];
+    }
+    acc += seg;
+  }
+  return path;
 }
 
 function followWithTabs(b: PathBuilder, path: Pt[], z: number, tabTop: number, tabs: Window[]) {

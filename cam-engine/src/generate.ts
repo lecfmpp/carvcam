@@ -19,6 +19,7 @@ import {
   type ToolInput,
 } from "./schema.js";
 import { verifyGcode, type VerifyResult } from "./verify.js";
+import type { TabPlacement } from "./cam/tabs.js";
 import { KEEP_OUT_MARGIN, zoneClearance, zoneName, zoneOverlap, type KeepOutZone } from "./keepout.js";
 
 export interface GenerateOptions {
@@ -38,7 +39,14 @@ export interface GenerateOptions {
    */
   sienci?: SienciConfig;
   direction?: Direction;
-  tabs?: { count?: number; width?: number; height?: number };
+  /**
+   * Holding tabs on the outer cut. `count` (default 4) tabs spread evenly; `width` (default 6 mm)
+   * is the wood left along the edge; `height` (default 35% of the thickness, at most 3 mm) is how
+   * tall they stay. `positions` places them by hand instead: fractions 0–1 of each outer outline's
+   * perimeter, counter-clockwise from the outline's lowest (then leftmost) point (see cam/tabs.ts);
+   * `count` is then ignored. Without `positions` the output is exactly what it was before it existed.
+   */
+  tabs?: { count?: number; width?: number; height?: number; positions?: number[] };
   title?: string;
   /**
    * Keep-out zones (clamps, screws, hold-downs) in stock coordinates. With at least one zone:
@@ -74,6 +82,8 @@ export interface GenerateResult {
   paramsSource: string;
   /** Geometry in stock coordinates, for the UI's 2D/3D preview. */
   layout: Layout;
+  /** Holding tabs the outer cut leaves (empty when there is no outer cut or no tabs). */
+  tabs: TabPlacement[];
 }
 
 /** Resolves the catalog (if any), the bits and the machine. Shared by generatePlate and invalidSpecResult. */
@@ -111,6 +121,7 @@ export function invalidSpecResult(input: PlateSpecInput, options: GenerateOption
     tools: cutTool.id === tool.id ? [tool] : [tool, cutTool],
     manualAdjustments: sienci?.manualAdjustments ?? [],
     paramsSource: sienci?.source ?? "Generic chip-load calculation",
+    tabs: [],
     layout: { stock: { width: w, height: h, thickness: Number(input.thickness) || 0 }, part: [], engraved: [], relief: null, cutouts: [], holes: [], profile: null, warnings },
   };
 }
@@ -156,6 +167,7 @@ export function generatePlate(input: PlateSpecInput, options: GenerateOptions): 
     manualAdjustments,
     paramsSource,
     layout,
+    tabs: [] as TabPlacement[],
   };
 
   if (hasErrors(warnings)) return { ...base, gcode: "" };
@@ -257,12 +269,24 @@ export function generatePlate(input: PlateSpecInput, options: GenerateOptions): 
     const per = layout.profile;
     const tabs = {
       count: opts.tabs?.count ?? 4,
-      width: opts.tabs?.width ?? 6,
+      width: opts.tabs?.width ?? DEFAULT_TAB_WIDTH,
       height: opts.tabs?.height ?? round1(Math.min(3, spec.thickness * 0.35)),
       thickness: spec.thickness,
+      ...(opts.tabs?.positions ? { positions: opts.tabs.positions.filter(Number.isFinite).map((t) => ((t % 1) + 1) % 1) } : {}),
     };
+    const tabsOn = tabs.positions ? tabs.positions.length > 0 : tabs.count > 0;
+    if (tabsOn && tabs.width < MIN_TAB_WIDTH) {
+      warnings.push({
+        code: "TAB_TOO_NARROW",
+        severity: "warning",
+        message: `The holding tabs are only ${fmt(tabs.width)} mm wide; tabs under ${MIN_TAB_WIDTH} mm can snap before the cut is done and let the piece move.`,
+        suggestion: `Make them at least ${MIN_TAB_WIDTH} mm wide (${DEFAULT_TAB_WIDTH} mm is a good default).`,
+        data: { width: tabs.width, minWidth: MIN_TAB_WIDTH, suggestedWidth: DEFAULT_TAB_WIDTH },
+      });
+    }
     run(`Profile: ${per.label}`, "profile", cutTool, pCut, per.depth, (b) => {
       const res = profile(b, per.region, { radius: rCut, depth: per.depth, stepdown: pCut.stepdown, direction, side: "outside", tabs });
+      base.tabs = res.tabs.map((t) => ({ ...t, x: round3(t.x), y: round3(t.y), angle: round1(t.angle), t: Math.round(t.t * 1e4) / 1e4, width: tabs.width, height: tabs.height, kerf: cutTool.diameter }));
       if (res.outlinesWithoutTabs > 0) {
         warnings.push({
           code: "SMALL_PART_WITHOUT_TABS",
@@ -382,3 +406,9 @@ function defaultTitle(texts: string[]) {
 }
 
 const round1 = (v: number) => Math.round(v * 10) / 10;
+const round3 = (v: number) => Math.round(v * 1000) / 1000;
+
+/** Default tab width (wood left along the edge), mm. */
+export const DEFAULT_TAB_WIDTH = 6;
+/** Narrower tabs can snap during the last passes (TAB_TOO_NARROW). */
+export const MIN_TAB_WIDTH = 3;

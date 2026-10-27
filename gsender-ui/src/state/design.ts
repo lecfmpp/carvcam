@@ -18,7 +18,7 @@ export interface Design {
   bit2?: string;
   useBit2: boolean;
   preset?: Preset;
-  tabs: { count: number; height: number };
+  tabs: Tabs;
   /** Reference image to trace over: shown under the design and never cut. */
   tracing?: TracingImage;
   /** Clamps and hold-downs the bit must stay away from, in stock coordinates (X0 Y0 = bottom-left of the board). */
@@ -26,6 +26,27 @@ export interface Design {
   /** Per-job inputs of the cost calculator (Pro). */
   jobCost?: JobCost;
 }
+
+/**
+ * Holding tabs on the outer cut. Auto: `count` tabs spread evenly by the engine. Manual: one tab at
+ * each of `positions` (fractions 0–1 of the outline, counter-clockwise from its lowest-left point;
+ * see the engine's cam/tabs.ts), placed by dragging on the canvas.
+ */
+export interface Tabs {
+  count: number;
+  /** How tall the tab stays (mm above the bottom of the board). */
+  height: number;
+  /** Length of wood left along the edge (mm). */
+  width: number;
+  mode: "auto" | "manual";
+  positions?: number[];
+}
+
+export const DEFAULT_TAB_WIDTH = 6;
+export const MAX_TABS = 12;
+
+/** Tabs for a new project: 4 tabs, 35% of the thickness (3 mm at most), 6 mm wide. */
+export const defaultTabs = (thickness: number): Tabs => ({ count: 4, height: Math.min(3, Math.round(thickness * 0.35 * 10) / 10), width: DEFAULT_TAB_WIDTH, mode: "auto" });
 
 /** Cost inputs that belong to one job (shop-wide rates live in the workshop store). */
 export interface JobCost {
@@ -60,7 +81,7 @@ export const BLANK: Design = {
   spec: { type: "plate", width: 200, height: 120, thickness: 15, material: "mdf", texts: [], edge: { type: "rounded", radius: 8 }, frame: 0 },
   bit: "flat-1-8-upcut",
   useBit2: false,
-  tabs: { count: 4, height: 3 },
+  tabs: { count: 4, height: 3, width: DEFAULT_TAB_WIDTH, mode: "auto" },
 };
 
 interface DesignState {
@@ -137,7 +158,7 @@ export const useDesign = create<DesignState>()(
             bit2: p.bits[1],
             useBit2: p.bits.length > 1,
             preset: p.speed,
-            tabs: { count: 4, height: Math.min(3, Math.round(p.spec.thickness * 0.35 * 10) / 10) },
+            tabs: defaultTabs(p.spec.thickness),
           },
           rev: get().rev + 1,
         });
@@ -154,15 +175,16 @@ export const useDesign = create<DesignState>()(
     },
     {
       name: "gsender-design",
-      version: 3,
+      version: 4,
       // Undo history and the last good design live only in this session.
       partialize: (s) => ({ design: s.design, rev: s.rev }) as DesignState,
       // v1 (0.1.0) stored the spec with Portuguese field names. v3 adds keep-out zones and job costs
-      // (both optional, so older designs load as they are).
+      // (both optional, so older designs load as they are). v4 adds the tab width and Auto/Manual placement.
       migrate: (persisted, version) => {
         const st = persisted as Partial<DesignState>;
         if (version < 2 && st.design) st.design = migrateLegacyDesign(st.design);
         if (version < 3 && st.design) st.design = migrateToV3(st.design);
+        if (version < 4 && st.design) st.design = migrateToV4(st.design);
         return st as DesignState;
       },
     },
@@ -184,4 +206,15 @@ export function migrateLegacyDesign(d: Design): Design {
 export function migrateToV3(d: Design): Design {
   const keepOut = Array.isArray(d.keepOut) ? d.keepOut.filter((z) => z && [z.x, z.y, z.width, z.height].every(Number.isFinite)) : undefined;
   return { ...d, keepOut };
+}
+
+/** v3 → v4: tabs get a width (the engine's default, 6 mm) and Auto placement, so the G-code is unchanged. */
+export function migrateToV4(d: Design): Design {
+  const t = (d.tabs ?? {}) as Partial<Tabs>;
+  const count = Number.isFinite(t.count) ? (t.count as number) : 4;
+  const height = Number.isFinite(t.height) ? (t.height as number) : 3;
+  const width = Number.isFinite(t.width) && (t.width as number) > 0 ? (t.width as number) : DEFAULT_TAB_WIDTH;
+  const positions = Array.isArray(t.positions) ? t.positions.filter((x) => Number.isFinite(x)) : undefined;
+  const mode = t.mode === "manual" && positions ? "manual" : "auto";
+  return { ...d, tabs: { count, height, width, mode, ...(mode === "manual" ? { positions } : {}) } };
 }
