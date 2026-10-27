@@ -6,7 +6,7 @@
 # app instalado baixa as atualizações) e sobe também cópias com nome fixo, que o site usa:
 #   https://github.com/lecfmpp/carvcam/releases/latest/download/CarvCAM-Windows-64Bit.exe
 #   .../CarvCAM-Linux-x86_64.AppImage · .../CarvCAM-Linux-amd64.deb
-#   .../CarvCAM-Linux-arm64.AppImage · .../CarvCAM-Linux-arm64.deb · .../CarvCAM-Linux-armv7l.AppImage · .../CarvCAM-Linux-armhf.deb
+#   .../CarvCAM-Linux-arm64.AppImage · .../CarvCAM-Linux-arm64.deb · .../CarvCAM-Linux-armv7l.AppImage · .../CarvCAM-Linux-armv7l.deb
 #   .../CarvCAM-Mac-arm64.dmg · .../CarvCAM-Mac-x64.dmg
 name: Installers
 
@@ -134,9 +134,11 @@ jobs:
             desktop/release/latest-linux*.yml
           retention-days: 14
 
+  # Mac ainda é "em breve" no site: este job só guarda o .dmg de teste e não bloqueia os outros.
   build-mac:
     needs: build-windows
     runs-on: macos-latest
+    continue-on-error: true
     env:
       HAS_MAC_CERT: ${{ secrets.MAC_CERT_P12_BASE64 != '' && 'true' || 'false' }}
     steps:
