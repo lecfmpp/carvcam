@@ -1,6 +1,6 @@
 import { Minus, Plus, RotateCw } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Seg } from "../components/ui";
+import { Seg, VideoChip } from "../components/ui";
 import { CanvasTools } from "./Rulers";
 
 export type View = "top" | "3d";
@@ -18,7 +18,7 @@ export interface StageApi {
  * Stage to the left of the panel: dot grid, Top/3D toggle, 360° button and zoom.
  * Content is drawn by `render`, which receives view, zoom and size.
  */
-export function Stage(props: { caption?: ReactNode; tools?: ReactNode; overlay?: ReactNode; render(api: StageApi): ReactNode; defaultView?: View; noViewToggle?: boolean; bottomLeft?: ReactNode; /** Show the Rulers toggle and snapping grid popover (top view only). */ canvasTools?: boolean }) {
+export function Stage(props: { caption?: ReactNode; tools?: ReactNode; overlay?: ReactNode; render(api: StageApi): ReactNode; defaultView?: View; noViewToggle?: boolean; bottomLeft?: ReactNode; /** Show the Rulers toggle and snapping grid popover (top view only). */ canvasTools?: boolean; /** When this changes to a value, the stage switches to the top view (e.g. to show a warning on the board). */ showTop?: string | null; /** The step's "Watch how" video (lib/videos.ts), shown beside the bottom-left content when it exists. */ video?: string }) {
   const [view, setView] = useState<View>(props.defaultView ?? "top");
   const [zoom, setZoom] = useState(1);
   const [spin, setSpin] = useState(0);
@@ -33,6 +33,10 @@ export function Stage(props: { caption?: ReactNode; tools?: ReactNode; overlay?:
     return () => ro.disconnect();
   }, []);
 
+  useEffect(() => {
+    if (props.showTop) setView("top");
+  }, [props.showTop]);
+
   const zoomBy = (f: number) => setZoom((z) => Math.max(0.4, Math.min(3, +(z * f).toFixed(3))));
 
   return (
@@ -41,8 +45,9 @@ export function Stage(props: { caption?: ReactNode; tools?: ReactNode; overlay?:
       className="stage"
       aria-label="Preview"
       onWheel={(e) => {
-        if (e.ctrlKey || e.metaKey) {
-          e.preventDefault();
+        // In 3D the wheel always zooms; in the top view it needs Ctrl/Cmd (the wheel scrolls the panel otherwise).
+        if (e.ctrlKey || e.metaKey || view === "3d") {
+          if (e.cancelable) e.preventDefault();
           zoomBy(e.deltaY < 0 ? 1.1 : 0.9);
         }
       }}
@@ -80,7 +85,12 @@ export function Stage(props: { caption?: ReactNode; tools?: ReactNode; overlay?:
       </div>
       {props.overlay}
       <div className="stage__canvas">{props.render({ view, zoom, spin, size })}</div>
-      {props.bottomLeft ? <div style={{ position: "absolute", left: 24, bottom: 24, zIndex: 3 }}>{props.bottomLeft}</div> : null}
+      {props.bottomLeft || props.video ? (
+        <div className="stage__bottomleft">
+          {props.bottomLeft}
+          {props.video ? <VideoChip id={props.video} /> : null}
+        </div>
+      ) : null}
       <div className="stage__zoom" role="group" aria-label="Zoom">
         <button aria-label="Zoom out" title="Zoom out" onClick={() => zoomBy(1 / 1.2)}>
           <Minus size={16} strokeWidth={1.75} />

@@ -10,6 +10,9 @@ import { TAB_COLOR, tabMask, type TabMark } from "./tabs";
  */
 export function ThreeView(props: { sim: SimGrid; thickness: number; material: Material; board: { width: number; height: number }; zoom: number; spin: number; size: { w: number; h: number }; marker?: { x: number; y: number; z: number } | null; /** Holding tabs, drawn in the tab colour. */ tabs?: TabMark[] }) {
   const host = useRef<HTMLDivElement>(null);
+  // The pointer handlers are set up once, so drawing reads the latest props (zoom, board) from here.
+  const live = useRef(props);
+  live.current = props;
   const ctx = useRef<{ renderer: THREE.WebGLRenderer; scene: THREE.Scene; camera: THREE.PerspectiveCamera; mesh?: THREE.Mesh; marker: THREE.Mesh; pins: THREE.Group; yaw: number; tilt: number; dist: number; raf?: number } | null>(null);
 
   // Scene (once).
@@ -67,15 +70,16 @@ export function ThreeView(props: { sim: SimGrid; thickness: number; material: Ma
   function draw() {
     const c = ctx.current;
     if (!c) return;
-    const { width, height } = props.board;
-    const r = (Math.hypot(width, height) * 2.1) / props.zoom;
+    const { board, zoom, thickness } = live.current;
+    const { width, height } = board;
+    const r = (Math.hypot(width, height) * 2.1) / zoom;
     const yaw = (c.yaw * Math.PI) / 180;
     const tilt = (c.tilt * Math.PI) / 180;
     const cx = width / 2;
     const cy = height / 2;
     c.camera.position.set(cx + r * Math.sin(yaw) * Math.sin(tilt), cy - r * Math.cos(yaw) * Math.sin(tilt), r * Math.cos(tilt));
     c.camera.up.set(0, 0, 1);
-    c.camera.lookAt(cx, cy, -props.thickness / 2);
+    c.camera.lookAt(cx, cy, -thickness / 2);
     c.renderer.render(c.scene, c.camera);
   }
 

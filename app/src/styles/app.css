@@ -222,7 +222,7 @@ input, select, textarea { font: inherit; color: inherit; }
 .video__play { width: 28px; height: 28px; border-radius: 50%; background: rgba(17, 18, 20, 0.85); display: flex; align-items: center; justify-content: center; }
 
 /* ---------- Toast ---------- */
-.toasts { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); z-index: 50; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+.toasts { position: fixed; left: 50%; top: 84px; transform: translateX(-50%); z-index: 50; display: flex; flex-direction: column; gap: 8px; align-items: center; }
 .toast { padding: 12px 16px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line-2); font: 500 13px var(--font); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4); animation: toast-in var(--t) var(--ease); }
 @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
@@ -281,3 +281,35 @@ input, select, textarea { font: inherit; color: inherit; }
 .rulers__cur-t { fill: #3db6ff; font-family: var(--mono); font-weight: 600; }
 .snap-guides { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; z-index: 4; }
 .snap-guides line { stroke: #ff3da5; }
+
+/* Numbered accordion sections in the side panels: one open at a time. */
+.acc { border: 1px solid var(--line); border-radius: 12px; background: rgba(255, 255, 255, 0.02); flex: none; }
+.acc.is-open { border-color: var(--line-2); background: rgba(255, 255, 255, 0.035); }
+.acc__head { display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 14px; border: 0; background: transparent; color: var(--text); text-align: left; border-radius: 12px; }
+button.acc__head:hover { background: rgba(255, 255, 255, 0.04); }
+.acc__num { width: 24px; height: 24px; flex: none; border-radius: 50%; background: var(--accent); color: #fff; font: 700 12px var(--font); display: flex; align-items: center; justify-content: center; }
+.acc__num--done { background: rgba(94, 221, 176, 0.18); color: var(--ready-text); }
+.acc__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.acc__title { font: 600 14.5px var(--font); }
+.acc__sum { font: 400 12.5px var(--font); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.acc.is-open .acc__sum { display: none; }
+.acc__chev { flex: none; color: var(--text-3); transition: transform var(--t) var(--ease); }
+.acc.is-open .acc__chev { transform: rotate(180deg); }
+.acc__body { padding: 2px 14px 14px; display: flex; flex-direction: column; gap: 12px; }
+
+/* "Watch how" button on the canvas, beside the assistant bar. */
+.stage__bottomleft { position: absolute; left: 24px; bottom: 24px; z-index: 3; display: flex; align-items: flex-end; gap: 12px; max-width: calc(100% - 200px); }
+.video-chip { display: flex; align-items: center; gap: 10px; height: 60px; padding: 6px 14px 6px 6px; border-radius: 16px; border: 1px solid var(--glass-border); background: var(--glass); backdrop-filter: var(--blur); color: var(--text); text-align: left; flex: none; max-width: 280px; }
+.video-chip:hover { background: rgba(255, 255, 255, 0.08); }
+.video-chip__thumb { width: 72px; height: 46px; flex: none; border-radius: 10px; background: center / cover no-repeat; display: flex; align-items: center; justify-content: center; }
+.video-chip__text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.video-chip__title { font: 600 13px var(--font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Warnings tray: issue cards float over the canvas instead of filling the side panel. */
+.issue-tray { position: absolute; right: 24px; bottom: 88px; z-index: 4; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; width: min(380px, calc(100% - 48px)); pointer-events: none; }
+.issue-tray > * { pointer-events: auto; }
+.issue-tray__list { display: flex; flex-direction: column; gap: 10px; max-height: min(62vh, 640px); overflow-y: auto; padding: 10px; border-radius: 16px; background: rgba(20, 21, 23, 0.92); backdrop-filter: var(--blur); border: 1px solid var(--glass-border); box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5); width: 100%; }
+.issue-tray__pill { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--glass-border); background: var(--glass); backdrop-filter: var(--blur); color: var(--text); font: 600 13px var(--font); }
+.issue-tray__pill:hover { background: rgba(255, 255, 255, 0.08); }
+.issue-tray__pill.is-error { border-color: rgba(242, 107, 94, 0.55); background: rgba(242, 107, 94, 0.14); }
+.issue-tray__pill.is-warning { border-color: rgba(242, 193, 78, 0.45); }

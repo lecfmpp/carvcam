@@ -1,5 +1,5 @@
-import { ArrowUpRight, Check, Eye, EyeOff } from "lucide-react";
-import { useState } from "react";
+import { AlertCircle, AlertTriangle, ArrowUpRight, Check, ChevronDown, Eye, EyeOff } from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { BitSilhouette } from "../../components/BitSilhouette";
 import { Issue } from "../../components/ui";
@@ -156,6 +156,33 @@ function BitRecBlock({ rec, onRun }: { rec: BitRec; onRun(a: IssueAction): void 
           ) : null}
         </span>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Warnings and errors float over the canvas, bottom right, instead of filling the side panel: a pill
+ * with the count opens the cards. It opens by itself when a new error appears.
+ */
+export function IssueTray({ errors, warnings, open, setOpen, children }: { errors: number; warnings: number; open: boolean; setOpen(v: boolean): void; children: ReactNode }) {
+  const prevErrors = useRef(errors);
+  useEffect(() => {
+    if (errors > prevErrors.current) setOpen(true);
+    prevErrors.current = errors;
+  }, [errors, setOpen]);
+  const total = errors + warnings;
+  if (!total) return null;
+  const label = errors
+    ? `${errors} error${errors > 1 ? "s" : ""} to fix${warnings ? ` · ${warnings} warning${warnings > 1 ? "s" : ""}` : ""}`
+    : `${warnings} warning${warnings > 1 ? "s" : ""}`;
+  return (
+    <div className="issue-tray">
+      {open ? <div className="issue-tray__list" role="region" aria-label="Warnings and errors">{children}</div> : null}
+      <button className={`issue-tray__pill ${errors ? "is-error" : "is-warning"}`} aria-expanded={open} onClick={() => setOpen(!open)}>
+        {errors ? <AlertCircle size={16} color="var(--alarm-text)" /> : <AlertTriangle size={16} color="var(--paused)" />}
+        {label}
+        <ChevronDown size={15} style={{ transform: open ? undefined : "rotate(180deg)" }} />
+      </button>
     </div>
   );
 }

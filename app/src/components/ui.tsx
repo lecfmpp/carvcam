@@ -1,7 +1,7 @@
-import { AlertCircle, AlertTriangle, Info, Play, XCircle } from "lucide-react";
+import { AlertCircle, AlertTriangle, Check, ChevronDown, Info, Play, XCircle } from "lucide-react";
 import { useCallback, useState, type ReactNode } from "react";
 import { VIDEOS } from "../lib/videos";
-import { toast, useUi } from "../state/ui";
+import { useUi } from "../state/ui";
 import { VideoTheater } from "./VideoTheater";
 
 /** Segmented control (Top/3D, Simple/Pro, Whole bed/Custom area…). */
@@ -58,43 +58,75 @@ function toSec(s: string) {
   return s ? s.split(":").map(Number).reduce((a, c) => a * 60 + (c || 0), 0) : 0;
 }
 
-/** "Watch how" card: opens the YouTube video in theater mode, or shows a placeholder. */
-export function VideoCard({ id }: { id: string }) {
-  const v = VIDEOS[id] ?? { title: "How to do this step", url: "", start: "0:00" };
-  const yt = youtubeId(v.url);
-  const [open, setOpen] = useState(false);
-  const close = useCallback(() => setOpen(false), []);
+/** Video for a step, when there is one: start time, end time and the YouTube id. */
+export function videoFor(id: string | undefined) {
+  const v = id ? VIDEOS[id] : undefined;
+  const yt = v ? youtubeId(v.url) : null;
+  if (!v || !yt) return null;
   let sec = toSec(v.start);
   if (!sec) sec = Number(/[?&]t=(\d+)/.exec(v.url)?.[1] ?? 0);
   const ts = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`;
   const end = v.end ? toSec(v.end) : 0;
+  const range = `${ts}${end > sec ? `–${v.end}` : ""}`;
+  return { title: v.title, yt, range, src: `https://www.youtube-nocookie.com/embed/${yt}?start=${sec}${end > sec ? `&end=${end}` : ""}&autoplay=1&rel=0&modestbranding=1` };
+}
+
+/**
+ * "Watch how" button that sits on the canvas, next to the assistant bar: opens the step's YouTube
+ * video in theater mode. Steps without a video show nothing.
+ */
+export function VideoChip({ id }: { id: string }) {
+  const v = videoFor(id);
+  const [open, setOpen] = useState(false);
+  const close = useCallback(() => setOpen(false), []);
+  if (!v) return null;
   return (
-    <div>
-      <button
-        className="video"
-        onClick={() => (yt ? setOpen(true) : toast("The video for this step is coming soon."))}
-        aria-haspopup="dialog"
-      >
-        <span className="video__thumb" style={yt ? { background: `center/cover no-repeat url(https://img.youtube.com/vi/${yt}/mqdefault.jpg)` } : undefined}>
+    <>
+      <button className="video-chip" onClick={() => setOpen(true)} aria-haspopup="dialog" title={`Watch how: ${v.title} (${v.range})`}>
+        <span className="video-chip__thumb" style={{ backgroundImage: `url(https://img.youtube.com/vi/${v.yt}/mqdefault.jpg)` }}>
           <span className="video__play">
-            <Play size={12} fill="currentColor" />
+            <Play size={11} fill="currentColor" />
           </span>
         </span>
-        <span style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <span className="tiny muted">Watch how</span>
-          <span style={{ font: "600 14px var(--font)" }}>{v.title}</span>
-          <span className="tiny muted">{yt ? `YouTube · ${ts}${end > sec ? `–${v.end}` : ""}` : "Video coming soon"}</span>
+        <span className="video-chip__text">
+          <span className="tiny muted">Watch how · {v.range}</span>
+          <span className="video-chip__title">{v.title}</span>
         </span>
       </button>
-      {open && yt ? (
-        <VideoTheater
-          title={v.title}
-          range={`${ts}${end > sec ? `–${v.end}` : ""}`}
-          src={`https://www.youtube-nocookie.com/embed/${yt}?start=${sec}${end > sec ? `&end=${end}` : ""}&autoplay=1&rel=0&modestbranding=1`}
-          onClose={close}
-        />
-      ) : null}
-    </div>
+      {open ? <VideoTheater title={v.title} range={v.range} src={v.src} onClose={close} /> : null}
+    </>
+  );
+}
+
+/**
+ * One numbered section of a side panel (accordion). Only the open one shows its content, so the
+ * panel fits without scrolling; the closed ones show a one-line summary.
+ */
+export function AccItem(props: { n: number; title: ReactNode; summary?: ReactNode; open: boolean; done?: boolean; onToggle?(): void; children?: ReactNode; aside?: ReactNode }) {
+  const head = (
+    <>
+      <span className={`acc__num ${props.done && !props.open ? "acc__num--done" : ""}`} aria-hidden>
+        {props.done && !props.open ? <Check size={13} strokeWidth={3} /> : props.n}
+      </span>
+      <span className="acc__text">
+        <span className="acc__title">{props.title}</span>
+        {props.summary ? <span className="acc__sum">{props.summary}</span> : null}
+      </span>
+      {props.aside}
+      {props.onToggle ? <ChevronDown size={16} className="acc__chev" aria-hidden /> : null}
+    </>
+  );
+  return (
+    <section className={`acc ${props.open ? "is-open" : ""}`}>
+      {props.onToggle ? (
+        <button className="acc__head" aria-expanded={props.open} onClick={props.onToggle}>
+          {head}
+        </button>
+      ) : (
+        <div className="acc__head">{head}</div>
+      )}
+      {props.open && props.children ? <div className="acc__body">{props.children}</div> : null}
+    </section>
   );
 }
 

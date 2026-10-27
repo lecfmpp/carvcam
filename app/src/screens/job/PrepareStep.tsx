@@ -4,7 +4,7 @@ import { templateFields } from "@carvcam/cam-engine";
 import { ProBadge } from "../../account/ProGate";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Issue, Seg, SidePanel, Stepper, VideoCard } from "../../components/ui";
+import { AccItem, Seg, SidePanel, Stepper } from "../../components/ui";
 import { engineKey, engineOptions, runEngine, tabCount } from "../../engine/useEngine";
 import { BITS, bitById, machineName, materialById, PRESET_LABEL, type Preset } from "../../lib/catalog";
 import { MAX_TABS, useDesign, type Tabs } from "../../state/design";
@@ -24,7 +24,7 @@ import { SetupSheetDialog } from "./SetupSheetDialog";
 import { CostPanel } from "./CostPanel";
 import { BatchDialog } from "./BatchDialog";
 import { buildIssues, engineErrorIssue } from "../create/issues";
-import { IssueCard, useIssueCtx, useIssueRunner } from "../create/IssueCard";
+import { IssueCard, IssueTray, useIssueCtx, useIssueRunner } from "../create/IssueCard";
 
 const HINT: Record<Preset, string> = {
   fast: "Shorter job; edges may need a bit more sanding.",
@@ -70,6 +70,10 @@ export function PrepareStep({ ctx }: { ctx: JobCtx }) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [batchOpen, setBatchOpen] = useState(false);
   const fields = useMemo(() => templateFields(design.spec), [design.spec]);
+  const [trayOpen, setTrayOpen] = useState(true);
+  // One section open at a time, so the panel fits without scrolling.
+  const [sec, setSec] = useState<"speed" | "tabs" | "second" | "summary" | "more">("speed");
+  const toggle = (k: typeof sec) => setSec(sec === k ? "summary" : k);
 
   // "Play toolpath": draws the path in ~9 s.
   useEffect(() => {
@@ -148,6 +152,15 @@ export function PrepareStep({ ctx }: { ctx: JobCtx }) {
   return (
     <>
       <Stage
+        video="prepare"
+        overlay={
+          <IssueTray errors={blocking.length + (ctx.error ? 1 : 0)} warnings={0} open={trayOpen} setOpen={setTrayOpen}>
+            {ctx.error ? <IssueCard issue={engineErrorIssue(ctx.error, issueCtx)} onRun={runIssue} /> : null}
+            {blocking.map((i) => (
+              <IssueCard key={i.key} issue={i} onRun={runIssue} />
+            ))}
+          </IssueTray>
+        }
         caption="Toolpath preview · orange is where the bit goes"
         canvasTools
         tools={
@@ -213,13 +226,8 @@ export function PrepareStep({ ctx }: { ctx: JobCtx }) {
           </>
         }
       >
-        {ctx.error ? <IssueCard issue={engineErrorIssue(ctx.error, issueCtx)} onRun={runIssue} /> : null}
-        {blocking.map((i) => (
-          <IssueCard key={i.key} issue={i} onRun={runIssue} />
-        ))}
-
+        <AccItem n={1} title="Speed" summary={`${PRESET_LABEL[preset].title} · ${times[preset] ? fmtMin(times[preset]!.sec / 60) : "…"}`} open={sec === "speed"} onToggle={() => toggle("speed")}>
         <section className="job-sec">
-          <div className="job-label">Speed</div>
           <div className="preset-grid">
             {PRESETS.map((k) => {
               const t = times[k];
@@ -247,8 +255,10 @@ export function PrepareStep({ ctx }: { ctx: JobCtx }) {
             </div>
           ) : null}
         </section>
+        </AccItem>
 
         {ctx.hasProfile ? (
+          <AccItem n={2} title="Holding tabs" summary={`${tabs.mode === "auto" ? "Auto" : "Manual"} · ${nTabs} tab${nTabs === 1 ? "" : "s"} · ${tabs.height} mm high`} open={sec === "tabs"} onToggle={() => toggle("tabs")}>
           <section className="job-sec job-tabs" aria-labelledby="tabs-label">
             <div className="job-tabs__head">
               <span className="job-tabs__sw" style={{ background: TAB_COLOR, borderColor: TAB_EDGE }} aria-hidden />
@@ -315,11 +325,12 @@ export function PrepareStep({ ctx }: { ctx: JobCtx }) {
               </div>
             ) : null}
           </section>
+          </AccItem>
         ) : null}
 
         {second ? (
+          <AccItem n={ctx.hasProfile ? 3 : 2} title="Second bit" summary={design.useBit2 ? `${second.fine.name} for the detail` : "Off · one bit for everything"} open={sec === "second"} onToggle={() => toggle("second")}>
           <section className="job-sec">
-            <div className="job-label">Second bit</div>
             <label className="job-check">
               <input type="checkbox" checked={design.useBit2} onChange={toggleSecond} />
               <span>
@@ -330,8 +341,10 @@ export function PrepareStep({ ctx }: { ctx: JobCtx }) {
               </span>
             </label>
           </section>
+          </AccItem>
         ) : null}
 
+        <AccItem n={2 + (ctx.hasProfile ? 1 : 0) + (second ? 1 : 0)} title="Time & G-code" summary={`${result ? fmtMin(totalSec / 60) : "…"} · ${verified ? "G-code verified" : "not verified yet"}`} open={sec === "summary"} onToggle={() => toggle("summary")}>
         <section className="job-summary">
           <div className="job-summary__head">
             <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
@@ -394,8 +407,10 @@ export function PrepareStep({ ctx }: { ctx: JobCtx }) {
             Print setup sheet
           </button>
         </section>
+        </AccItem>
         {sheetOpen ? <SetupSheetDialog ctx={ctx} onClose={() => setSheetOpen(false)} /> : null}
 
+        <AccItem n={3 + (ctx.hasProfile ? 1 : 0) + (second ? 1 : 0)} title="Batch & pricing" summary="One file per row of a spreadsheet · what to charge" open={sec === "more"} onToggle={() => toggle("more")}>
         <button className="batch-launch" onClick={() => setBatchOpen(true)}>
           <Rows3 size={18} strokeWidth={1.5} color="var(--text-2)" />
           <span className="batch-launch__text">
@@ -408,8 +423,7 @@ export function PrepareStep({ ctx }: { ctx: JobCtx }) {
         {batchOpen ? <BatchDialog ctx={ctx} onClose={() => setBatchOpen(false)} /> : null}
 
         <CostPanel ctx={ctx} />
-
-        <VideoCard id="prepare" />
+        </AccItem>
       </SidePanel>
     </>
   );

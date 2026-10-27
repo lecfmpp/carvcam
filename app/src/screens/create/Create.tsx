@@ -47,8 +47,8 @@ import { CurveEditor, PenLayer, type Geom } from "./pen";
 import { isImageFile, tracingFromFile, TracingLayer } from "./tracing";
 import { toast } from "../../state/ui";
 import { addCurve, addElement, alignElements, deleteElement, patchElement, type CurveNode, duplicateElement, elementBoxes, elementOf, fontOf, margin, moveElement, parseId, type Align, type Box, type ElementId, type Tool } from "./elements";
-import { buildIssues, type UiIssue } from "./issues";
-import { useIssueCtx } from "./IssueCard";
+import { buildIssues, engineErrorIssue, type UiIssue } from "./issues";
+import { IssueCard, IssueTray, useIssueCtx, useIssueRunner } from "./IssueCard";
 import { useCanvasPrefs, useUi } from "../../state/ui";
 import { CreatePanel } from "./Panel";
 import { importSvgFile, isSvgFile, pickSvgFile } from "./svgImport";
@@ -128,11 +128,17 @@ export default function Create() {
   const simTabs = useMemo(() => tabMarks({ ...design.tabs, mode: "auto" }, result), [design.tabs, result]);
   const tabMarksNow = useMemo(() => tabMarks(design.tabs, result), [design.tabs, result]);
   const tabOutlines = useMemo(() => profileOutlines(result), [result]);
-  /** Legend link: scroll the first card into view and focus it. */
+  const [trayOpen, setTrayOpen] = useState(false);
+  const runIssue = useIssueRunner((id) => setSel(id));
+  /** Legend link: open the warnings tray, scroll the first card into view and focus it. */
   const showIssue = (i: UiIssue | undefined) => {
     if (!i) return;
     if (i.target && i.level !== "error") setFocusKey(i.key);
-    const el = document.querySelector<HTMLElement>(`[data-issue-key="${CSS.escape(i.key)}"]`);
+    setTrayOpen(true);
+    requestAnimationFrame(() => flashIssue(i.key));
+  };
+  const flashIssue = (key: string) => {
+    const el = document.querySelector<HTMLElement>(`[data-issue-key="${CSS.escape(key)}"]`);
     if (!el) return;
     el.scrollIntoView({ behavior: "smooth", block: "center" });
     el.focus({ preventScroll: true });
@@ -279,10 +285,18 @@ export default function Create() {
       <Stage
         caption={caption}
         canvasTools
+        showTop={focusKey}
+        video="create-design"
         overlay={
           <>
             <ToolRail tool={tool} setTool={setTool} onImport={() => void pickSvgFile().then(importSvg)} />
             {dropping ? <div className="create-drop">Drop an SVG or DXF to carve it, or a picture to trace over, on the {spec.type === "lettering" ? "board" : "sign"}</div> : null}
+            <IssueTray errors={errors + (eng.error ? 1 : 0)} warnings={warnings} open={trayOpen} setOpen={setTrayOpen}>
+              {eng.error ? <IssueCard issue={engineErrorIssue(eng.error, issueCtx)} onRun={runIssue} /> : null}
+              {issues.map((i) => (
+                <IssueCard key={i.key} issue={i} focused={focusKey === i.key} onFocus={() => setFocusKey(focusKey === i.key ? null : i.key)} onRun={runIssue} onSelect={() => i.target && setSel(i.target)} />
+              ))}
+            </IssueTray>
             <Legend
               rows={legendRows({ result, thickness: spec.thickness, tabs: result?.tabs?.length ?? 0, leftover: issues.some((i) => i.pct !== undefined && !!i.target && boxes.has(i.target)) })}
               material={material}
@@ -580,7 +594,8 @@ function Overlay(p: OverlayProps) {
   const curveEl = selCurve && "type" in selCurve && selCurve.type === "curve" ? selCurve : null;
 
   const errorTargets = new Set(p.issues.filter((i) => i.level === "error" && i.target).map((i) => i.target!));
-  const focused = p.issues.find((i) => i.key === p.focusKey)?.target ?? null;
+  const focusedIssue = p.issues.find((i) => i.key === p.focusKey) ?? null;
+  const focused = focusedIssue?.target ?? null;
   const markers = p.issues.filter((i) => i.pct !== undefined && i.target && p.boxes.has(i.target));
   // Dragging a selected element brings the other selected ones along.
   const group = drag && p.selected.includes(drag.id) ? p.selected : drag ? [drag.id] : [];
@@ -725,6 +740,8 @@ function Overlay(p: OverlayProps) {
       ) : null}
       {p.tool === "pen" ? <PenLayer geom={geom} onCommit={p.onCurve} /> : null}
 
+      {focusedIssue && focused && p.boxes.has(focused) ? <Spotlight r={px(p.boxes.get(focused)!)} title={focusedIssue.title} /> : null}
+
       {markers.map((i) => {
         const r = px(p.boxes.get(i.target!)!);
         return (
@@ -734,6 +751,16 @@ function Overlay(p: OverlayProps) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/** "Show on preview": dims the rest of the board and rings the element the warning is about, with its title. */
+function Spotlight({ r, title }: { r: { left: number; top: number; width: number; height: number }; title: string }) {
+  const pad = 10;
+  return (
+    <div className="create-spot" style={{ left: r.left - pad, top: r.top - pad, width: r.width + 2 * pad, height: r.height + 2 * pad }} aria-hidden>
+      <span className="create-spot__tag">{title}</span>
     </div>
   );
 }

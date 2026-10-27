@@ -43,6 +43,10 @@
 .create-el.is-focus { outline: 1.5px dashed #F2C14E; outline-offset: 6px; }
 .create-el.is-sel { outline: 1.5px solid #F5F3EF; outline-offset: 4px; }
 .create-el.is-drag { outline-style: dashed; background: rgba(245, 243, 239, 0.06); }
+.create-spot { position: absolute; z-index: 2; pointer-events: none; border-radius: 10px; border: 2px solid #F2C14E; box-shadow: 0 0 0 9999px rgba(10, 11, 12, 0.55); animation: create-spot-pulse 1.4s var(--ease) infinite; }
+.create-spot__tag { position: absolute; left: -2px; top: calc(100% + 8px); max-width: 320px; padding: 5px 10px; border-radius: 8px; background: #F2C14E; color: #1A1B1E; font: 600 12.5px/1.3 var(--font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@keyframes create-spot-pulse { 0%, 100% { outline: 0 solid rgba(242, 193, 78, 0.55); } 50% { outline: 8px solid rgba(242, 193, 78, 0); } }
+@media (prefers-reduced-motion: reduce) { .create-spot { animation: none; } }
 .create-el.is-sel::after { content: ""; position: absolute; right: -9px; bottom: -9px; width: 8px; height: 8px; border-radius: 2px; background: #F5F3EF; }
 
 .create-inline { position: absolute; inset: -2px; width: calc(100% + 4px); min-width: 80px; border: 0; outline: 1.5px solid var(--accent); border-radius: 4px; background: rgba(17, 18, 20, 0.85); color: var(--text); text-align: center; padding: 0 6px; }

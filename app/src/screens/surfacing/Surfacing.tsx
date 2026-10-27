@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BitSilhouette } from "../../components/BitSilhouette";
 import { TopBar } from "../../components/TopBar";
-import { Seg, SidePanel, Stepper, VideoCard } from "../../components/ui";
+import { Seg, SidePanel, Stepper } from "../../components/ui";
 import { bitById, PRESET_TO_SPEED, type Preset } from "../../lib/catalog";
 import { useMachine } from "../../machine/store";
 import { openConnect, toast } from "../../state/ui";
@@ -247,6 +247,7 @@ export default function Surfacing() {
       <div className="dotgrid" />
       <TopBar variant="tool" crumbs={["Tools", "Surface the bed"]} />
       <Stage
+        video="surfacing"
         noViewToggle={false}
         tools={
           phase === "setup" && step !== "check" ? (
@@ -534,8 +535,6 @@ export default function Surfacing() {
             </div>
           </>
         ) : null}
-
-        <VideoCard id="surfacing" />
       </SidePanel>
     </div>
   );

@@ -1,15 +1,14 @@
 import type { PlateSpecInput } from "@carvcam/cam-engine";
-import { AlertCircle, AlertTriangle, ArrowRight, CheckCircle2, ChevronDown, ChevronRight, ChevronUp, Circle, Copy, Eye, EyeOff, FileUp, Heart, Hexagon, ImagePlus, Layers, Move, Wand2, Minus, MoveVertical, PenTool, Plus, Shapes, Square, Star, Trash2, Type, XCircle } from "lucide-react";
+import { AlertCircle, AlertTriangle, ArrowRight, CheckCircle2, ChevronDown, ChevronRight, ChevronUp, Circle, Copy, FileUp, Heart, Hexagon, ImagePlus, Layers, Move, Wand2, Minus, MoveVertical, PenTool, Plus, Shapes, Square, Star, Trash2, Type, XCircle } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { Issue, Seg, Stepper, VideoCard } from "../../components/ui";
+import { AccItem, Seg, Stepper } from "../../components/ui";
 import { BITS, bitById, compat, materialById, MATERIALS } from "../../lib/catalog";
 import { useDesign } from "../../state/design";
 import { toast } from "../../state/ui";
 import { useActiveMachine, useWorkshop } from "../../state/workshop";
 import { addElement, arcFromBend, bendOf, elementOf, FONTS, ICONS, idOfTarget, listElements, parseId, patchElement, refOf, type Target, type Box, type ElementId, type ElementRow, type Shape, type SvgEl, type Text, svgAspect } from "./elements";
-import { engineErrorIssue, type UiIssue } from "./issues";
-import { IssueCard, useIssueCtx, useIssueRunner } from "./IssueCard";
+import type { UiIssue } from "./issues";
 import { useUi } from "../../state/ui";
 import { importSvgFile, pickSvgFile } from "./svgImport";
 import { TraceDialog } from "./traceDialog";
@@ -48,8 +47,17 @@ export function CreatePanel(p: Props) {
     selRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [p.sel]);
 
-  const run = useIssueRunner((id) => p.setSel(id));
-  const issueCtx = useIssueCtx();
+  // One section open at a time, so the panel fits without scrolling. Selecting an element opens Elements;
+  // "Pick another bit" (from a warning) opens Wood & bit.
+  const [sec, setSec] = useState<"wood" | "shape" | "tracing" | "elements">("elements");
+  const toggle = (k: typeof sec) => setSec(sec === k && k !== "elements" ? "elements" : k);
+  useEffect(() => {
+    if (p.sel) setSec("elements");
+  }, [p.sel]);
+  const bitMenuReq = useUi((s) => s.bitMenuReq);
+  useEffect(() => {
+    if (bitMenuReq > seenBitMenuReq) setSec("wood");
+  }, [bitMenuReq]);
 
   const status = p.errors ? (
     <>
@@ -87,35 +95,20 @@ export function CreatePanel(p: Props) {
             Blank board
           </button>
         </div>
-        <Chips material={material.id} thickness={spec.thickness} bitId={design.bit} onMaterial={(id) => setMaterial(id)} onThickness={(t) => setMaterial(material.id, t)} onBit={(id) => patch({ bit: id })} />
         <div className="create-status" aria-live="polite">
           {status}
           <span className="muted">· {p.busy ? "re-checking…" : "re-checked on every change"}</span>
         </div>
-        <VideoCard id="create-design" />
       </div>
 
       <div className="sidepanel__body create-panel__body">
-        {p.engineError ? <IssueCard issue={engineErrorIssue(p.engineError, issueCtx)} onRun={run} /> : null}
-        {spec.texts?.length === 0 && !spec.shapes?.length && !spec.icons?.length && !spec.svgs?.length && !spec.holes?.length ? (
-          <div className="create-blankmsg">
-            Blank {spec.thickness} mm {material.id} board, {spec.width} × {spec.height} mm. Pick the wood and thickness above, then add text, shapes or lines with the tools on the left, or drop an SVG file on the board.
-          </div>
-        ) : null}
-        {p.issues.map((i) => (
-          <IssueCard key={i.key} issue={i} focused={p.focusKey === i.key} onFocus={() => p.setFocusKey(p.focusKey === i.key ? null : i.key)} onRun={run} onSelect={() => i.target && p.setSel(i.target)} />
-        ))}
+        <AccItem n={1} title="Wood & bit" summary={`${material.id} · ${spec.thickness} mm · ${bit?.name ?? "pick a bit"}`} open={sec === "wood"} onToggle={() => toggle("wood")}>
+          <Chips material={material.id} thickness={spec.thickness} bitId={design.bit} onMaterial={(id) => setMaterial(id)} onThickness={(t) => setMaterial(material.id, t)} onBit={(id) => patch({ bit: id })} />
+        </AccItem>
+        <ShapeSection n={2} open={sec === "shape"} onToggle={() => toggle("shape")} spec={spec} patchSpec={patchSpec} />
+        <TracingSection n={3} open={sec === "tracing"} onToggle={() => toggle("tracing")} spec={spec} onAdded={(id) => p.setSel(id)} />
 
-        <ShapeSection spec={spec} patchSpec={patchSpec} />
-        <TracingSection spec={spec} onAdded={(id) => p.setSel(id)} />
-
-        <section className="create-section">
-          <div className="create-section__head">
-            <h3>
-              Elements <span className="muted">{rows.length}</span>
-            </h3>
-            <span className="tiny muted">Click to edit · same as on the board</span>
-          </div>
+        <AccItem n={4} title="Elements" summary={rows.length ? `${rows.length} on the board · click one to edit` : "Nothing on the board yet"} open={sec === "elements"} onToggle={() => toggle("elements")}>
           {rows.length === 0 ? <div className="create-empty">Nothing on the board yet. Add text or a shape below, or pick a tool on the left and click on the board.</div> : null}
           {rows.map((r) => {
             const open = p.sel === r.id;
@@ -157,7 +150,7 @@ export function CreatePanel(p: Props) {
             patchSpec(() => next);
             if (id) p.setSel(id);
           }} />
-        </section>
+        </AccItem>
       </div>
 
       <div className="sidepanel__foot">
@@ -273,20 +266,11 @@ function Chips(props: { material: string; thickness: number; bitId: string; onMa
 
 // ------------------------------------------------------------------ shape
 
-function ShapeSection({ spec, patchSpec }: { spec: PlateSpecInput; patchSpec(fn: (s: PlateSpecInput) => PlateSpecInput): void }) {
-  const [open, setOpen] = useState(false);
+function ShapeSection({ n, open, onToggle, spec, patchSpec }: { n: number; open: boolean; onToggle(): void; spec: PlateSpecInput; patchSpec(fn: (s: PlateSpecInput) => PlateSpecInput): void }) {
   const edge = spec.edge?.type ?? "straight";
   const set = (fn: (s: PlateSpecInput) => PlateSpecInput) => patchSpec(fn);
   return (
-    <section className="create-section create-shape">
-      <button className="create-section__toggle" aria-expanded={open} onClick={() => setOpen(!open)}>
-        <h3>Shape</h3>
-        <span className="tiny muted">
-          {spec.type === "lettering" ? "Cut-out lettering" : "Sign"} · {spec.width} × {spec.height} mm
-        </span>
-        {open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-      </button>
-      {open ? (
+    <AccItem n={n} title="Shape" summary={`${spec.type === "lettering" ? "Cut-out lettering" : "Sign"} · ${spec.width} × ${spec.height} mm`} open={open} onToggle={onToggle}>
         <div className="create-fields">
           <Field label="Type">
             <Seg<"plate" | "lettering">
@@ -337,8 +321,7 @@ function ShapeSection({ spec, patchSpec }: { spec: PlateSpecInput; patchSpec(fn:
             </>
           ) : null}
         </div>
-      ) : null}
-    </section>
+    </AccItem>
   );
 }
 
@@ -346,11 +329,10 @@ function ShapeSection({ spec, patchSpec }: { spec: PlateSpecInput; patchSpec(fn:
  * Tracing image: a reference under the design (not cut). You can draw over it with
  * the pen, or convert it to vectors automatically.
  */
-function TracingSection({ spec, onAdded }: { spec: PlateSpecInput; onAdded(id: ElementId): void }) {
+function TracingSection({ n, open, onToggle, spec, onAdded }: { n: number; open: boolean; onToggle(): void; spec: PlateSpecInput; onAdded(id: ElementId): void }) {
   const t = useDesign((s) => s.design.tracing);
   const patch = useDesign((s) => s.patch);
   const { moving, setMoving } = useTracingUi();
-  const [open, setOpen] = useState(false);
   const [tracingOpen, setTracingOpen] = useState(false);
   const set = (p: Partial<TracingImage>) => t && patch({ tracing: { ...t, ...p } });
   const load = async () => {
@@ -358,19 +340,13 @@ function TracingSection({ spec, onAdded }: { spec: PlateSpecInput; onAdded(id: E
     if (!file) return;
     try {
       patch({ tracing: await tracingFromFile(file, spec) });
-      setOpen(true);
     } catch (e) {
       toast(e instanceof Error ? e.message : "This image could not be opened.");
     }
   };
   return (
-    <section className="create-section create-shape">
-      <button className="create-section__toggle" aria-expanded={open} onClick={() => setOpen(!open)}>
-        <h3>Tracing image</h3>
-        <span className="tiny muted">{t ? `${t.name} · not carved` : "Draw over a photo or logo"}</span>
-        {open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-      </button>
-      {open ? (
+    <>
+      <AccItem n={n} title="Tracing image" summary={t ? `${t.name} · not carved` : "Draw over a photo or logo"} open={open} onToggle={onToggle}>
         <div className="create-fields">
           {!t ? (
             <>
@@ -426,9 +402,9 @@ function TracingSection({ spec, onAdded }: { spec: PlateSpecInput; onAdded(id: E
             </>
           )}
         </div>
-      ) : null}
+      </AccItem>
       {tracingOpen && t ? <TraceDialog tracing={t} onClose={() => setTracingOpen(false)} onAdded={onAdded} /> : null}
-    </section>
+    </>
   );
 }
 

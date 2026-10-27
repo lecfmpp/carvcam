@@ -1,7 +1,7 @@
 import { AlertTriangle, ArrowDown, ArrowUp, Check, OctagonAlert, Pause, Printer } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Banner, Seg, SidePanel, VideoCard } from "../../components/ui";
+import { Banner, Seg, SidePanel } from "../../components/ui";
 import { dialFor, materialById, TRACK } from "../../lib/catalog";
 import { useMachine, workPos, type AlarmCode } from "../../machine/store";
 import { useDesign } from "../../state/design";
@@ -286,6 +286,7 @@ export function CarveStep({ ctx }: { ctx: JobCtx }) {
   return (
     <>
       <Stage
+        video={video}
         caption={caption}
         overlay={
           phase === "alarm" && A && !A.hold ? (
@@ -646,8 +647,6 @@ export function CarveStep({ ctx }: { ctx: JobCtx }) {
             </div>
           </>
         ) : null}
-
-        <VideoCard id={video} />
       </SidePanel>
     </>
   );

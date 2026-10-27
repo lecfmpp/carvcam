@@ -1,7 +1,7 @@
 import { ArrowDown, ArrowUp, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Plug } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Seg, SidePanel, VideoCard } from "../../components/ui";
+import { AccItem, Seg, SidePanel } from "../../components/ui";
 import { machineName, materialById } from "../../lib/catalog";
 import { useMachine, workPos } from "../../machine/store";
 import { openConnect, toast } from "../../state/ui";
@@ -127,6 +127,7 @@ export function PositionStep({ ctx }: { ctx: JobCtx }) {
     ["stock", "Place your board", `At least ${stockW} × ${stockH} mm`],
     ["zero", "Set work zero", "Bottom-left corner · Z with the touch plate or by hand"],
   ];
+  const [koOpen, setKoOpen] = useState(false);
   const order: Sub[] = ["connect", "home", "stock", "zero", "done"];
   const ci = order.indexOf(sub);
   const video = sub === "zero" && flow.probeOpen ? "position-probe" : `position-${sub === "done" ? "zero" : sub}`;
@@ -167,6 +168,7 @@ export function PositionStep({ ctx }: { ctx: JobCtx }) {
   return (
     <>
       <Stage
+        video={video}
         noViewToggle
         canvasTools={view === "board"}
         tools={
@@ -279,18 +281,10 @@ export function PositionStep({ ctx }: { ctx: JobCtx }) {
           </>
         }
       >
-        <div className="substeps">
-          {steps.map(([k, label, subText], i) => (
-            <div key={k} className="substep">
-              <span className={`num ${i < ci ? "num--done" : i === ci ? "num--current" : ""}`}>{i < ci ? "✓" : i + 1}</span>
-              <span className="substep__text">
-                <span className={i === ci ? "substep__label substep__label--current" : i > ci ? "substep__label substep__label--todo" : "substep__label"}>{label}</span>
-                <span className="substep__sub">{subText}</span>
-              </span>
-            </div>
-          ))}
-        </div>
-
+        {steps.map(([k, label, subText], i) => (
+          <AccItem key={k} n={i + 1} title={label} summary={i < ci ? "Done" : subText} open={i === ci} done={i < ci}>
+            {i === ci ? (
+              <>
         {sub === "connect" ? (
           <div className="job-sec">
             <div className="job-body">{m.status === "connecting" ? `Connecting to ${machineName(machine)}…` : "We'll show you where each cable goes, connect, and test that the machine really answers."}</div>
@@ -491,6 +485,10 @@ export function PositionStep({ ctx }: { ctx: JobCtx }) {
             </div>
           </div>
         ) : null}
+              </>
+            ) : null}
+          </AccItem>
+        ))}
 
         {sub === "done" ? (
           <div className="job-sec">
@@ -507,6 +505,7 @@ export function PositionStep({ ctx }: { ctx: JobCtx }) {
           </div>
         ) : null}
 
+        <AccItem n={5} title="Clamps & keep-out zones" summary={zones.length ? `${zones.length} zone${zones.length > 1 ? "s" : ""} the bit stays away from` : "Optional · mark clamps so the bit avoids them"} open={koOpen || drawing} onToggle={() => setKoOpen(!(koOpen || drawing))}>
         <KeepOutPanel
           stock={stock}
           result={result}
@@ -518,8 +517,7 @@ export function PositionStep({ ctx }: { ctx: JobCtx }) {
             if (on) setView("board");
           }}
         />
-
-        <VideoCard id={video} />
+        </AccItem>
       </SidePanel>
     </>
   );
