@@ -1,5 +1,5 @@
-import { maskFromRgba, regionToSvg, traceMask } from "@carvcam/cam-engine";
-import { X } from "lucide-react";
+import { maskFromRgba, polishMask, regionToSvg, traceMask } from "@carvcam/cam-engine";
+import { Sparkles, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { Seg } from "../../components/ui";
@@ -9,6 +9,9 @@ import { addSvg, type ElementId } from "./elements";
 import { tracingPixels } from "./tracing";
 
 type Region = { x: number; y: number }[][];
+type Polish = "off" | "light" | "medium" | "strong";
+/** Polish reach per level, in units of 1/350 of the image's long side. */
+const POLISH_LEVEL: Record<Polish, number> = { off: 0, light: 1, medium: 2, strong: 3 };
 
 function regionBounds(r: Region) {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -34,6 +37,9 @@ export function TraceDialog({ tracing, onClose, onAdded }: { tracing: TracingIma
   const [smooth, setSmooth] = useState(2);
   const [blobs, setBlobs] = useState(2); // mm²
   const [region, setRegion] = useState<Region | null>(null);
+  // Optional clean-up for a rough trace: closes cracks, fills pinholes, rounds jagged edges.
+  const [polish, setPolish] = useState<Polish>("off");
+  const [even, setEven] = useState(false);
 
   useEffect(() => {
     tracingPixels(tracing).then(setPx, () => toast("The tracing image could not be read."));
@@ -43,11 +49,16 @@ export function TraceDialog({ tracing, onClose, onAdded }: { tracing: TracingIma
   useEffect(() => {
     if (!px) return;
     const t = setTimeout(() => {
-      const mask = maskFromRgba(px.data, px.width, px.height, threshold, invert);
+      let mask = maskFromRgba(px.data, px.width, px.height, threshold, invert);
+      if (polish !== "off" || even) {
+        // Reach scales with the image size (it's read at up to 700 px), so the result doesn't depend on its resolution.
+        const unit = Math.max(1, Math.round(Math.max(px.width, px.height) / 350));
+        mask = polishMask(mask, px.width, px.height, { radius: POLISH_LEVEL[polish] * unit, even });
+      }
       setRegion(traceMask(mask, px.width, px.height, { smooth, minBlob: blobs / (k * k), detail: 0.6 }) as Region);
     }, 90);
     return () => clearTimeout(t);
-  }, [px, threshold, invert, smooth, blobs, k]);
+  }, [px, threshold, invert, smooth, blobs, k, polish, even]);
 
   const d = useMemo(() => (region ? region.map((p) => "M" + p.map((q) => `${q.x.toFixed(1)} ${q.y.toFixed(1)}`).join("L") + "Z").join("") : ""), [region]);
   const empty = region !== null && region.length === 0;
@@ -108,6 +119,29 @@ export function TraceDialog({ tracing, onClose, onAdded }: { tracing: TracingIma
                   ["light", "Light parts"],
                 ]}
               />
+            </div>
+            <div className="create-trace__polish">
+              <div className="create-trace__polishhead">
+                <Sparkles size={15} color="var(--accent)" />
+                <b>Polish</b>
+                <span className="tiny muted">optional · for a rough trace</span>
+              </div>
+              <Seg<Polish>
+                label="Polish"
+                value={polish}
+                onChange={setPolish}
+                options={[
+                  ["off", "Off"],
+                  ["light", "Light"],
+                  ["medium", "Medium"],
+                  ["strong", "Strong"],
+                ]}
+              />
+              <label className="create-trace__check">
+                <input type="checkbox" checked={even} onChange={(e) => setEven(e.target.checked)} />
+                <span>Even out letter thickness</span>
+              </label>
+              <div className="tiny muted">Closes cracks and small gaps, fills pinholes and rounds off jagged edges. Even thickness redraws thin strokes at one width (lettering, line art); big filled areas keep their shape.</div>
             </div>
             <label className="create-trace__row">
               <span>

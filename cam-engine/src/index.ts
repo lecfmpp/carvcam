@@ -15,7 +15,7 @@ export { parseSvg, placeSvg, InvalidSvg, type SvgDrawing } from "./svg.js";
 export { parseDxf } from "./dxf.js";
 export { parseDrawing, detectFormat, type Format } from "./drawing.js";
 export { curvePolyline } from "./geometry/shapes.js";
-export { traceMask, maskFromRgba, regionToSvg, type TraceOpts } from "./trace.js";
+export { traceMask, maskFromRgba, polishMask, regionToSvg, type PolishOpts, type TraceOpts } from "./trace.js";
 export { ELEMENTS, ELEMENT_BY_ID, type DesignElement, type ElementCategory } from "./catalog/elements.js";
 export { migrateLegacySpec, migrateLegacyBitId, migrateLegacyProjectId, LEGACY_BIT_IDS, LEGACY_PROJECT_IDS } from "./migrate.js";
 export { type KeepOutZone, DEFAULT_KEEP_OUT_CLEARANCE, KEEP_OUT_MARGIN } from "./keepout.js";
