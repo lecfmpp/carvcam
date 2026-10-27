@@ -20,7 +20,7 @@ FunctionEnd
 !define MUI_FINISHPAGE_SHOWREADME_FUNCTION createDS
 
 ; The installer runs as administrator (perMachine). Launching the exe directly would make CarvCAM
-; inherit that access; through explorer.exe it runs as the normal user (same as gSender).
+; inherit that access; through explorer.exe it runs as the normal user.
 !define MUI_FINISHPAGE_RUN
 !define MUI_FINISHPAGE_RUN_FUNCTION RunAsUser
 !define MUI_FINISHPAGE_RUN_TEXT "Run CarvCAM"

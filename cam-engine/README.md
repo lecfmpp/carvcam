@@ -1,6 +1,6 @@
 # cam-engine: 2.5D CAM for signs and cut-out lettering
 
-The engine that fixes "gSender can't create anything". It takes the JSON spec the AI assistant fills in and returns **GRBL G-code that has already been verified**. Along with it come manufacturability warnings in plain English and the geometry for the preview.
+The CAM engine behind CarvCAM. It takes the JSON spec the AI assistant fills in and returns **GRBL G-code that has already been verified**. Along with it come manufacturability warnings in plain English and the geometry for the preview.
 
 ```
 JSON spec  →  2D layout  →  toolpaths  →  GRBL G-code  →  verifier  →  (simulation)
@@ -9,7 +9,7 @@ JSON spec  →  2D layout  →  toolpaths  →  GRBL G-code  →  verifier  → 
                               tabs)
 ```
 
-It has no UI dependency. It runs in Node (tests, CLI, gSender's server) and in the browser (worker).
+It has no UI dependency. It runs in Node (tests, CLI) and in the browser (worker).
 
 ## What it does today (v1)
 
@@ -22,7 +22,7 @@ It has no UI dependency. It runs in Node (tests, CLI, gSender's server) and in t
 | **Holes and slots** for mounting or hanging | peck drilling when the hole is the bit's diameter, otherwise a pocket |
 | **Pocket** (relief, engraving) | concentric Clipper2 offset rings, from the inside out, staying at depth between rings when it is safe |
 | **Outer profile cut with tabs** | depth passes; the bit lifts over the tabs on the final passes. `tabs: { count, width, height }` spreads them evenly; `tabs.positions` (fractions 0–1 of each outer outline, counter-clockwise from its lowest-left point; see `src/cam/tabs.ts`) places them by hand. The result lists the tabs it left in `result.tabs` |
-| **Two bits** (e.g. 1/16" engraves, 1/8" cuts out) | tool change with `T# M6`, handled by gSender |
+| **Two bits** (e.g. 1/16" engraves, 1/8" cuts out) | tool change with `T# M6`; the sender pauses so the bit can be swapped |
 | **Cutting parameters** per material | RPM, feed rate = chip load × flutes × RPM, plunge rate, stepdown and stepover |
 | **Verifier** | allowed commands only, mm/absolute, no `$`, no G0 inside the material, area/Z/feed/RPM limits; estimated time |
 | **Simulation** with a heightmap | same idea as `carve.ts` from rudra496/cnc, rewritten without Three.js |
@@ -44,7 +44,7 @@ The tool is built for Sienci machines. With `sienci: { machine, head?, bit, cuto
 
 | File | Contents | Source |
 |---|---|---|
-| `machines.ts` | LongMill MK2 (12×30, 30×30, 48×30), MK3 (30×30, 48×30), AltMill (2×4, 4×4, 4×8): travel, max rate, supported heads and the default one | gSender's firmware defaults ($110–$112, $130–$132) |
+| `machines.ts` | LongMill MK2 (12×30, 30×30, 48×30), MK3 (30×30, 48×30), AltMill (2×4, 4×4, 4×8): travel, max rate, supported heads and the default one | Sienci's firmware defaults ($110–$112, $130–$132) |
 | `heads.ts` | Makita RT0701 (manual dial 1–6), AutoSpin T1 (ER11, speed from the G-code), 1.5/2.2 kW ER20 spindles | product pages and resources.sienci.com |
 | `bits.ts` | 15 bits from the store (1/16″, 1/8″, 1/4″ straight, compression, single flute, 30/60/90° V-bits, 22 mm surfacing, ball nose) with measurements and link; shank × collet compatibility rule | tables on the sienci.com product pages |
 | `table.ts` | Official feeds and speeds table (softwood/MDF, hardwood, plastics × reduced/regular/maximum), converted to mm | resources.sienci.com/view/cnc-feeds-speeds |
@@ -80,7 +80,7 @@ npm run render -- output.nc output.png 220 120 15 examples/anas-house.json
 ```
 
 ```ts
-import { generatePlate, loadFonts } from "@gsender-next/cam-engine";
+import { generatePlate, loadFonts } from "@carvcam/cam-engine";
 
 const fonts = await loadFonts((file) => fetch(`/fonts/${file}`).then((r) => r.arrayBuffer()));
 const res = generatePlate(
@@ -96,7 +96,7 @@ const res = generatePlate(
 res.warnings;     // show in the UI
 res.layout;       // geometry for the preview
 res.verification; // estimated time, extent, problems
-if (res.ok) await fetch("/api/gcode", { method: "POST", body: res.gcode }); // send through gSender's server
+if (res.ok) sendToMachine(res.gcode); // stream it to the controller
 ```
 
 **Work origin:** X0 Y0 at the bottom-left corner of the stock and Z0 on the top surface. When there is an outer cutout, the stock is the sign plus `margin` (10 mm) on each side.
@@ -127,7 +127,7 @@ if (res.ok) await fetch("/api/gcode", { method: "POST", body: res.gcode }); // s
 - **Straight plunge:** the bit plunges at the plunge rate, with no ramp or helix. This requires a center-cutting end mill. Ramping is planned for v1.1.
 - **V-bit:** V-carving with variable depth (the depth follows the stroke width); where it would go past the max depth, the bottom is left flat and cleared with the V-bit.
 - **Material presets:** these are conservative starting values. The UI should allow adjusting them and remember the adjustment per material.
-- **Machine limits:** the default is generic (300 × 300 mm). When integrating, fill `machine` with the firmware settings read by gSender ($110–$112 max rates, $130–$132 travel).
+- **Machine limits:** the default is generic (300 × 300 mm). When integrating, fill `machine` with the firmware settings read from the controller ($110–$112 max rates, $130–$132 travel).
 - **Not yet tested on a real machine.** Validation so far is the verifier plus the simulation.
 
 ## What came from rudra496/cnc

@@ -5,7 +5,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "../..");
-const projects = ["gsender-ui", "cam-engine", "desktop"];
+const projects = ["app", "cam-engine", "desktop"];
 const seen = new Map();
 
 for (const p of projects) {

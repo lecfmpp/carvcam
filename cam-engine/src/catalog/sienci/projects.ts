@@ -6,7 +6,7 @@ import type { Speed } from "./table.js";
 
 /**
  * Ready-made projects to test the machine and make the first cuts. The order is the one suggested
- * for someone who just assembled the machine (after surfacing the spoilboard with gSender's Surfacing tool).
+ * for someone who just assembled the machine (after surfacing the spoilboard with the Surfacing tool).
  */
 export interface StarterProject {
   id: string;

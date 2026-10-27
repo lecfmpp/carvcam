@@ -1,4 +1,4 @@
-gsender-ui/public/.debug/
+app/public/.debug/
 node_modules/
 dist/
 .env.local

@@ -1,7 +1,7 @@
 #!/bin/bash
 # .deb post-install: the same as electron-builder's template (link on the PATH, Chromium sandbox,
 # menus) plus a udev rule that gives the logged-in user access to USB CNC controllers, without
-# needing the dialout group. Chips: the same list gSender accepts (STM32 on the
+# needing the dialout group. Chips used by CNC controllers (STM32 on the
 # SuperLongBoard/SLB-EXT/SLB-LITE, CH340 and Arduino on the LongBoard, FTDI, CP210x, Teensy, RP2040...).
 APP=/opt/CarvCAM/carvcam
 

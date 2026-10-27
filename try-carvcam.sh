@@ -15,14 +15,14 @@ if [ "$major" -lt 18 ]; then
   exit 1
 fi
 
-for dir in cam-engine gsender-ui; do
+for dir in cam-engine app; do
   if [ ! -d "$dir/node_modules" ]; then
     echo "==> Installing dependencies for $dir (first run only)…"
     (cd "$dir" && npm install --no-audit --no-fund)
   fi
 done
 
-cd gsender-ui
+cd app
 if [ "${1:-}" = "--dev" ]; then
   echo "==> Development mode at http://localhost:5173"
   npx vite --open
