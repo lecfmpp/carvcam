@@ -416,3 +416,4 @@ a.card:hover { border-color: #d9d5ce; transform: translateY(-2px); box-shadow: 0
 .dlcard .note { margin: 6px 0 0; }
 .dlcard:target { box-shadow: 0 0 0 4px var(--accent-soft); }
 @media (max-width: 820px) { .plat--4, .dlcards { grid-template-columns: 1fr; } }
+.soon { display: inline-block; font: 500 12px var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent-ink); background: var(--accent-soft); border-radius: 999px; padding: 4px 10px; }

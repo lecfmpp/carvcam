@@ -13,6 +13,10 @@ export const site = {
     windows: "https://github.com/lecfmpp/carvcam/releases/latest/download/CarvCAM-Windows-64Bit.exe",
     appimage: "https://github.com/lecfmpp/carvcam/releases/latest/download/CarvCAM-Linux-x86_64.AppImage",
     deb: "https://github.com/lecfmpp/carvcam/releases/latest/download/CarvCAM-Linux-amd64.deb",
+    // Raspberry Pi: 64 bits (Pi 4 e 5 com o Raspberry Pi OS 64-bit) e 32 bits (armv7l)
+    piDeb: "https://github.com/lecfmpp/carvcam/releases/latest/download/CarvCAM-Linux-arm64.deb",
+    piAppImage: "https://github.com/lecfmpp/carvcam/releases/latest/download/CarvCAM-Linux-arm64.AppImage",
+    pi32Deb: "https://github.com/lecfmpp/carvcam/releases/latest/download/CarvCAM-Linux-armv7l.deb",
     releases: "https://github.com/lecfmpp/carvcam/releases/latest",
   },
   checked: "October 2026",
@@ -257,7 +261,7 @@ export const howtos = [
 export const faq = [
   ["Which machines does CarvCAM support?", "Sienci Labs LongMill MK2 (LongBoard or SuperLongBoard), LongMill MK3 (SLB-LITE) and AltMill 2×4, 4×4 and 4×8 (SLB-EXT), with the Makita, AutoSpin T1 or ER20 spindle kits."],
   ["Do I still need gSender or another sender?", "No. CarvCAM connects to the controller and runs the job itself. You can still export the G-code file if you want to."],
-  ["Which computers can run it?", "Windows 10 and 11, and Linux (AppImage or .deb for Ubuntu, Debian and Mint). Mac and Raspberry Pi versions are in development."],
+  ["Which computers can run it?", "Windows 10 and 11, and Linux (AppImage or .deb for Ubuntu, Debian and Mint). Raspberry Pi (64-bit and 32-bit). The Mac version is coming soon."],
   ["Does it need internet?", "Only to download it. After that it runs entirely on your computer, workshop Wi-Fi or not."],
   ["Can I import my own designs?", "Yes: SVG and DXF files, and images you can trace into outlines."],
   ["Do I need to know G-code or feeds and speeds?", "No. Pick Fast, Balanced or Detailed and CarvCAM sets the numbers for your machine, router and bit, then checks the job before you carve."],

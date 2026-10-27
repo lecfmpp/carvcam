@@ -84,8 +84,8 @@ ${footer()}
   const icon = ${JSON.stringify(ICON_LINUX)};
   document.querySelectorAll("a[data-dl]").forEach((a) => {
     const long = a.dataset.dl === "long";
-    if (linux) { a.href = ${JSON.stringify(site.downloads.appimage)}; a.querySelector("svg").outerHTML = icon; a.querySelector("span").textContent = long ? "Download for Linux" : "Download"; }
-    else { a.href = ${JSON.stringify(href(site.download))}; a.querySelector("span").textContent = long ? "Mac version in development" : "Downloads"; }
+    if (linux) { a.href = /aarch64|arm64/.test(ua) ? ${JSON.stringify(site.downloads.piDeb)} : /armv7|armhf/.test(ua) ? ${JSON.stringify(site.downloads.pi32Deb)} : ${JSON.stringify(site.downloads.appimage)}; a.querySelector("svg").outerHTML = icon; a.querySelector("span").textContent = long ? (/aarch64|arm64|armv7|armhf/.test(ua) ? "Download for Raspberry Pi" : "Download for Linux") : "Download"; }
+    else { a.href = ${JSON.stringify(href(site.download))}; a.querySelector("span").textContent = long ? "Mac version coming soon" : "Downloads"; }
   });
 })();</script>
 </body>
@@ -142,7 +142,7 @@ ${col("Learn", howtos.slice(0, 4).map((h) => [h.short, `/learn/${h.slug}/`]))}
 const downloadCta = (center = false) => `<div class="cta"${center ? ' style="justify-content:center"' : ""}>
 <a class="btn btn--accent btn--lg" data-dl="long" href="${site.downloads.windows}">${ICON_WIN}<span>Download for Windows</span></a>
 <a class="btn btn--ghost btn--lg" href="${href("/#how")}">See how it works</a>
-<span class="note"${center ? ' style="text-align:center"' : ""}>Windows 10 and 11 · <a href="${site.downloads.appimage}" data-dl-alt>Linux</a> · Works offline · Mac in development · <a href="${href(site.download)}">All downloads</a></span>
+<span class="note"${center ? ' style="text-align:center"' : ""}>Windows 10 and 11 · <a href="${site.downloads.appimage}" data-dl-alt>Linux</a> · <a href="${site.downloads.piDeb}">Raspberry Pi</a> · Works offline · Mac soon · <a href="${href(site.download)}">All downloads</a></span>
 </div>`;
 
 const app = {
@@ -150,7 +150,7 @@ const app = {
   "@type": "SoftwareApplication",
   name: "CarvCAM",
   applicationCategory: "DesignApplication",
-  operatingSystem: "Windows 10, Windows 11, Linux",
+  operatingSystem: "Windows 10, Windows 11, Linux, Raspberry Pi OS",
   downloadUrl: site.downloads.windows,
   description: "Desktop CNC software for Sienci Labs LongMill and AltMill: sign design, V-carving, toolpaths, machine setup and carving in one app.",
   url: site.url,
@@ -245,12 +245,12 @@ ${clip(img, `CarvCAM ${eb}: screen recording`)}
 </div></section>
 
 <section class="soft"><div class="wrap">
-<div class="sec-head"><span class="eyebrow">Download</span><h2>Available for Windows and Linux</h2></div>
+<div class="sec-head"><span class="eyebrow">Download</span><h2>Available for Windows, Linux and Raspberry Pi</h2></div>
 <div class="plat plat--4">
 <div class="on"><b>${ICON_WIN} Windows</b>Windows 10 and 11. <a href="${site.downloads.windows}" style="font-weight:600">Download .exe →</a></div>
 <div class="on"><b>${ICON_LINUX} Linux</b>Ubuntu, Debian, Mint and others. <a href="${site.downloads.appimage}" style="font-weight:600">AppImage →</a> <a href="${site.downloads.deb}" style="font-weight:600">.deb →</a></div>
-<div><b>macOS</b>In development.</div>
-<div><b>Raspberry Pi</b>In development.</div>
+<div class="on"><b>Raspberry Pi</b>Pi 4 and 5, 64-bit and 32-bit. <a href="${site.downloads.piDeb}" style="font-weight:600">64-bit .deb →</a></div>
+<div><b>macOS</b>Coming soon.</div>
 </div></div></section>
 
 <section><div class="narrow faq">
@@ -271,18 +271,18 @@ function download() {
   const btn = (url, icon, label) => `<a class="btn btn--accent" href="${url}">${icon}${label}</a>`;
   layout({
     path: at("/download/"),
-    title: "Download CarvCAM for Windows and Linux | CNC Software for LongMill & AltMill",
-    description: "Download CarvCAM for Windows 10 and 11 or Linux (AppImage and .deb). Design, prepare and carve on Sienci LongMill and AltMill machines. Mac and Raspberry Pi versions are in development.",
+    title: "Download CarvCAM for Windows, Linux and Raspberry Pi | CNC Software for LongMill & AltMill",
+    description: "Download CarvCAM for Windows 10 and 11, Linux (AppImage and .deb) or Raspberry Pi. Design, prepare and carve on Sienci LongMill and AltMill machines. The Mac version is coming soon.",
     crumbs: [["Home", "/"], ["Download", "/download/"]],
     schema: [app],
     body: `<section class="article"><div class="narrow">
 <h1>Download CarvCAM</h1>
-<p class="lede">Windows and Linux today. Mac and Raspberry Pi are in development. Every link downloads the latest version.</p>
+<p class="lede">Windows, Linux and Raspberry Pi today. Mac is coming soon. Every link downloads the latest version.</p>
 <div class="dlcards">
 <div class="dlcard on" id="windows"><b>${ICON_WIN} Windows</b><p class="note">Windows 10 and 11, 64-bit</p>${btn(site.downloads.windows, ICON_WIN, "Download for Windows")}<p class="note">CarvCAM-Windows-64Bit.exe</p></div>
 <div class="dlcard on" id="linux"><b>${ICON_LINUX} Linux</b><p class="note">64-bit PC: Ubuntu, Debian, Mint, Fedora and others</p>${btn(site.downloads.appimage, ICON_LINUX, "AppImage")} ${btn(site.downloads.deb, ICON_LINUX, ".deb")}<p class="note">.deb for Ubuntu, Debian and Mint · AppImage for any distro</p></div>
-<div class="dlcard" id="mac"><b>macOS</b><p class="note">Intel and Apple Silicon</p><p>In development.</p></div>
-<div class="dlcard" id="pi"><b>Raspberry Pi</b><p class="note">Pi 4 and 5</p><p>In development.</p></div>
+<div class="dlcard on" id="pi"><b>Raspberry Pi</b><p class="note">Pi 4 and 5 · Raspberry Pi OS</p>${btn(site.downloads.piDeb, ICON_LINUX, "64-bit .deb")} ${btn(site.downloads.pi32Deb, ICON_LINUX, "32-bit .deb")}<p class="note">64-bit: Pi 4 and 5 on Raspberry Pi OS 64-bit · <a href="${site.downloads.piAppImage}">64-bit AppImage</a></p></div>
+<div class="dlcard" id="mac"><b>macOS</b><p class="note">Intel and Apple Silicon</p><p><span class="soon">Coming soon</span></p></div>
 </div>
 <div class="prose">
 <h2>Install on Windows</h2>
@@ -295,6 +295,11 @@ function download() {
 <ol class="howto">
 <li><h3>.deb (Ubuntu, Debian, Mint)</h3><p>Double-click the file, or run <code>sudo apt install ./CarvCAM-Linux-amd64.deb</code>. It also lets your user reach the USB controller, no extra setup.</p></li>
 <li><h3>AppImage (any distro)</h3><p>Make it executable with <code>chmod +x CarvCAM-Linux-x86_64.AppImage</code> and open it. For USB, add yourself to the dialout group once: <code>sudo usermod -aG dialout $USER</code>, then log out and back in.</p></li>
+</ol>
+<h2>Install on a Raspberry Pi</h2>
+<ol class="howto">
+<li><h3>Pick the file</h3><p>Pi 4 or 5 on Raspberry Pi OS 64-bit: the <b>64-bit .deb</b>. Older 32-bit systems: the <b>32-bit .deb</b>. Not sure? Run <code>uname -m</code>: <code>aarch64</code> means 64-bit.</p></li>
+<li><h3>Install</h3><p>Run <code>sudo apt install ./CarvCAM-Linux-arm64.deb</code> (or the 32-bit file). USB access is set up for you. 4 GB of memory or more is recommended.</p></li>
 </ol>
 <div class="callout">Close gSender or any other program connected to your machine before connecting CarvCAM. Only one program can use the connection at a time.</div>
 <p class="note">All versions and release notes: <a href="${site.downloads.releases}">GitHub releases</a>.</p>
@@ -572,7 +577,7 @@ ${rec ? `<p class="note" style="margin-top:20px">Sienci Labs itself notes that m
 <section id="options" class="vsec"><div class="wrap">
 <h2>All the options, compared</h2>
 <div class="tablewrap"><table class="cmp"><thead><tr><th>Software</th><th>Does</th><th>Price</th><th>Platforms</th><th>Best for</th></tr></thead><tbody>
-<tr><td class="us">CarvCAM</td><td class="us">Design + CAM + sender, offline</td><td class="us">At launch</td><td class="us">Windows, Linux (Mac in development)</td><td class="us">LongMill and AltMill owners who want one app</td></tr>
+<tr><td class="us">CarvCAM</td><td class="us">Design + CAM + sender, offline</td><td class="us">At launch</td><td class="us">Windows, Linux, Raspberry Pi (Mac soon)</td><td class="us">LongMill and AltMill owners who want one app</td></tr>
 ${comparisons.map((c) => `<tr><td><a href="${href(vsUrl(c))}">${esc(c.name)}</a></td><td>${esc(c.type.split(";")[0].split(" (")[0])}</td><td>${esc(c.pricing[0].price)}${c.pricing[1] ? ` · ${esc(c.pricing[1].price)}` : ""} ${cite(c.pricing[0].source || c.sources[0].url)}</td><td>${esc(c.platformsShort)}</td><td>${esc(c.chooseThem[0])}</td></tr>`).join("")}
 ${others.map((o) => `<tr><td>${esc(o.name)}</td><td>${esc(o.type.split(" (")[0])}</td><td>${esc(o.price)} ${cite(o.source.url, o.source.title)}</td><td>${esc(o.platforms.split(" (")[0])}</td><td>Free or low-cost option</td></tr>`).join("")}
 </tbody></table></div>
@@ -835,7 +840,7 @@ await writeFile(
   join(OUT, "llms.txt"),
   `# CarvCAM
 
-> CarvCAM is a desktop app for Windows and Linux, for Sienci Labs LongMill and AltMill CNC routers that does sign design, CAM (toolpaths with feeds and speeds tuned to the machine, router or spindle and bit) and machine control (connects over USB or Ethernet, guided wiring check, homing, touch-plate zero, carving) in one app that works offline. Mac and Raspberry Pi versions are in development.
+> CarvCAM is a desktop app for Windows, Linux and Raspberry Pi (Mac coming soon), for Sienci Labs LongMill and AltMill CNC routers that does sign design, CAM (toolpaths with feeds and speeds tuned to the machine, router or spindle and bit) and machine control (connects over USB or Ethernet, guided wiring check, homing, touch-plate zero, carving) in one app that works offline. Mac and Raspberry Pi versions are in development.
 
 Every page is also available as Markdown by adding \`index.md\` to its URL. The full documentation in one file: ${site.url}/llms-full.txt
 

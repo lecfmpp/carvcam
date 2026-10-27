@@ -48,7 +48,7 @@ export const docs = {
     title: "Install CarvCAM",
     nav: "Install",
     description: "How to download and install CarvCAM on Windows 10 or 11 or on Linux (AppImage or .deb), open it for the first time, and use it offline.",
-    lead: "CarvCAM runs on Windows 10 and 11 and on Linux. Mac and Raspberry Pi versions are in development.",
+    lead: "CarvCAM runs on Windows 10 and 11, on Linux and on the Raspberry Pi. The Mac version is coming soon.",
     blocks: [
       ["h2", "What you need"],
       ["table", ["Item", "Requirement"], [["Computer", "Windows 10 or 11, 64-bit, or a 64-bit Linux PC (Ubuntu, Debian, Mint, Fedora…)"], ["Internet", "Only to download and for the first start"], ["Connection to the machine", "The USB cable that came with your machine, or an Ethernet cable (SuperLongBoard and SLB-EXT)"]]],
@@ -68,6 +68,15 @@ export const docs = {
           ["Ubuntu, Debian or Mint: the .deb", "Download the **.deb** from the [download page](/download/) and double-click it, or run `sudo apt install ./CarvCAM-Linux-amd64.deb`. It also gives your user access to the USB controller.", null],
           ["Any other distro: the AppImage", "Download the **AppImage**, run `chmod +x CarvCAM-Linux-x86_64.AppImage` and open it.", null],
           ["USB access with the AppImage", "Add yourself to the dialout group once with `sudo usermod -aG dialout $USER`, then log out and back in.", null],
+        ],
+      ],
+      ["h2", "Install on a Raspberry Pi"],
+      [
+        "steps",
+        [
+          ["Pick the right file", "Pi 4 or 5 with Raspberry Pi OS **64-bit**: the **arm64 .deb**. Older 32-bit systems: the **armv7l .deb**. Check with `uname -m`: `aarch64` means 64-bit.", null],
+          ["Install", "Run `sudo apt install ./CarvCAM-Linux-arm64.deb` (or the armv7l file). It also gives your user access to the USB controller.", null],
+          ["Open CarvCAM", "From the applications menu, under Graphics. A Pi 4 or 5 with 4 GB of memory or more is recommended; the 3D preview is the heaviest part.", null],
         ],
       ],
       ["callout", "tip", "Works offline", "After the first start, CarvCAM opens and carves without internet. Your projects are saved on your computer. New versions install themselves on Windows and with the AppImage."],
