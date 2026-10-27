@@ -1,0 +1,14 @@
+{
+  "name": "carvcam-website",
+  "private": true,
+  "type": "module",
+  "description": "CarvCAM marketing site: landing page plus programmatic SEO pages (machines, features, comparisons, how-tos), built to static HTML.",
+  "scripts": {
+    "build": "node build.mjs",
+    "images": "node scripts/images.mjs",
+    "serve": "node scripts/serve.mjs"
+  },
+  "devDependencies": {
+    "sharp": "^0.33.5"
+  }
+}
