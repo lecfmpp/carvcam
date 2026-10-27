@@ -3,11 +3,12 @@
 
 export const site = {
   name: "CarvCAM",
-  // TODO: domínio final e link do instalador do Windows.
+  // TODO: domínio final.
   // Netlify define URL no build (o endereço principal do site); fora dele, o domínio final.
   url: (process.env.SITE_URL || process.env.URL || "https://www.carvcam.com").replace(/\/$/, ""),
   download: "/download/#windows",
-  installer: "#",
+  // Instalador publicado pelo CI (desktop/, tag v*) na Release mais recente do GitHub.
+  installer: "https://github.com/lecfmpp/carvcam/releases/latest",
   checked: "October 2026",
 };
 
