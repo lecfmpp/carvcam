@@ -35,7 +35,7 @@ const clip = (name, alt) =>
 const ICON_WIN = `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 5.5 10.5 4.5v7H3zM11.5 4.4 21 3v8.5h-9.5zM3 12.5h7.5v7L3 18.5zM11.5 12.5H21V21l-9.5-1.4z"/></svg>`;
 const cell = (v) => (v === "yes" ? '<span class="yes">✓ Yes</span>' : v === "no" ? '<span class="no">— No</span>' : v === "part" ? '<span class="part">Partly</span>' : esc(v));
 
-function layout({ path, title, description, body, schema = [], crumbs = null }) {
+function layout({ path, title, description, body, schema = [], crumbs = null, head = "" }) {
   at(path);
   const canonical = site.url + path;
   const ld = [...schema];
@@ -60,7 +60,7 @@ function layout({ path, title, description, body, schema = [], crumbs = null }) 
 <meta name="theme-color" content="#ffffff">
 <link rel="icon" type="image/svg+xml" href="${asset("/assets/carvcam-icon.svg")}">
 <link rel="preload" href="${asset("/assets/fonts/geist-sans-latin-600-normal.woff2")}" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="${asset("/assets/site.css")}">
+<link rel="stylesheet" href="${asset("/assets/site.css")}">${head}
 ${path.endsWith(".html") ? "" : `<link rel="alternate" type="text/markdown" href="${site.url}${path}index.md" title="Markdown version">`}
 ${ld.map((j) => `<script type="application/ld+json">${JSON.stringify(j)}</script>`).join("\n")}
 </head>
@@ -160,6 +160,7 @@ function home() {
   ];
   layout({
     path: at("/"),
+    head: `\n<link rel="preload" as="image" href="${asset("/assets/video/hero-demo-poster.webp")}" fetchpriority="high">`,
     title: "CarvCAM: CNC Software for LongMill & AltMill. Design, Carve, Done.",
     description: "Design signs, get feeds tuned to your machine, wire and connect with a guided check, and carve, all in one Windows app made for Sienci LongMill and AltMill owners.",
     schema: [app, faqLd(faq)],
