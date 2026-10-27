@@ -135,3 +135,13 @@
   .cw, .cw__pane { animation: none; }
   .cw-cable.is-now { animation: none; }
 }
+
+/* Conexão real */
+.cw__ip { display: flex; align-items: center; gap: 8px; margin-top: 6px; font: 500 12px var(--font); color: var(--text-3); }
+.cw__ip input { width: 150px; height: 32px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line-2); background: #0d0e10; color: var(--text); font-size: 13px; }
+.cw__port { cursor: pointer; border-color: var(--line-2); background: rgba(255, 255, 255, 0.03); }
+.cw__port.is-on { border-color: var(--accent); background: rgba(255, 91, 31, 0.06); }
+.cw__port:not(.is-on) .cw__port-dot { display: none; }
+.cw__port:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.cw__port--sim .cw__port-name { color: var(--text-2); }
+.cw__test--warn { border-color: rgba(242, 193, 78, 0.4); background: rgba(242, 193, 78, 0.06); }

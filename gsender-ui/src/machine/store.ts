@@ -1,9 +1,11 @@
 import { Heightmap, parseLines, ToolSchema, toSegments, type Segment, type Tool } from "@gsender-next/cam-engine";
 import { create } from "zustand";
+import * as R from "./real";
 
 /**
- * Estado da máquina. Hoje existe só o adaptador simulado (para testar a interface sem CNC);
- * o adaptador real fala com o servidor do gSender (Socket.IO) e expõe as mesmas ações.
+ * Estado da máquina. Com conn === "real" as ações vão para a controladora de verdade (real.ts,
+ * protocolo grbl/grblHAL por USB ou Ethernet); com "sim" ou sem conexão, o simulador interno
+ * anima tudo para testar a interface sem CNC.
  */
 export type MachineStatus = "disconnected" | "connecting" | "idle" | "homing" | "running" | "paused" | "toolchange" | "alarm" | "done";
 
@@ -77,6 +79,18 @@ export interface Job {
 interface MachineState {
   status: MachineStatus;
   port: string | null;
+  /** "real": controladora de verdade; "sim": simulador; null: desconectado. */
+  conn: "real" | "sim" | null;
+  /** Firmware e versão informados pela placa (só conexão real). */
+  firmware: string;
+  /** A máquina tem sensores de home ($22). Sem eles, a posição ao ligar já vale. */
+  homingEnabled: boolean;
+  lastError: string | null;
+  /** Conversa com a placa (console). */
+  log: { dir: "in" | "out"; text: string; t: number }[];
+  /** Avanço (mm/min) e rotação reais informados pela placa. */
+  liveFeed: number;
+  liveRpm: number;
   homed: boolean;
   /** Posição da fresa em coordenadas de máquina (mm). */
   pos: Vec3;
@@ -98,6 +112,8 @@ interface MachineState {
 
   setBed(b: { x: number; y: number; z: number }): void;
   connect(port: string): Promise<void>;
+  /** Conecta numa controladora de verdade (USB pelo navegador ou pelo bridge, ou Ethernet). */
+  connectReal(target: R.ConnTarget): Promise<void>;
   disconnect(): void;
   home(): Promise<void>;
   jog(dx: number, dy: number, dz: number): void;
@@ -125,6 +141,13 @@ let timer: ReturnType<typeof setInterval> | null = null;
 export const useMachine = create<MachineState>()((set, get) => ({
   status: "disconnected",
   port: null,
+  conn: null,
+  firmware: "",
+  homingEnabled: true,
+  lastError: null,
+  log: [],
+  liveFeed: 0,
+  liveRpm: 0,
   homed: false,
   pos: { x: 0, y: 0, z: 0 },
   workZero: null,
@@ -143,18 +166,22 @@ export const useMachine = create<MachineState>()((set, get) => ({
   setBed: (bed) => set({ bed }),
 
   connect: async (port) => {
-    set({ status: "connecting", port });
+    await R.disconnectReal();
+    set({ status: "connecting", port, conn: "sim", firmware: "Simulator", homingEnabled: true });
     await sleep(700);
     // Ao ligar, a máquina não sabe onde está até achar o home.
     set({ status: "idle", homed: false, pos: { x: get().bed.x / 2, y: get().bed.y / 2, z: SAFE_Z } });
   },
+  connectReal: (target) => R.connectReal(target),
   disconnect: () => {
     stopTimer();
-    set({ status: "disconnected", port: null, homed: false });
+    void R.disconnectReal();
+    set({ status: "disconnected", port: null, homed: false, conn: null });
   },
 
   home: async () => {
     if (get().status !== "idle") return;
+    if (get().conn === "real") return R.homeReal();
     set({ status: "homing" });
     const from = get().pos;
     // Home das LongMill e AltMill: canto de trás à direita, Z no alto.
@@ -166,16 +193,19 @@ export const useMachine = create<MachineState>()((set, get) => ({
   jog: (dx, dy, dz) => {
     const s = get();
     if (s.status !== "idle") return;
+    if (s.conn === "real") return R.jogReal(dx, dy, dz);
     const p = { x: clamp(s.pos.x + dx, 0, s.bed.x), y: clamp(s.pos.y + dy, 0, s.bed.y), z: clamp(s.pos.z + dz, -s.bed.z, 0) };
     set({ pos: p });
   },
   moveTo: (x, y) => {
     const s = get();
     if (s.status !== "idle") return;
+    if (s.conn === "real") return R.moveToReal(x, y);
     animate(s.pos, { x: clamp(x, 0, s.bed.x), y: clamp(y, 0, s.bed.y), z: s.pos.z }, 600, (p) => set({ pos: p }));
   },
   setWorkZero: (axes = ["x", "y", "z"]) => {
     const s = get();
+    if (s.conn === "real") return void R.setWorkZeroReal(axes);
     const wz = s.workZero ?? { ...s.pos };
     const next = { ...wz };
     for (const a of axes) next[a] = s.pos[a];
@@ -183,6 +213,8 @@ export const useMachine = create<MachineState>()((set, get) => ({
   },
   probeZ: async (plate = 15) => {
     const s = get();
+    // Na troca de ferramenta a fila está parada e a máquina, em repouso: dá para medir.
+    if (s.conn === "real" && (s.status === "idle" || s.status === "toolchange")) return R.probeZReal(plate);
     if (s.status !== "idle") return;
     // Desce até tocar a placa (simulada a 40 mm abaixo) e volta 5 mm.
     const touch = { ...s.pos, z: Math.max(-s.bed.z, s.pos.z - 40) };
@@ -230,30 +262,42 @@ export const useMachine = create<MachineState>()((set, get) => ({
   start: () => {
     const s = get();
     if (!s.job || !s.homed || !s.workZero || s.status !== "idle") return;
+    if (s.conn === "real") return R.startReal();
     set({ status: "running", elapsed: 0 });
     startTimer();
   },
   pause: () => {
+    if (get().conn === "real") return R.pauseReal();
     if (get().status === "running") set({ status: "paused" });
   },
   resume: () => {
+    if (get().conn === "real") return void R.resumeReal();
     if (get().status === "paused") set({ status: "running" });
   },
   stop: () => {
     stopTimer();
     const s = get();
     if (s.status === "disconnected") return;
+    if (s.conn === "real") return void R.stopReal();
     set({ status: s.status === "alarm" ? "alarm" : "idle", pendingTool: null });
   },
   confirmToolChange: () => {
     const s = get();
+    if (s.conn === "real") return R.confirmToolChangeReal();
     if (s.status !== "toolchange" || s.pendingTool == null) return;
     set({ status: "running", activeTool: s.pendingTool, pendingTool: null });
   },
-  setFeedOverride: (v) => set({ feedOverride: clamp(v, 50, 150) }),
-  setRpmOverride: (v) => set({ rpmOverride: clamp(v, 50, 150) }),
+  setFeedOverride: (v) => {
+    set({ feedOverride: clamp(v, 50, 150) });
+    if (get().conn === "real") R.feedOverrideReal(clamp(v, 50, 150));
+  },
+  setRpmOverride: (v) => {
+    set({ rpmOverride: clamp(v, 50, 150) });
+    if (get().conn === "real") R.rpmOverrideReal(clamp(v, 50, 150));
+  },
   raiseAlarm: (code) => set({ status: "alarm", alarm: code }),
   clearAlarm: () => {
+    if (get().conn === "real") return void R.clearAlarmReal();
     const code = get().alarm;
     // Fim de curso, emergência e posição perdida exigem achar o home de novo.
     const needsHome = code === "limit" || code === "estop" || code === "lost";
@@ -262,6 +306,10 @@ export const useMachine = create<MachineState>()((set, get) => ({
   restartFrom: (elapsed) => {
     const s = get();
     if (!s.job) return;
+    if (s.conn === "real") {
+      const seg = s.job.segs[upperBound(s.job.times, elapsed)];
+      return R.restartFromReal(seg?.line ?? 1);
+    }
     set({ status: "running", alarm: null, homed: true, elapsed: Math.max(0, Math.min(elapsed, s.job.total)) });
     startTimer();
   },
@@ -368,3 +416,6 @@ function animate(from: Vec3, to: Vec3, ms: number, onFrame: (p: Vec3) => void): 
     requestAnimationFrame(step);
   });
 }
+
+// Em desenvolvimento, o estado da máquina fica acessível no console do navegador (__machine.getState()).
+if (import.meta.env.DEV && typeof window !== "undefined") (window as unknown as { __machine: typeof useMachine }).__machine = useMachine;

@@ -5,13 +5,14 @@
   "description": "CarvCAM: interface (design Calm Precision) e motor de CAM de placas e letreiros para máquinas Sienci Labs",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "node scripts/local.mjs --dev",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "local": "vite build && vite preview --open",
-    "images:fetch": "node scripts/fetch-sienci-images.mjs"
+    "local": "vite build && node scripts/local.mjs",
+    "images:fetch": "node scripts/fetch-sienci-images.mjs",
+    "bridge": "node bridge/server.mjs"
   },
   "license": "GPL-3.0-only",
   "dependencies": {
@@ -26,7 +27,9 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.28.0",
+    "serialport": "^12.0.0",
     "three": "^0.170.0",
+    "ws": "^8.22.0",
     "zustand": "^5.0.16"
   },
   "devDependencies": {
