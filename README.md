@@ -1,7 +1,7 @@
 # CarvCAM
 
 Nova interface e CAM para o gSender, feita para as máquinas Sienci Labs (LongMill e AltMill).
-Fica separada do app scanbusinesscard, que continua na raiz do repositório.
+Veio do repositório Leandro-Apps/scanbusinesscard (pasta `carvcam/`), com o histórico preservado.
 
 | Pasta | O que é |
 |---|---|
@@ -11,7 +11,7 @@ Fica separada do app scanbusinesscard, que continua na raiz do repositório.
 
 ## Testar
 
-Precisa do [Node.js](https://nodejs.org) 18 ou mais novo. Dentro desta pasta:
+Precisa do [Node.js](https://nodejs.org) 18 ou mais novo. Na raiz do repositório:
 
 - **Mac:** clique duas vezes em `testar-carvcam.command`
 - **Windows:** clique duas vezes em `testar-carvcam.cmd`
