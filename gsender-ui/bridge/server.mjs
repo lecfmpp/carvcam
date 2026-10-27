@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 // carvcam-bridge: liga o CarvCAM (no navegador) à controladora da máquina.
 //
 // O navegador não abre portas USB em todos os navegadores e nunca abre conexões TCP diretas, que é
