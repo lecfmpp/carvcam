@@ -35,3 +35,23 @@ insert into public.admin_allowlist (email) values ('someone@example.com');
 -- for an account that already exists:
 update public.profiles set role = 'admin' where email = 'someone@example.com';
 ```
+
+## Billing (Stripe)
+- `public.entitlements`: one row per account with `plan` (free, pro, school), Stripe `status`,
+  `current_period_end`, `trial_end` and `lifetime`. `public.has_pro()` and the `plan` claim in the
+  login token (from `custom_access_token_hook`) say whether Pro is unlocked.
+- `public.billing_customers` maps accounts to Stripe customers; `public.stripe_events` makes the
+  webhook idempotent. Only the Edge Functions (service role) write to these tables.
+- Edge Functions in `functions/`:
+  - `create-checkout`: `POST { plan: "pro_yearly" | "pro_lifetime" | "school_yearly" }` with the
+    user's token → Stripe Checkout URL. Pro yearly has a 14-day trial; tax is calculated by
+    Stripe Tax (`STRIPE_AUTOMATIC_TAX=off` disables it).
+  - `create-portal`: opens the Stripe Customer Portal (card, cancel at period end, invoices).
+  - `stripe-webhook`: keeps `entitlements` in sync (subscriptions, lifetime purchases, refunds,
+    lost disputes). Authenticated by the Stripe signature.
+- One-time setup: run `node supabase/scripts/setup-stripe.mjs` on your computer. It creates the
+  products and prices (lookup keys `carvcam_pro_yearly`, `carvcam_pro_lifetime`,
+  `carvcam_school_yearly`), configures the Customer Portal, creates the webhook and saves
+  `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` as Edge Function secrets.
+- Schools that pay by purchase order: create the invoice in the Stripe Dashboard (Invoicing),
+  then grant access with `insert into public.entitlements (user_id, plan, source) values ('<id>', 'school', 'manual')`.
