@@ -27,6 +27,9 @@ const href = (p) => {
 const asset = (p) => "../".repeat(depth) + p.replace(/^\//, "");
 const shot = (name, alt, { eager = false, cls = "shot" } = {}) =>
   `<div class="${cls}"><img src="${asset(`/assets/screens/${name}.webp`)}" srcset="${asset(`/assets/screens/${name}-800.webp`)} 800w, ${asset(`/assets/screens/${name}.webp`)} 1440w" sizes="(max-width: 900px) 100vw, 1160px" width="1440" height="900" alt="${esc(alt)}" ${eager ? 'fetchpriority="high"' : 'loading="lazy"'} decoding="async"></div>`;
+// Clipe em loop (gravação simulada da tela): leve como vídeo, comporta-se como um GIF. Só baixa perto da tela.
+const clip = (name, alt) =>
+  `<div class="shot shot--video"><video class="lazyclip" muted loop playsinline preload="none" width="1280" height="800" poster="${asset(`/assets/video/feature-${name}-poster.webp`)}" data-src="${asset(`/assets/video/feature-${name}.mp4`)}" aria-label="${esc(alt)}"></video></div>`;
 const ICON_WIN = `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 5.5 10.5 4.5v7H3zM11.5 4.4 21 3v8.5h-9.5zM3 12.5h7.5v7L3 18.5zM11.5 12.5H21V21l-9.5-1.4z"/></svg>`;
 const cell = (v) => (v === "yes" ? '<span class="yes">✓ Yes</span>' : v === "no" ? '<span class="no">— No</span>' : v === "part" ? '<span class="part">Partly</span>' : esc(v));
 
@@ -117,8 +120,8 @@ function home() {
   const rows = [
     ["Design", "Signs your bit can actually cut", "Fonts made for carving, text on an arc, frames and icons sized for a 1/8 in bit, SVG and DXF import, and image tracing. If a detail is too fine for your bit, CarvCAM says so and fixes it in one click.", "design", ["Text, shapes, free curves", "Engrave, V-carve, relief, hatch, cutout with tabs", "Image to vector with live preview"], "/features/sign-design/"],
     ["Prepare", "No feeds-and-speeds spreadsheet", "Choose how fast you want it. CarvCAM fills in feed, plunge, depth per pass and RPM for your machine, router and bit, shows the time, and verifies the G-code before it lets you near the machine.", "prepare", ["Values for your exact Sienci setup", "Animated toolpath and 3D preview", "Makita dial number for every cut"], "/features/feeds-and-speeds/"],
-    ["Connect", "Every cable, checked before the first cut", "A wiring map for your controller: power, E-stop, AutoSpin or spindle cable, USB or Ethernet. Then a real test: the controller answers, the Z lifts 2 mm and the spindle spins.", "connect-power", ["LongBoard, SuperLongBoard, SLB-LITE, SLB-EXT", "USB or Ethernet", "Unlock and test in one place"], "/features/connect-wizard/"],
-    ["Position & carve", "From zero to finished, in the same window", "Home, clamp, measure the bit and set zero on a live top view of your bed. Then carve with pause, safe stop, speed overrides, guided bit changes and alarm recovery.", "carving", ["Touch plate probing", "Pause with Space, stop with Esc", "Guided bit change with re-measuring"], "/features/carve-control/"],
+    ["Connect", "Every cable, checked before the first cut", "A wiring map for your controller: power, E-stop, AutoSpin or spindle cable, USB or Ethernet. Then a real test: the controller answers, the Z lifts 2 mm and the spindle spins.", "connect", ["LongBoard, SuperLongBoard, SLB-LITE, SLB-EXT", "USB or Ethernet", "Unlock and test in one place"], "/features/connect-wizard/"],
+    ["Position & carve", "From zero to finished, in the same window", "Home, clamp, measure the bit and set zero on a live top view of your bed. Then carve with pause, safe stop, speed overrides, guided bit changes and alarm recovery.", "carve", ["Touch plate probing", "Pause with Space, stop with Esc", "Guided bit change with re-measuring"], "/features/carve-control/"],
   ];
   layout({
     path: at("/"),
@@ -164,9 +167,18 @@ ${downloadCta()}
 <section><div class="wrap">
 ${rows.map(([eb, h, p, img, ticks, link], i) => `<div class="frow${i % 2 ? " flip" : ""}">
 <div class="frow__copy"><span class="eyebrow">${eb}</span><h3>${h}</h3><p>${p}</p><ul class="ticks">${ticks.map((t) => `<li>${t}</li>`).join("")}</ul><p style="margin-top:18px"><a href="${href(link)}" style="font-weight:600">Learn more →</a></p></div>
-${shot(img, `CarvCAM ${eb} screen`)}
+${clip(img, `CarvCAM ${eb}: screen recording`)}
 </div>`).join("")}
 </div></section>
+<script>(() => {
+  const vids = document.querySelectorAll("video.lazyclip");
+  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const io = new IntersectionObserver((es) => es.forEach((e) => {
+    const v = e.target;
+    if (e.isIntersecting) { if (!v.src) v.src = v.dataset.src; if (!still) v.play().catch(() => {}); } else v.pause();
+  }), { rootMargin: "200px" });
+  vids.forEach((v) => io.observe(v));
+})();</script>
 
 <section class="soft"><div class="wrap">
 <div class="sec-head"><span class="eyebrow">Machines</span><h2>Made for the machine you own</h2><p class="lede">CarvCAM knows your bed size, your controller and what spins the bit, so the numbers are right from the first job.</p></div>
