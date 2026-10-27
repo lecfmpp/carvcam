@@ -1,0 +1,49 @@
+{
+  "_comment": "Sienci Labs products used on the cards (spec sheets in src/lib/machineInfo.ts and src/lib/storeBits.ts). 'image' is the WebP file in public/; scripts/fetch-sienci-images.mjs downloads 'photo' (the direct image file) or, without it, the main image on each 'url' and saves it to that path.",
+  "machines": [
+    { "id": "altmill-2x4", "url": "https://sienci.com/product/altmill-2x4/", "image": "machines/altmill-2x4.webp", "photo": "https://sienci.com/wp-content/uploads/2024/12/2x4_TREAT_01.jpg" },
+    { "id": "altmill-4x4", "url": "https://sienci.com/product/altmill-4x4/", "image": "machines/altmill-4x4.webp", "photo": "https://sienci.com/wp-content/uploads/2025/01/4x4_TREAT_02.jpg" },
+    { "id": "altmill-4x8", "url": "https://sienci.com/product/altmill-4x8/", "image": "machines/altmill-4x8.webp", "photo": "https://sienci.com/wp-content/uploads/2025/08/AltMill-4x8-Main-Image.png" },
+    { "id": "longmill-mk3-30x30", "url": "https://sienci.com/product/longmill-mk3-30x30/", "image": "machines/longmill-mk3-30x30.webp", "photo": "https://sienci.com/wp-content/uploads/2026/01/30x30-Thumbanil.png" },
+    { "id": "longmill-mk3-48x30", "url": "https://sienci.com/product/longmill-mk3-48x30/", "image": "machines/longmill-mk3-48x30.webp", "photo": "https://sienci.com/wp-content/uploads/2026/01/48x30-Thumbnail-1.png" },
+    { "id": "longmill-mk2-12x30", "url": "https://resources.sienci.com/", "image": "machines/longmill-mk2.webp" },
+    { "id": "longmill-mk2-30x30", "url": "https://resources.sienci.com/", "image": "machines/longmill-mk2.webp" },
+    { "id": "longmill-mk2-48x30", "url": "https://resources.sienci.com/", "image": "machines/longmill-mk2.webp" }
+  ],
+  "heads": [
+    { "id": "makita-rt0701", "url": "https://sienci.com/product/makita-rt0701c-1-25-hp-110v-compact-router/", "image": "heads/makita-rt0701.webp" },
+    { "id": "autospin-t1", "url": "https://sienci.com/product/autospin-t1-router/", "image": "heads/autospin-t1.webp", "photo": "https://sienci.com/wp-content/uploads/2025/06/AutoSpin-T1-Router-Thumbnail.png" },
+    { "id": "spindle-1-5kw-er20", "url": "https://sienci.com/product/altmill-1-5kw-er20-spindle-clear-cut-dust-shoe-kit/", "image": "heads/spindle-1-5kw-er20.webp" },
+    { "id": "spindle-2-2kw-er20", "url": "https://sienci.com/product/altmill-2-2kw-er20-spindle-clear-cut-dust-shoe-kit/", "image": "heads/spindle-2-2kw-er20.webp" }
+  ],
+  "bits": [
+    { "id": "flat-1-16-downcut", "url": "https://sienci.com/product/1-16-flat-downcut-end-mill/", "image": "bits/flat-1-16-downcut.webp", "photo": "https://sienci.com/wp-content/uploads/2021/03/125.png" },
+    { "id": "flat-1-16-upcut", "url": "https://sienci.com/product/1-16-flat-upcut-end-mill/", "image": "bits/flat-1-16-upcut.webp", "photo": "https://sienci.com/wp-content/uploads/2021/03/Existing-Bits-Project_Jul-2025.png" },
+    { "id": "flat-1-8-downcut", "url": "https://sienci.com/product/1-8-flat-downcut_end-mill_3-10pc_pack/", "image": "bits/flat-1-8-downcut.webp", "photo": "https://sienci.com/wp-content/uploads/2020/04/1-8in-Flat-Downcut-End-Mill-3pcs.jpg" },
+    { "id": "flat-1-8-upcut", "url": "https://sienci.com/product/1-8-flat-upcut-end-mill_3pcs_or10pcs/", "image": "bits/flat-1-8-upcut.webp", "photo": "https://sienci.com/wp-content/uploads/2017/09/1-8in-Flat-Upcut-End-Mill-3pcs.jpg" },
+    { "id": "flat-1-8-1flute", "url": "https://sienci.com/product/1-8-singleflute_upcut_endmill_2pcs/", "image": "bits/flat-1-8-1flute.webp", "photo": "https://sienci.com/wp-content/uploads/2017/09/109.png" },
+    { "id": "flat-1-8-compression", "url": "https://sienci.com/product/1-8_flat_compression_end-mill_2pcs/", "image": "bits/flat-1-8-compression.webp", "photo": "https://sienci.com/wp-content/uploads/2021/03/1-8in-Flat-Compression-End-Mill-2pcs.jpg" },
+    { "id": "flat-1-4-upcut", "url": "https://sienci.com/product/1-4-flat-upcut-endmill/", "image": "bits/flat-1-4-upcut.webp", "photo": "https://sienci.com/wp-content/uploads/2019/07/101.png" },
+    { "id": "flat-1-4-downcut", "url": "https://sienci.com/product/1-4-1-1-4_flat-downcut-end-mill/", "image": "bits/flat-1-4-downcut.webp", "photo": "https://sienci.com/wp-content/uploads/2019/07/1_4_-Flat-Down-Cut-End-Mill_Profile-3.png" },
+    { "id": "flat-1-4-1flute", "url": "https://sienci.com/product/1-4-single-flute-end-mill/", "image": "bits/flat-1-4-1flute.webp", "photo": "https://sienci.com/wp-content/uploads/2020/06/1-4in-Single-Flute-Upcut-End-Mill.jpg" },
+    { "id": "flat-1-4-compression", "url": "https://sienci.com/product/1-4-flat-compression-end-mill/", "image": "bits/flat-1-4-compression.webp", "photo": "https://sienci.com/wp-content/uploads/2021/03/Existing-Bits-Project_Jul-2025-1.png" },
+    { "id": "vbit-30-1-8", "url": "https://sienci.com/product/30-degree_engraving_vbit_4-10pc_pack/", "image": "bits/vbit-30-1-8.webp", "photo": "https://sienci.com/wp-content/uploads/2018/01/30-Degree-Engraving-V-Bit-Pack-18-Shank-1F-4-or-10pcs.png" },
+    { "id": "vbit-60-15mm", "url": "https://sienci.com/product/15mm_60-degree-v-bit/", "image": "bits/vbit-60-15mm.webp", "photo": "https://sienci.com/wp-content/uploads/2020/01/1_4_-60-Degree-V-Bit_Front.png" },
+    { "id": "vbit-90-15mm", "url": "https://sienci.com/product/15mm_90-degree-1_4-v-bit/", "image": "bits/vbit-90-15mm.webp", "photo": "https://sienci.com/wp-content/uploads/2020/01/1_4_-90-Degree-V-Bit_Front.png" },
+    { "id": "surfacing-22mm", "url": "https://sienci.com/product/22mm-surfacing-bit/", "image": "bits/surfacing-22mm.webp", "photo": "https://sienci.com/wp-content/uploads/2020/01/1_4_-22mm-Surfacing-Bit_Profile-3.png" },
+    { "id": "ball-1-4", "url": "https://sienci.com/product/1-4-ballnose-upcut-end-mill/", "image": "bits/ball-1-4.webp", "photo": "https://sienci.com/wp-content/uploads/2020/01/157.png" },
+
+    { "id": "store-ball-1-8", "url": "https://sienci.com/product/1-8-ballnose-upcut_endmill_3pc_or_10pc/", "image": "bits/store-ball-1-8.webp", "photo": "https://sienci.com/wp-content/uploads/2017/09/1-8in-Ball-Upcut-End-Mill-3pcs.jpg" },
+    { "id": "store-tapered-1-4-1-5", "url": "https://sienci.com/product/1-4_1-1-2_r1-32-tapered-ballnose-endmill/", "image": "bits/store-tapered-1-4-1-5.webp", "photo": "https://sienci.com/wp-content/uploads/2020/09/Tapered.png" },
+    { "id": "store-tapered-1-4-2-dlc", "url": "https://sienci.com/product/1-4_2_r1-32_tapered_ballnose/", "image": "bits/store-tapered-1-4-2-dlc.webp", "photo": "https://sienci.com/wp-content/uploads/2025/08/1_4_x2_xR1_32_-Tapered-Ball-Nose-End-Mill-1_4_-Shank-2F-DLC.png" },
+    { "id": "store-ball-1-4-1-dlc", "url": "https://sienci.com/product/1-4_1_downcut_ballnose/", "image": "bits/store-ball-1-4-1-dlc.webp", "photo": "https://sienci.com/wp-content/uploads/2025/08/14x1-Downcut-Ball-Nose-End-Mill-14-Shank-2F-DLC.png" },
+    { "id": "store-corncob-1-16", "url": "https://sienci.com/product/1-16_1-6mm_corncob_endmill_10pcs/", "image": "bits/store-corncob-1-16.webp", "photo": "https://sienci.com/wp-content/uploads/2021/03/164.png" },
+    { "id": "store-roughing-1-4", "url": "https://sienci.com/product/1-4-extra-long-flat-roughing-endmill/", "image": "bits/store-roughing-1-4.webp", "photo": "https://sienci.com/wp-content/uploads/2023/12/141.png" },
+    { "id": "store-compression-1-4-dlc", "url": "https://sienci.com/product/1-4_extra-hard-compression-upcut-with-chip-breaker/", "image": "bits/store-compression-1-4-dlc.webp", "photo": "https://sienci.com/wp-content/uploads/2025/07/1_4_x1_-Extra-Hard-Compression-Upcut-End-Mill-w_-Chip-Breaker-1_4_-Shank-3F-DLC.png" },
+    { "id": "store-vbit-60-dlc", "url": "https://sienci.com/product/1-4_60_degree_downcut_vbit/", "image": "bits/store-vbit-60-dlc.webp", "photo": "https://sienci.com/wp-content/uploads/2025/08/1_4_-60-Degree-Downcut-V-Bit-1_4_-Shank-3F-DLC.png" },
+    { "id": "store-groove-1-2", "url": "https://sienci.com/product/1-2_1-1-4_round_groove_bit/", "image": "bits/store-groove-1-2.webp", "photo": "https://sienci.com/wp-content/uploads/2020/09/1_2_-Round-Groove-Bit_profile-3.png" },
+    { "id": "store-groove-3-4", "url": "https://sienci.com/product/3-4_1-1-4_round-groove-bit/", "image": "bits/store-groove-3-4.webp", "photo": "https://sienci.com/wp-content/uploads/2021/03/76.png" },
+    { "id": "store-bowl-1", "url": "https://sienci.com/product/1_3-4_r3-8_flat_bottom_bowl_bit/", "image": "bits/store-bowl-1.webp", "photo": "https://sienci.com/wp-content/uploads/2025/08/1_x3_4_xR3_8_-Flat-Bottom-Bowl-Bit-1_4_-Shank-2F.png" },
+    { "id": "store-surfacing-1-5", "url": "https://sienci.com/product/1-1-2_surfacing_bit/", "image": "bits/store-surfacing-1-5.webp", "photo": "https://sienci.com/wp-content/uploads/2025/08/1-12-Surfacing-Bit-14-Shank-4F-1.png" }
+  ]
+}

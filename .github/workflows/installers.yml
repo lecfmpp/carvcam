@@ -1,10 +1,10 @@
-# CarvCAM installers (Electron), in the same shape as gSender's CI:
+# CarvCAM installers (Electron):
 #   Windows: NSIS (.exe) · Linux: AppImage and .deb (x64) · Raspberry Pi: AppImage and .deb (arm64, armv7l)
 #   Mac: .dmg (Intel and Apple Silicon)
 # On every push to the branch and on PRs: builds unsigned installers and keeps them as artifacts.
 # On a v1.2.3 tag: builds, signs (if the secrets exist), publishes to the GitHub Release (where the
 # installed app downloads its updates from) and also uploads fixed-name copies the website uses:
-#   https://github.com/lecfmpp/carvcam/releases/latest/download/CarvCAM-Windows-64Bit.exe
+#   https://github.com/lecfmpp/carvcam-releases/releases/latest/download/CarvCAM-Windows-64Bit.exe
 #   .../CarvCAM-Linux-x86_64.AppImage · .../CarvCAM-Linux-amd64.deb
 #   .../CarvCAM-Linux-arm64.AppImage · .../CarvCAM-Linux-arm64.deb · .../CarvCAM-Linux-armv7l.AppImage · .../CarvCAM-Linux-armv7l.deb
 #   .../CarvCAM-Mac-arm64.dmg · .../CarvCAM-Mac-x64.dmg
@@ -15,7 +15,7 @@ on:
     tags: ["v*"]
     branches: [main, feat/windows-installer]
   pull_request:
-    paths: ["desktop/**", "gsender-ui/**", "cam-engine/**", ".github/workflows/installers.yml"]
+    paths: ["desktop/**", "app/**", "cam-engine/**", ".github/workflows/installers.yml"]
   # Publish a version without pushing the tag through git: Actions › Installers › Run workflow, with the
   # version (e.g. 0.1.0). The job creates the v0.1.0 tag on the chosen commit and continues as for a tag.
   workflow_dispatch:
@@ -30,6 +30,10 @@ permissions:
 
 env:
   # Version to publish: the pushed tag (v1.2.3) or the one entered on a manual run. Empty = test build only.
+  # Installers are published to a separate PUBLIC repository (this one is private), so the
+  # website and the in-app updater can download them. RELEASES_TOKEN: a fine-grained token with
+  # Contents: read and write on lecfmpp/carvcam-releases.
+  RELEASES_REPO: lecfmpp/carvcam-releases
   RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || (github.event_name == 'workflow_dispatch' && inputs.version != '' && format('v{0}', inputs.version) || '') }}
 
 jobs:
@@ -44,11 +48,11 @@ jobs:
         shell: bash
         run: |
           (cd cam-engine && npm ci)
-          (cd gsender-ui && npm ci)
+          (cd app && npm ci)
           (cd desktop && npm ci)
       - name: Test the machine protocol
         shell: bash
-        run: cd gsender-ui && npx vitest run
+        run: cd app && npx vitest run
       - name: Create the tag (manual release)
         if: env.RELEASE_TAG != '' && !startsWith(github.ref, 'refs/tags/')
         shell: bash
@@ -62,7 +66,7 @@ jobs:
       - name: Build (and sign on tags)
         shell: bash
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
           WIN_PUBLISHER_NAME: ${{ secrets.WIN_PUBLISHER_NAME }}
           # Pick a signing service (see docs/code-signing.md).
           WIN_SIGN_PROVIDER: ${{ env.RELEASE_TAG != '' && secrets.WIN_SIGN_PROVIDER || '' }}
@@ -92,11 +96,11 @@ jobs:
         if: env.RELEASE_TAG != ''
         shell: bash
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
         run: |
           cd desktop/release
           cp CarvCAM-*-Windows-64Bit.exe CarvCAM-Windows-64Bit.exe
-          gh release upload "$RELEASE_TAG" CarvCAM-Windows-64Bit.exe --clobber
+          gh release upload --repo "$RELEASES_REPO" "$RELEASE_TAG" CarvCAM-Windows-64Bit.exe --clobber
       - uses: actions/upload-artifact@v4
         with:
           name: CarvCAM-Windows
@@ -117,14 +121,14 @@ jobs:
       - name: Install dependencies
         run: |
           (cd cam-engine && npm ci)
-          (cd gsender-ui && npm ci)
+          (cd app && npm ci)
           (cd desktop && npm ci)
       - name: Version from the tag
         if: env.RELEASE_TAG != ''
         run: cd desktop && npm version "${RELEASE_TAG#v}" --no-git-tag-version --allow-same-version
       - name: Build Linux (PC) and Raspberry Pi
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
           LINUX_ARCHS: x64,arm64,armv7l
         run: |
           cd desktop
@@ -134,13 +138,13 @@ jobs:
       - name: Fixed-name copies for the website
         if: env.RELEASE_TAG != ''
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
         run: |
           cd desktop/release
           for f in CarvCAM-*-Linux-*; do
             fixed=$(echo "$f" | sed -E 's/^CarvCAM-[0-9][^-]*-Linux-/CarvCAM-Linux-/')
             cp "$f" "$fixed"
-            gh release upload "$RELEASE_TAG" "$fixed" --clobber
+            gh release upload --repo "$RELEASES_REPO" "$RELEASE_TAG" "$fixed" --clobber
           done
       - uses: actions/upload-artifact@v4
         with:
@@ -166,14 +170,14 @@ jobs:
       - name: Install dependencies
         run: |
           (cd cam-engine && npm ci)
-          (cd gsender-ui && npm ci)
+          (cd app && npm ci)
           (cd desktop && npm ci)
       - name: Version from the tag
         if: env.RELEASE_TAG != ''
         run: cd desktop && npm version "${RELEASE_TAG#v}" --no-git-tag-version --allow-same-version
       - name: Build Mac (signed and notarized when the Apple secrets exist)
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
           CSC_LINK: ${{ secrets.MAC_CERT_P12_BASE64 }}
           CSC_KEY_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
@@ -192,13 +196,13 @@ jobs:
       - name: Fixed-name copies for the website
         if: env.RELEASE_TAG != '' && env.HAS_MAC_CERT == 'true'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
         run: |
           cd desktop/release
           for f in CarvCAM-*-Mac-*.dmg; do
             fixed=$(echo "$f" | sed -E 's/^CarvCAM-[0-9][^-]*-Mac-/CarvCAM-Mac-/')
             cp "$f" "$fixed"
-            gh release upload "$RELEASE_TAG" "$fixed" --clobber
+            gh release upload --repo "$RELEASES_REPO" "$RELEASE_TAG" "$fixed" --clobber
           done
       - uses: actions/upload-artifact@v4
         with:

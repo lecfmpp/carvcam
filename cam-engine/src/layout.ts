@@ -67,6 +67,7 @@ export function buildLayout(spec: PlateSpec, fonts: FontMap, tool: Tool, cutTool
       severity: "error",
       message: `The cutout bit cuts up to ${fmt(cutTool.cutLength)} mm deep, but the material is ${fmt(spec.thickness)} mm thick.`,
       suggestion: "Use a longer bit or thinner material.",
+      data: { needed: Math.round(through * 10) / 10, cutLength: cutTool.cutLength, role: cutTool === tool ? "main" : "cutout" },
     });
   }
 
@@ -78,7 +79,7 @@ export function buildLayout(spec: PlateSpec, fonts: FontMap, tool: Tool, cutTool
   spec.texts.forEach((t, i) => {
     const font = fonts[t.font];
     if (!font) {
-      warnings.push({ code: "FONT_UNAVAILABLE", severity: "error", message: `The font "${t.font}" was not loaded.` });
+      warnings.push({ code: "FONT_UNAVAILABLE", severity: "error", message: `The font "${t.font}" was not loaded.`, element: { type: "text", index: i }, data: { font: t.font } });
       return;
     }
     const raw = textToRegion(font, t.content, t.size, t.arc || undefined);
@@ -198,6 +199,7 @@ export function buildLayout(spec: PlateSpec, fonts: FontMap, tool: Tool, cutTool
         severity: "error",
         message: `The bit cuts up to ${fmt(tool.cutLength)} mm deep, and ${p.label} needs ${fmt(p.depth)} mm.`,
         element: ref,
+        data: { needed: p.depth, cutLength: tool.cutLength, role: "main" },
       });
     }
     if (tool.type === "vbit" && p.mode !== "engrave") {
@@ -344,7 +346,7 @@ function buildHoles(spec: PlateSpec, tool: Tool, part: Region, m: number, depth:
       return;
     }
     const r = circle(f.x + m, f.y + m, f.diameter / 2);
-    checkInside(r, part, `hole ${i + 1}`, warnings, { type: "hole", index: i });
+    checkInside(r, part, `hole ${i + 1}`, warnings, { type: "hole", index: i }, m, spec);
     out.push({ label: `hole ${i + 1}`, ref: { type: "hole", index: i }, region: r, depth: depth });
   });
   spec.slots.forEach((s, i) => {
@@ -359,15 +361,24 @@ function buildHoles(spec: PlateSpec, tool: Tool, part: Region, m: number, depth:
       return;
     }
     const r = slot(s.x + m, s.y + m, s.length, s.width, s.angle);
-    checkInside(r, part, `slot ${i + 1}`, warnings, { type: "slot", index: i });
+    checkInside(r, part, `slot ${i + 1}`, warnings, { type: "slot", index: i }, m, spec);
     out.push({ label: `slot ${i + 1}`, ref: { type: "slot", index: i }, region: r, depth: depth });
   });
   return out;
 }
 
-function checkInside(r: Region, part: Region, label: string, warnings: Warning[], ref: ElementRef) {
+function checkInside(r: Region, part: Region, label: string, warnings: Warning[], ref: ElementRef, m: number, spec: PlateSpec) {
   if (area(difference(r, part)) > 0.01) {
-    warnings.push({ code: "OUTSIDE_PART", severity: "error", message: `${capitalize(label)} goes outside the part.`, element: ref });
+    // Where it is and how big the part is (part coordinates, like the spec's x/y), so the UI can move it inside.
+    const b = bounds(r);
+    const r1 = (v: number) => Math.round(v * 100) / 100;
+    warnings.push({
+      code: "OUTSIDE_PART",
+      severity: "error",
+      message: `${capitalize(label)} goes outside the part.`,
+      element: ref,
+      data: { bounds: { minX: r1(b.minX - m), minY: r1(b.minY - m), maxX: r1(b.maxX - m), maxY: r1(b.maxY - m) }, part: { width: spec.width, height: spec.height } },
+    });
   }
 }
 

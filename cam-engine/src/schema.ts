@@ -247,7 +247,7 @@ export type Tool = z.infer<typeof ToolSchema>;
 export type ToolInput = z.input<typeof ToolSchema>;
 
 /**
- * Machine limits. When integrating with gSender, fill these from the firmware
+ * Machine limits. When the machine is known, fill these from the firmware
  * settings ($110–$112 max rates, $130–$132 travel) instead of using the defaults.
  */
 export const MachineSchema = z.object({

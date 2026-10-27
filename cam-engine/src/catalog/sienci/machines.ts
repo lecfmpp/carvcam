@@ -2,9 +2,8 @@ import type { MachineInput } from "../../schema.js";
 import { HEADS, type HeadId } from "./heads.js";
 
 /**
- * Sienci Labs machines. Travel and max rates come from the firmware defaults that gSender itself
- * applies to each profile ($110–$112 and $130–$132, in
- * src/app/src/features/Config/assets/MachineDefaults/), not from marketing material.
+ * Sienci Labs machines. Travel and max rates come from each machine's firmware defaults
+ * ($110–$112 and $130–$132), not from marketing material.
  */
 export type MachineId =
   | "longmill-mk2-12x30"

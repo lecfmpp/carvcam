@@ -1,0 +1,548 @@
+import { ArrowDown, ArrowUp, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Plug } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { AccItem, Seg, SidePanel } from "../../components/ui";
+import { machineName, materialById } from "../../lib/catalog";
+import { useMachine, workPos } from "../../machine/store";
+import { openConnect, toast } from "../../state/ui";
+import { useDesign } from "../../state/design";
+import { useWorkshop } from "../../state/workshop";
+import { Board, LayoutOverlay, ToolpathOverlay, useSegments } from "../../stage/Board";
+import { KeepOutLayer } from "../../stage/KeepOutLayer";
+import { fitScale, Stage } from "../../stage/Stage";
+import { StageRulers } from "../../stage/Rulers";
+import type { JobCtx } from "./Job";
+import { useFlow } from "./jobUtil";
+import { KeepOutPanel } from "./KeepOutPanel";
+import { nextZoneLabel, NO_ZONES, zoneBounds, zoneId, zoneIssues } from "./zones";
+
+/** Room shown around the board in the "Board" view, for clamps on the edges (mm). */
+const BOARD_PAD = 45;
+
+/** Where the user clamps the stock, in machine coordinates (bottom-left corner). */
+export const STOCK_AT = { x: 60, y: 60 };
+const PLATE = 15; // touch plate thickness (mm)
+
+type Sub = "connect" | "home" | "stock" | "zero" | "done";
+
+export function PositionStep({ ctx }: { ctx: JobCtx }) {
+  const nav = useNavigate();
+  const m = useMachine();
+  const flow = useFlow();
+  const mode = useWorkshop((s) => s.mode);
+  const { machine, design, result } = ctx;
+  const [probing, setProbing] = useState(false);
+  const bedRef = useRef<HTMLDivElement>(null);
+  const zones = useDesign((st) => st.design.keepOut) ?? NO_ZONES;
+  const setKeepOut = useDesign((st) => st.setKeepOut);
+  const [zoneSel, setZoneSel] = useState<number | null>(null);
+  const [drawing, setDrawing] = useState(false);
+  const [view, setView] = useState<"bed" | "board">("bed");
+  const segs = useSegments(result?.gcode);
+
+  const connected = m.status !== "disconnected" && m.status !== "connecting";
+  const sub: Sub = !connected ? "connect" : !m.homed ? "home" : !flow.stockOk ? "stock" : !flow.zeroSet ? "zero" : "done";
+  // Before the first result: the sign plus the default 10 mm margin around an outer cutout.
+  const sp = design.spec as { width: number; height: number; thickness: number; outerCutout?: boolean; margin?: number };
+  const pad0 = sp.outerCutout === false ? 0 : (sp.margin ?? 10);
+  const stock = result?.layout.stock ?? { width: sp.width + 2 * pad0, height: sp.height + 2 * pad0, thickness: sp.thickness };
+  const margin = result ? (stock.width - design.spec.width) / 2 : 0;
+  const atCorner = Math.abs(m.pos.x - STOCK_AT.x) < 0.05 && Math.abs(m.pos.y - STOCK_AT.y) < 0.05;
+  const stockW = Math.round(stock.width * 10) / 10;
+  const stockH = Math.round(stock.height * 10) / 10;
+
+  // Keyboard: arrows jog X/Y, PageUp/PageDown jog Z.
+  useEffect(() => {
+    if (sub !== "zero" || flow.probeOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.target as HTMLElement)?.closest("input, textarea")) return;
+      const j = useFlow.getState().jogStep;
+      const map: Record<string, [number, number, number]> = { ArrowLeft: [-j, 0, 0], ArrowRight: [j, 0, 0], ArrowUp: [0, j, 0], ArrowDown: [0, -j, 0], PageUp: [0, 0, j], PageDown: [0, 0, -j] };
+      const d = map[e.key];
+      if (!d) return;
+      e.preventDefault();
+      useMachine.getState().jog(...d);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [sub, flow.probeOpen]);
+
+  const jog = (dx: number, dy: number, dz: number) => {
+    if (!m.homed) return toast("Find machine home first, so moves are safe.");
+    m.jog(dx * flow.jogStep, dy * flow.jogStep, dz * flow.jogStep);
+  };
+
+  const measure = async () => {
+    setProbing(true);
+    await useMachine.getState().probeZ(PLATE);
+    setProbing(false);
+    flow.set({ probeOpen: false });
+  };
+  const openManualZ = () => flow.set({ manualZOpen: true, probeOpen: false, jogStep: 0.1 });
+  const closeManualZ = () => flow.set({ manualZOpen: false, jogStep: 1 });
+
+  let primary: { label: string; click(): void; enabled: boolean } = { label: "", click: () => {}, enabled: false };
+  let hint = "";
+  if (sub === "connect") primary = { label: m.status === "connecting" ? "Connecting…" : "Connect", click: openConnect, enabled: m.status !== "connecting" };
+  if (sub === "home") primary = { label: m.status === "homing" ? "Finding home…" : "Find home", click: () => m.home(), enabled: m.status === "idle" };
+  if (sub === "stock") primary = { label: "My board is clamped", click: () => flow.set({ stockOk: true }), enabled: true };
+  if (sub === "zero") {
+    if (flow.probeOpen) primary = { label: probing ? "Measuring…" : "Measure height", click: measure, enabled: !probing && m.status === "idle" };
+    else if (flow.manualZOpen) {
+      primary = {
+        label: "Set Z zero here",
+        click: () => {
+          void m.setWorkZero(["z"]);
+          closeManualZ();
+          toast("Z zero set by hand. Lift the bit a little before moving to the corner.");
+        },
+        enabled: m.status === "idle",
+      };
+      hint = "Lower the bit until it just pinches the paper, then set Z.";
+    } else {
+      // Z can come from the touch plate, the paper method, or be set together with X/Y right here.
+      primary = {
+        label: m.zMeasured ? "Set zero here" : "Set X, Y and Z here",
+        click: () => {
+          if (!atCorner) toast("Zero set where the bit is now. The sign will be carved from this point.");
+          void m.setWorkZero(m.zMeasured ? ["x", "y"] : ["x", "y", "z"]);
+          flow.set({ zeroSet: true });
+        },
+        enabled: m.status === "idle",
+      };
+      hint = m.zMeasured
+        ? atCorner
+          ? "The bit is on the corner."
+          : "Click the board corner on the preview to move there."
+        : "Z isn't set yet: use one of the two options below, or lower the bit onto the corner's top face and set all three here.";
+    }
+  }
+  if (sub === "done") primary = { label: "Continue to Carve →", click: () => nav("/carve"), enabled: !!result?.ok };
+  const koIssues = zoneIssues(result, zones);
+  if (koIssues.length) hint = "A clamp is in the way of the bit. Move it, or move the design, to continue.";
+
+  const steps: [Sub, string, string][] = [
+    ["connect", "Connect", `${machineName(machine)} over USB`],
+    ["home", "Find machine home", "So the machine knows where it is"],
+    ["stock", "Place your board", `At least ${stockW} × ${stockH} mm`],
+    ["zero", "Set work zero", "Bottom-left corner · Z with the touch plate or by hand"],
+  ];
+  const [koOpen, setKoOpen] = useState(false);
+  const order: Sub[] = ["connect", "home", "stock", "zero", "done"];
+  const ci = order.indexOf(sub);
+  const video = sub === "zero" && flow.probeOpen ? "position-probe" : `position-${sub === "done" ? "zero" : sub}`;
+  const zStatus = !m.zMeasured ? "Not set yet" : m.zeroMethod === "manual" ? "Set by hand · paper method" : "Measured with the touch plate";
+  const wp = workPos(m);
+  const showStock = flow.stockOk || sub === "stock" || zones.length > 0 || drawing;
+  const bounds = zoneBounds(stock);
+  const badZones = koIssues.map((i) => i.zoneIndex).filter((i): i is number => i != null);
+  const selectZone = (i: number | null) => {
+    setZoneSel(i);
+    if (i != null) setView("board");
+  };
+  const zoneLayer = (scale: number, frame: { width: number; height: number }, origin: { x: number; y: number }, zoom: number) => (
+    <KeepOutLayer
+      board={stock}
+      zoom={zoom}
+      zones={zones}
+      scale={scale}
+      frame={frame}
+      origin={origin}
+      bounds={bounds}
+      selected={zoneSel}
+      invalid={badZones}
+      drawing={drawing}
+      onSelect={setZoneSel}
+      onChange={setKeepOut}
+      onDrawn={(r) => {
+        setKeepOut([...zones, { id: zoneId(), label: nextZoneLabel(zones), ...r, clearance: 20 }]);
+        setZoneSel(zones.length);
+        setDrawing(false);
+      }}
+    />
+  );
+  const mat = materialById(design.material);
+  // Before connecting, the position is unknown: the marker sits in the middle of the bed.
+  const bitAt = connected ? m.pos : { x: machine.area[0] / 2, y: machine.area[1] / 2, z: 0 };
+
+  return (
+    <>
+      <Stage
+        video={video}
+        noViewToggle
+        canvasTools={view === "board"}
+        tools={
+          <Seg<"bed" | "board">
+            label="View"
+            size="lg"
+            value={view}
+            onChange={setView}
+            options={[
+              ["bed", "Whole bed"],
+              ["board", "Board & clamps"],
+            ]}
+            style={{ background: "rgba(26,27,30,.72)", backdropFilter: "var(--blur)" }}
+          />
+        }
+        caption={
+          drawing
+            ? "Drag on the board to mark a clamp"
+            : view === "board"
+              ? `Board ${stockW} × ${stockH} mm · drag a zone to move it, its corners to resize`
+              : sub === "zero"
+                ? "Click the board corner to move the bit there"
+                : `Machine bed · top view · ${machineName(machine)} (${machine.area[0]} × ${machine.area[1]} mm)`
+        }
+        render={(api) => {
+          if (view === "board") {
+            const fw = stock.width + 2 * BOARD_PAD;
+            const fh = stock.height + 2 * BOARD_PAD;
+            const s = fitScale(api.size, fw, fh, { x: 120, y: 200 });
+            return (
+              <div style={{ position: "relative", width: fw * s, height: fh * s, transform: `scale(${api.zoom})`, transition: "transform 180ms var(--ease)" }}>
+                <div className="bed__grid" style={{ borderRadius: 10, opacity: 0.6 }} />
+                <div style={{ position: "absolute", left: BOARD_PAD * s, bottom: BOARD_PAD * s }}>
+                  <Board width={stock.width} height={stock.height} scale={s} label={`X0 Y0 at the bottom-left corner`}>
+                    <div className={`job-face ${mat.grain ? "job-face--grain" : ""}`} style={{ background: mat.face }} />
+                    {segs.length ? <ToolpathOverlay segments={segs} width={stock.width} height={stock.height} scale={s} opacity={0.6} /> : result ? <LayoutOverlay layout={result.layout} scale={s} /> : null}
+                    <StageRulers width={stock.width} height={stock.height} scale={s} zoom={api.zoom} min={{ x: -BOARD_PAD, y: -BOARD_PAD }} max={{ x: stock.width + BOARD_PAD, y: stock.height + BOARD_PAD }} />
+                  </Board>
+                </div>
+                {zoneLayer(s, { width: fw, height: fh }, { x: BOARD_PAD, y: BOARD_PAD }, api.zoom)}
+              </div>
+            );
+          }
+          const s = fitScale(api.size, machine.area[0], machine.area[1], { x: 140, y: 200 });
+          const px = (v: number) => v * s;
+          const clickable = sub === "zero" && !flow.probeOpen;
+          return (
+            <div style={{ transform: `scale(${api.zoom})`, transition: "transform 180ms var(--ease)" }}>
+              <div
+                ref={bedRef}
+                className="bed"
+                style={{ width: px(machine.area[0]), height: px(machine.area[1]), cursor: clickable ? "crosshair" : "default" }}
+                onClick={(e) => {
+                  if (!clickable) return;
+                  const r = bedRef.current!.getBoundingClientRect();
+                  const k = r.width / machine.area[0];
+                  let x = (e.clientX - r.left) / k;
+                  let y = machine.area[1] - (e.clientY - r.top) / k;
+                  if (Math.abs(x - STOCK_AT.x) < 16 && Math.abs(y - STOCK_AT.y) < 16) [x, y] = [STOCK_AT.x, STOCK_AT.y];
+                  m.moveTo(x, y);
+                }}
+              >
+                <div className="bed__grid" />
+                {showStock ? (
+                  <>
+                    <div
+                      className="bed__stock"
+                      style={{ left: px(STOCK_AT.x), bottom: px(STOCK_AT.y), width: px(stock.width), height: px(stock.height), background: mat.face, opacity: flow.stockOk ? 1 : 0.45, border: flow.stockOk ? "none" : "1.5px dashed var(--text)" }}
+                    >
+                      {margin > 0 ? <div className="bed__ghost" style={{ inset: px(margin) }} /> : null}
+                    </div>
+                    <div className="bed__corner" style={{ left: px(STOCK_AT.x) - 9, bottom: px(STOCK_AT.y) - 9, background: flow.zeroSet ? "var(--accent)" : "rgba(255,91,31,.2)" }} />
+                    <div className="bed__corner-label" style={{ left: px(STOCK_AT.x) - 4, top: px(machine.area[1] - STOCK_AT.y) + 14 }}>
+                      Work zero · bottom-left, top face
+                    </div>
+                  </>
+                ) : null}
+                {showStock ? zoneLayer(s, { width: machine.area[0], height: machine.area[1] }, STOCK_AT, api.zoom) : null}
+                <div
+                  className="bed__bit"
+                  style={{ left: px(bitAt.x) - 11, bottom: px(bitAt.y) - 11, background: `rgba(255,91,31,${0.15 + 0.35 * Math.min(1, -bitAt.z / machine.z)})` }}
+                />
+                <div className="bed__tag mono" style={{ left: px(bitAt.x) + 16, bottom: px(bitAt.y) + 10 }}>
+                  {!connected || !m.homed
+                    ? "Position unknown"
+                    : flow.zeroSet
+                      ? `X ${wp.x.toFixed(1)}  Y ${wp.y.toFixed(1)}  Z ${m.zMeasured ? wp.z.toFixed(1) : "—"}`
+                      : `X ${m.pos.x.toFixed(1)}  Y ${m.pos.y.toFixed(1)}  Z ${m.pos.z.toFixed(1)}`}
+                </div>
+                <div className="bed__label mono" style={{ left: 10, bottom: -30 }}>
+                  Front of machine
+                </div>
+                <div className="bed__label mono" style={{ right: 10, top: -30 }}>
+                  Home · back right
+                </div>
+              </div>
+            </div>
+          );
+        }}
+      />
+      <SidePanel
+        title="Position"
+        sub={design.name}
+        foot={
+          <>
+            {hint ? <div className="sidepanel__hint">{hint}</div> : null}
+            <button className="btn btn--primary btn--lg" disabled={!primary.enabled} onClick={primary.click}>
+              {primary.label}
+            </button>
+          </>
+        }
+      >
+        {steps.map(([k, label, subText], i) => (
+          <AccItem key={k} n={i + 1} title={label} summary={i < ci ? "Done" : subText} open={i === ci} done={i < ci}>
+            {i === ci ? (
+              <>
+        {sub === "connect" ? (
+          <div className="job-sec">
+            <div className="job-body">{m.status === "connecting" ? `Connecting to ${machineName(machine)}…` : "We'll show you where each cable goes, connect, and test that the machine really answers."}</div>
+            <div className="port">
+              <Plug size={20} strokeWidth={1.5} color="var(--text-3)" />
+              <span style={{ display: "flex", flexDirection: "column" }}>
+                <span style={{ font: "500 14px var(--font)" }}>{machineName(machine)}</span>
+                <span className="mono tiny muted">Power · E-stop · router · USB or Ethernet</span>
+              </span>
+            </div>
+          </div>
+        ) : null}
+
+        {sub === "home" ? (
+          <div className="job-sec">
+            <div className="job-body">The machine moves to the back-right corner, touches its sensors and stops. This is how it learns where it is. Takes about 30 seconds. Keep the bed clear.</div>
+            {m.status === "homing" ? (
+              <div role="status" className="mono job-live">
+                Moving to the sensors… Z ✓ · X · Y
+              </div>
+            ) : null}
+            <button className="link" style={{ alignSelf: "flex-start", color: "var(--text-2)" }} onClick={() => toast("Without sensors, jog to the back-right corner by hand and set it as home in Settings.")}>
+              My machine has no limit sensors
+            </button>
+          </div>
+        ) : null}
+
+        {sub === "stock" ? (
+          <div className="job-sec">
+            <div className="job-body">Clamp a board anywhere on the bed. It needs at least {margin > 0 ? `${margin} mm of margin around the sign` : "the size of the sign"}.</div>
+            <div className="job-row job-row--box">
+              <span>Minimum board</span>
+              <span className="mono" style={{ font: "500 15px var(--mono)", color: "var(--text)" }}>
+                {stockW} × {stockH} × {stock.thickness} mm
+              </span>
+            </div>
+            <ZeroIllustration face={mat.face} recess={mat.recess} side={mat.side} />
+          </div>
+        ) : null}
+
+        {sub === "zero" && flow.manualZOpen ? (
+          <div className="job-sec">
+            <div style={{ font: "600 15px var(--font)" }}>
+              Set Z by hand <span className="mono" style={{ font: "400 11px var(--mono)", color: "var(--text-4)" }}>paper method</span>
+            </div>
+            <div className="job-body">
+              Put a sheet of paper on the top of the board, under the bit.
+              <br />
+              Lower the bit in small steps until it just pinches the paper (it drags when you slide it), then set Z zero.
+            </div>
+            <div className="zman">
+              <button className="jog__btn jog__btn--zh mono" aria-label="Raise bit (Z+)" onClick={() => jog(0, 0, 1)}>
+                <ArrowUp size={18} strokeWidth={1.75} />
+                Up
+              </button>
+              <button className="jog__btn jog__btn--zh mono" aria-label="Lower bit (Z−)" onClick={() => jog(0, 0, -1)}>
+                <ArrowDown size={18} strokeWidth={1.75} />
+                Down
+              </button>
+              <div className="zman__read mono">
+                <span className="readout__k">Z</span>
+                <span>{(m.zMeasured ? wp.z : m.pos.z).toFixed(2)}</span>
+              </div>
+            </div>
+            <Seg<string>
+              label="Z step"
+              size="lg"
+              value={String(flow.jogStep)}
+              onChange={(v) => flow.set({ jogStep: Number(v) })}
+              options={[
+                ["0.01", <span className="mono">0.01 mm</span>],
+                ["0.1", <span className="mono">0.1 mm</span>],
+                ["1", <span className="mono">1 mm</span>],
+              ]}
+            />
+            <div className="small muted">Use 1 mm until the bit is close, 0.1 mm near the paper and 0.01 mm for the last touch. PageUp / PageDown move Z too.</div>
+            <button className="link" style={{ alignSelf: "flex-start", color: "var(--text-2)" }} onClick={closeManualZ}>
+              Back
+            </button>
+          </div>
+        ) : null}
+
+        {sub === "zero" && !flow.probeOpen && !flow.manualZOpen ? (
+          <div className="job-sec">
+            <div className="job-body">
+              Move the bit to the <b style={{ color: "var(--text)", fontWeight: 600 }}>bottom-left corner of the board, on the top face</b>. Click the corner on the preview, then fine-tune with the arrows.
+            </div>
+            <div className="jog">
+              <div className="jog__pad">
+                <span />
+                <button className="jog__btn" aria-label="Move back (Y+)" onClick={() => jog(0, 1, 0)}>
+                  <ChevronUp size={18} strokeWidth={1.75} />
+                </button>
+                <span />
+                <button className="jog__btn" aria-label="Move left (X−)" onClick={() => jog(-1, 0, 0)}>
+                  <ChevronLeft size={18} strokeWidth={1.75} />
+                </button>
+                <span className="jog__xy mono">XY</span>
+                <button className="jog__btn" aria-label="Move right (X+)" onClick={() => jog(1, 0, 0)}>
+                  <ChevronRight size={18} strokeWidth={1.75} />
+                </button>
+                <span />
+                <button className="jog__btn" aria-label="Move forward (Y−)" onClick={() => jog(0, -1, 0)}>
+                  <ChevronDown size={18} strokeWidth={1.75} />
+                </button>
+                <span />
+              </div>
+              <div className="jog__z">
+                <button className="jog__btn jog__btn--z mono" aria-label="Raise bit (Z+)" onClick={() => jog(0, 0, 1)}>
+                  <ArrowUp size={18} strokeWidth={1.75} />
+                  Up
+                </button>
+                <button className="jog__btn jog__btn--z mono" aria-label="Lower bit (Z−)" onClick={() => jog(0, 0, -1)}>
+                  <ArrowDown size={18} strokeWidth={1.75} />
+                  Down
+                </button>
+              </div>
+            </div>
+            <Seg<string>
+              label="Step size"
+              size="lg"
+              value={String(flow.jogStep)}
+              onChange={(v) => flow.set({ jogStep: Number(v) })}
+              options={[
+                ["0.1", <span className="mono">0.1 mm</span>],
+                ["1", <span className="mono">1 mm</span>],
+                ["10", <span className="mono">10 mm</span>],
+              ]}
+            />
+            {mode === "pro" ? (
+              <div className="readout mono">
+                <span className="readout__k">Work</span>
+                <span>{flow.zeroSet ? wp.x.toFixed(3) : "—"}</span>
+                <span>{flow.zeroSet ? wp.y.toFixed(3) : "—"}</span>
+                <span>{m.zMeasured ? wp.z.toFixed(3) : "—"}</span>
+                <span className="readout__k">Machine</span>
+                <span>{m.pos.x.toFixed(3)}</span>
+                <span>{m.pos.y.toFixed(3)}</span>
+                <span>{m.pos.z.toFixed(3)}</span>
+              </div>
+            ) : null}
+            <div className="zopts">
+              <div className="zopts__head">
+                <span style={{ font: "500 14px var(--font)" }}>Top of the board (Z)</span>
+                <span className={`small ${m.zMeasured ? "" : "muted"}`} style={m.zMeasured ? { color: "var(--ready-text)" } : undefined}>
+                  {m.zMeasured ? "✓ " : ""}
+                  {zStatus}
+                </span>
+              </div>
+              <div className="zopt">
+                <span className="zopt__text">
+                  <span className="zopt__title">
+                    Touch plate (AutoZero) <span className="zopt__badge">Recommended</span>
+                  </span>
+                  <span className="small muted">Sienci's touch plate finds the top for you, accurate and repeatable.</span>
+                </span>
+                <button className="btn btn--outline btn--sm" onClick={() => flow.set({ probeOpen: true, manualZOpen: false })}>
+                  Use plate
+                </button>
+              </div>
+              <div className="zopt">
+                <span className="zopt__text">
+                  <span className="zopt__title">Set Z by hand (paper method)</span>
+                  <span className="small muted">No plate? Lower the bit onto a sheet of paper.</span>
+                </span>
+                <button className="btn btn--outline btn--sm" onClick={openManualZ}>
+                  By hand
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {sub === "zero" && flow.probeOpen ? (
+          <div className="job-sec">
+            <div style={{ font: "600 15px var(--font)" }}>
+              Measure height with the touch plate <span className="mono" style={{ font: "400 11px var(--mono)", color: "var(--text-4)" }}>probe Z</span>
+            </div>
+            <ol className="finish__steps">
+              <li>Put the plate on the board, under the bit.</li>
+              <li>Clip the magnet on the bit.</li>
+              <li>Press Measure height: the bit lowers until it touches the plate, then lifts.</li>
+            </ol>
+            <div className="job-body">The bit will lower slowly until it touches the plate, then lift 5 mm.</div>
+            {probing ? (
+              <div role="status" className="mono job-live">
+                Lowering… waiting for contact
+              </div>
+            ) : null}
+            <div style={{ display: "flex", gap: 8 }}>
+              <button className="btn btn--outline btn--sm" onClick={() => toast("Contact detected. The plate is working.")}>
+                Test contact
+              </button>
+              <button className="link" style={{ color: "var(--text-2)" }} onClick={() => flow.set({ probeOpen: false })}>
+                Back
+              </button>
+            </div>
+          </div>
+        ) : null}
+              </>
+            ) : null}
+          </AccItem>
+        ))}
+
+        {sub === "done" ? (
+          <div className="job-sec">
+            <div className="job-ok">
+              <CheckCircle2 size={18} color="var(--ready-text)" strokeWidth={1.75} />
+              <span>
+                Work zero is set on the bottom-left corner of the board. The sign will be carved from there.
+                {m.zeroMethod === "manual" ? " Z was set by hand: double-check the bit just touches the top of the board." : ""}
+              </span>
+            </div>
+            <button className="link" style={{ alignSelf: "flex-start", color: "var(--text-2)" }} onClick={() => flow.set({ zeroSet: false })}>
+              Set zero again
+            </button>
+          </div>
+        ) : null}
+
+        <AccItem n={5} title="Clamps & keep-out zones" summary={zones.length ? `${zones.length} zone${zones.length > 1 ? "s" : ""} the bit stays away from` : "Optional · mark clamps so the bit avoids them"} open={koOpen || drawing} onToggle={() => setKoOpen(!(koOpen || drawing))}>
+        <KeepOutPanel
+          stock={stock}
+          result={result}
+          selected={zoneSel}
+          onSelect={selectZone}
+          drawing={drawing}
+          onDrawing={(on) => {
+            setDrawing(on);
+            if (on) setView("board");
+          }}
+        />
+        </AccItem>
+      </SidePanel>
+    </>
+  );
+}
+
+/** Stock drawing with zero at the bottom-left corner of the top face (from the prototype). */
+function ZeroIllustration({ face, recess, side }: { face: string; recess: string; side: string }) {
+  return (
+    <div className="zero-illus">
+      <div style={{ position: "absolute", left: 96, top: 44, width: 170, height: 62, background: face, transform: "skewX(-40deg)", transformOrigin: "bottom left" }} />
+      <div style={{ position: "absolute", left: 96, top: 106, width: 170, height: 30, background: recess }} />
+      <div style={{ position: "absolute", left: 266, top: 106, width: 52, height: 30, background: side, transform: "skewY(-50deg)", transformOrigin: "top left" }} />
+      <div style={{ position: "absolute", left: 96, top: 106, width: 66, height: 2, background: "var(--text)" }} />
+      <div className="mono" style={{ position: "absolute", left: 164, top: 99, font: "600 12px var(--mono)" }}>
+        X
+      </div>
+      <div style={{ position: "absolute", left: 96, top: 106, width: 60, height: 2, background: "var(--text)", transform: "rotate(-50deg)", transformOrigin: "left center" }} />
+      <div className="mono" style={{ position: "absolute", left: 134, top: 52, font: "600 12px var(--mono)" }}>
+        Y
+      </div>
+      <div style={{ position: "absolute", left: 95, top: 52, width: 2, height: 54, background: "var(--text)" }} />
+      <div className="mono" style={{ position: "absolute", left: 84, top: 34, font: "600 12px var(--mono)" }}>
+        Z
+      </div>
+      <div style={{ position: "absolute", left: 87, top: 97, width: 18, height: 18, borderRadius: "50%", background: "var(--accent)", boxShadow: "0 0 0 4px rgba(255,91,31,.25)" }} />
+      <div style={{ position: "absolute", left: 16, bottom: 12, font: "500 12px var(--font)" }}>Work zero = bottom-left corner, on the top face</div>
+    </div>
+  );
+}

@@ -51,13 +51,13 @@ export function resolveSienci(cfg: SienciConfig, material: MaterialId): Resolved
   const manualAdjustments: ManualAdjustment[] = [];
 
   if (!machine.heads.includes(headId)) {
-    warnings.push({ code: "BIT_INCOMPATIBLE", severity: "error", message: `The ${head.name} is not an option for the ${machine.name}.` });
+    warnings.push({ code: "BIT_INCOMPATIBLE", severity: "error", message: `The ${head.name} is not an option for the ${machine.name}.`, data: { reason: "head", head: headId } });
   }
 
   const bits: { f: SienciBit; toolNumber: number; role: string }[] = [];
-  const main = findBit(cfg.bit, warnings);
+  const main = findBit(cfg.bit, warnings, "main");
   if (main) bits.push({ f: main, toolNumber: 1, role: "main" });
-  const cutout = cfg.cutoutBit && cfg.cutoutBit !== cfg.bit ? findBit(cfg.cutoutBit, warnings) : undefined;
+  const cutout = cfg.cutoutBit && cfg.cutoutBit !== cfg.bit ? findBit(cfg.cutoutBit, warnings, "cutout") : undefined;
   if (cutout) bits.push({ f: cutout, toolNumber: 2, role: "cutout" });
 
   const params: Partial<CutParams>[] = [];
@@ -68,16 +68,17 @@ export function resolveSienci(cfg: SienciConfig, material: MaterialId): Resolved
         severity: "error",
         message: `The ${role} bit (${f.name}) is not suitable for signs and lettering.`,
         suggestion: f.bestFor,
+        data: { bit: f.id, role },
       });
     }
     const c = compatibility(f, headId);
-    if (c.status === "incompatible") warnings.push({ code: "BIT_INCOMPATIBLE", severity: "error", message: c.reason });
+    if (c.status === "incompatible") warnings.push({ code: "BIT_INCOMPATIBLE", severity: "error", message: c.reason, data: { reason: "bit", bit: f.id, role } });
     if (c.status === "with-accessory") {
       warnings.push({
         code: "BIT_NEEDS_ACCESSORY",
         severity: "warning",
         message: `To use the ${f.name} in the ${head.name} you need: ${c.accessory.name}.`,
-        data: { url: c.accessory.url },
+        data: { url: c.accessory.url, bit: f.id, role },
       });
     }
 
@@ -140,8 +141,8 @@ export function resolveSienci(cfg: SienciConfig, material: MaterialId): Resolved
   };
 }
 
-function findBit(id: string, warnings: Warning[]): SienciBit | undefined {
+function findBit(id: string, warnings: Warning[], role: "main" | "cutout"): SienciBit | undefined {
   const f = BIT_BY_ID.get(id);
-  if (!f) warnings.push({ code: "BIT_INCOMPATIBLE", severity: "error", message: `Bit "${id}" is not in the Sienci catalog.` });
+  if (!f) warnings.push({ code: "BIT_INCOMPATIBLE", severity: "error", message: `Bit "${id}" is not in the Sienci catalog.`, data: { reason: "unknown", bit: id, role } });
   return f;
 }

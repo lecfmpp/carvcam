@@ -138,7 +138,7 @@ export const BITS: SienciBit[] = [
     url: "https://sienci.com/product/22mm-surfacing-bit/",
     type: "surfacing", cut: "straight", diameter: 22, shank: SHANK_1_4, flutes: 2, cutLength: 12,
     tableRow: "surfacing-22", supportedInV1: false,
-    bestFor: "Surfacing the spoilboard (gSender's Surfacing tool). Not for signs.",
+    bestFor: "Surfacing the spoilboard with the Surfacing tool. Not for signs.",
   },
   {
     id: "ball-1-4",

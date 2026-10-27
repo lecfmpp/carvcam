@@ -1,5 +1,4 @@
-// CarvCAM packaging, mirroring the "build" section of gSender 1.6.4's package.json:
-// assisted NSIS installer, per-machine install (Program Files), asar with the native modules
+// CarvCAM packaging: assisted NSIS installer, per-machine install (Program Files), asar with the native modules
 // (serialport) unpacked, updates from GitHub Releases and optional code signing.
 // Signing: see docs/code-signing.md. Without the variables, the installer is built unsigned.
 const azure = process.env.AZURE_SIGNING_ENDPOINT && process.env.AZURE_SIGNING_ACCOUNT && process.env.AZURE_SIGNING_PROFILE;
@@ -11,7 +10,9 @@ module.exports = {
   copyright: "Copyright © 2026 CarvCAM",
   asar: true,
   asarUnpack: ["**/*.node"],
-  files: ["main.mjs", "app/**", "bridge/**", "package.json", "LICENSE"],
+  files: ["main.mjs", "app/**", "bridge/**", "package.json", "LICENSE", "THIRD_PARTY_NOTICES.txt"],
+  // License and third-party notices also sit next to the program, where users can read them.
+  extraFiles: ["LICENSE", "THIRD_PARTY_NOTICES.txt"],
   directories: { buildResources: "build", output: "release" },
   compression: "normal",
   npmRebuild: false, // serialport uses N-API (prebuilt win32-x64 binaries, nothing to compile)
@@ -30,7 +31,7 @@ module.exports = {
         }
       : { signtoolOptions: { sign: "./build/sign.cjs", ...(process.env.WIN_PUBLISHER_NAME ? { publisherName: process.env.WIN_PUBLISHER_NAME } : {}) } }),
   },
-  // Linux like gSender: AppImage and .deb. x64 for PCs; arm64 and armv7l for the Raspberry Pi.
+  // Linux: AppImage and .deb. x64 for PCs; arm64 and armv7l for the Raspberry Pi.
   linux: {
     target: [
       { target: "AppImage", arch: (process.env.LINUX_ARCHS || "x64").split(",") },
@@ -69,5 +70,6 @@ module.exports = {
     shortcutName: "CarvCAM",
     include: "build/installer.nsh",
   },
-  publish: [{ provider: "github", owner: "lecfmpp", repo: "carvcam", releaseType: "release" }],
+  // Installers live in a separate public repository; this source repository is private.
+  publish: [{ provider: "github", owner: "lecfmpp", repo: "carvcam-releases", releaseType: "release" }],
 };
