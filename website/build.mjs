@@ -4,7 +4,8 @@
 //   node build.mjs --preview  → links para index.html, para abrir sem servidor
 import { cp, mkdir, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { competitors, faq, features, howtos, machines, nav, site } from "./src/data.mjs";
+import { faq, features, howtos, machines, nav, site } from "./src/data.mjs";
+import { comparisons, others, sienciRecs } from "./src/compare.mjs";
 import { docSections, docs } from "./src/docs.mjs";
 
 const PREVIEW = process.argv.includes("--preview");
@@ -60,6 +61,7 @@ function layout({ path, title, description, body, schema = [], crumbs = null }) 
 <link rel="icon" type="image/svg+xml" href="${asset("/assets/carvcam-icon.svg")}">
 <link rel="preload" href="${asset("/assets/fonts/geist-sans-latin-600-normal.woff2")}" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="${asset("/assets/site.css")}">
+${path.endsWith(".html") ? "" : `<link rel="alternate" type="text/markdown" href="${site.url}${path}index.md" title="Markdown version">`}
 ${ld.map((j) => `<script type="application/ld+json">${JSON.stringify(j)}</script>`).join("\n")}
 </head>
 <body>
@@ -76,7 +78,39 @@ ${body}
 ${footer()}
 </body>
 </html>`;
-  pages.push({ path, html });
+  pages.push({ path, html, title, description, body });
+}
+
+/* ---------------- Agent-ready: Markdown de cada página, llms.txt e llms-full.txt ---------------- */
+// Converte o corpo (HTML gerado acima, sem cabeçalho/rodapé) em Markdown simples para agentes e LLMs.
+function htmlToMd(html, path) {
+  const abs = (u) => (/^(https?:|mailto:)/.test(u) ? u : site.url + new URL(u.replace(/index\.html$/, ""), site.url + path).pathname);
+  let t = html
+    .replace(/<script[\s\S]*?<\/script>/g, "")
+    .replace(/<div class="dcall dcall--(\w+)"[^>]*><span[^>]*>[^<]*<\/span><div><b>([\s\S]*?)<\/b><p>([\s\S]*?)<\/p><\/div><\/div>/g, (_, k, a, b) => `\n> **${CALLOUT_LABEL[k]}: ${a}.** ${b}\n`)
+    .replace(/<ol class="dsteps">([\s\S]*?)<\/ol>/g, (_, x) => { let n = 0; return x.replace(/<li><h3[^>]*>([\s\S]*?)<\/h3>/g, (_, t) => `\n### ${++n}. ${t}\n`).replace(/<\/?li>/g, ""); })
+    .replace(/<(nav|aside) class="(dside|dtoc|dpn)[\s\S]*?<\/\1>/g, "")
+    .replace(/<div class="dhelp">[\s\S]*?<\/div>/g, "")
+    .replace(/<div class="dsearch">[\s\S]*?<\/div>/g, "")
+    .replace(/<video[^>]*aria-label="([^"]*)"[^>]*>[\s\S]*?<\/video>/g, "\n[Video: $1]\n")
+    .replace(/<img [^>]*alt="([^"]+)"[^>]*>/g, "\n[Image: $1]\n")
+    .replace(/<img [^>]*>/g, "")
+    .replace(/<h1[^>]*>([\s\S]*?)<\/h1>/g, "\n# $1\n")
+    .replace(/<h2[^>]*>([\s\S]*?)<\/h2>/g, "\n## $1\n")
+    .replace(/<h3[^>]*>([\s\S]*?)<\/h3>/g, "\n### $1\n")
+    .replace(/<summary>([\s\S]*?)<\/summary>/g, "\n### $1\n")
+    .replace(/<tr>([\s\S]*?)<\/tr>/g, (_, r) => "\n| " + [...r.matchAll(/<t[hd][^>]*>([\s\S]*?)<\/t[hd]>/g)].map((c) => c[1].replace(/\|/g, "/").trim() || " ").join(" | ") + " |")
+    .replace(/<\/thead>/g, "\n|---|")
+    .replace(/<li[^>]*>/g, "\n- ")
+    .replace(/<(b|strong)>([\s\S]*?)<\/\1>/g, "**$2**")
+    .replace(/<code>([\s\S]*?)<\/code>/g, "`$1`")
+    .replace(/<a [^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/g, (_, u, x) => (u.startsWith("#") ? x : `[${x.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()}](${abs(u)})`))
+    .replace(/<\/(p|div|section|figure|figcaption|ul|ol|table|details)>/g, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ").replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
+  // a linha de cabeçalho da tabela vem antes do |---| com o número certo de colunas
+  t = t.replace(/(\n\|[^\n]*\|)\s*\n\|---\|/g, (_, h) => `${h}\n|${" --- |".repeat((h.match(/\|/g).length - 1))}`);
+  return t.split("\n").map((l) => l.replace(/[ \t]+/g, " ").trim()).join("\n").replace(/\n{3,}/g, "\n\n").trim();
 }
 
 function footer() {
@@ -86,7 +120,7 @@ function footer() {
 <div class="ftr__brand"><a class="logo" href="${href("/")}"><img src="${asset("/assets/carvcam-icon.svg")}" alt="" width="28" height="28"><span class="wordmark">Carv<span>CAM</span></span></a><p>Design, prepare and carve on your LongMill or AltMill. One app, start to finished piece.</p></div>
 ${col("Product", [["How it works", "/#how"], ["Features", "/features/"], ["Download", "/download/"], ["Docs", "/docs/"], ["Quickstart", "/docs/quickstart/"], ["Best software for LongMill", "/best-cnc-software-for-longmill/"]])}
 ${col("Machines", machines.map((m) => [m.name, `/machines/${m.slug}/`]))}
-${col("Compare", competitors.map((c) => [`CarvCAM vs ${c.name}`, `/compare/carvcam-vs-${c.slug}/`]))}
+${col("Compare", comparisons.map((c) => [`CarvCAM vs ${c.name}`, `/compare/carvcam-vs-${c.slug}/`]))}
 ${col("Learn", howtos.slice(0, 4).map((h) => [h.short, `/learn/${h.slug}/`]))}
 </div>
 <div class="ftr__legal"><span>© 2026 CarvCAM</span><span>LongMill, AltMill, SuperLongBoard, AutoSpin and gSender are trademarks of Sienci Labs. Other names are trademarks of their owners. CarvCAM is an independent product.</span></div>
@@ -190,10 +224,10 @@ ${clip(img, `CarvCAM ${eb}: screen recording`)}
 <div class="sec-head"><span class="eyebrow">Why CarvCAM</span><h2>What you won't find elsewhere</h2></div>
 <div class="grid grid--3">
 <div class="card"><h3>The whole path, offline</h3><p>Browser tools need the cloud. CAM-only tools need a sender. CarvCAM is design to carve on your own computer.</p></div>
-<div class="card"><h3>A wiring check that proves it</h3><p>No other app we looked at walks you through each cable and then tests that the Z moves and the spindle spins.</p></div>
+<div class="card"><h3>A wiring check that proves it</h3><p>A map of every cable for your exact controller, over USB or Ethernet, then a real test: the Z moves and the spindle spins.</p></div>
 <div class="card"><h3>Numbers for your exact setup</h3><p>Feeds and speeds for your Sienci machine, your router or spindle and your bit, not a generic preset.</p></div>
 </div>
-<p style="margin-top:28px"><a href="${href("/compare/")}" style="font-weight:600">See how CarvCAM compares to Easel, gSender, Carbide Create and VCarve →</a></p>
+<p style="margin-top:28px"><a href="${href("/compare/")}" style="font-weight:600">See how CarvCAM compares to Easel, gSender, Carbide Create, VCarve, Fusion 360 and Carveco →</a></p>
 </div></section>
 
 <section class="soft"><div class="wrap">
@@ -336,73 +370,198 @@ ${finalCta()}`,
 }
 
 /* ---------------- Compare ---------------- */
+const vsUrl = (c) => `/compare/carvcam-vs-${c.slug}/`;
+const host = (u) => { try { return new URL(u).hostname.replace(/^www\./, ""); } catch { return u; } };
+// Título legível a partir do endereço de um fórum ou artigo: "forum.sienci.com: Easel connecting to SLB".
+const urlTitle = (u) => {
+  try {
+    const x = new URL(u);
+    if (/youtube\.com|youtu\.be/.test(x.hostname)) return "Video review (YouTube)";
+    const seg = x.pathname.split("/").filter((p) => p && !/^\d+$/.test(p) && !/^(t|view|hc|en-us|en-gb|articles|community|posts|blog|td-p|t5)$/.test(p)).pop();
+    if (!seg) return host(u);
+    const words = decodeURIComponent(seg).replace(/^\d+-/, "").replace(/[-_]+/g, " ").replace(/\.html?$/, "").trim();
+    return `${host(u)}: ${words.charAt(0).toUpperCase()}${words.slice(1)}`;
+  } catch { return u; }
+};
+// Citação numerada: cada fonte usada na página vira [n], com a lista no fim.
+function citer() {
+  const list = [];
+  const cite = (url, title) => {
+    let i = list.findIndex((x) => x.url === url);
+    if (i < 0) i = list.push({ url, title: title || urlTitle(url) }) - 1;
+    return `<sup class="cite"><a href="#src-${i + 1}" aria-label="Source ${i + 1}">${i + 1}</a></sup>`;
+  };
+  return { list, cite };
+}
+const CARV_FLOW = ["Design in CarvCAM", "Pick a speed (toolpaths and checks are automatic)", "Connect, zero and carve in the same window"];
+const flowLane = (name, steps, us) => `<div class="vflow__lane${us ? " us" : ""}"><b class="vflow__name">${esc(name)}</b><ol>${steps.map((s) => `<li>${esc(s)}</li>`).join("")}</ol><span class="vflow__count">${steps.length} steps${us ? " · 1 app" : ""}</span></div>`;
+
 function comparePages() {
+  const checked = "October 27, 2026";
   layout({
     path: at("/compare/"),
-    title: "CarvCAM vs Easel, gSender, Carbide Create and VCarve",
-    description: "Honest comparisons of CarvCAM with Easel, gSender, Carbide Create and VCarve for LongMill and AltMill owners, including where each one is stronger.",
+    title: "CarvCAM vs Easel, gSender, Carbide Create, VCarve, Fusion 360 and Carveco",
+    description: "Side-by-side comparisons of CarvCAM with Easel, gSender, Carbide Create, VCarve, Fusion 360 and Carveco Maker for LongMill and AltMill owners, with prices, limits and sources checked October 2026.",
     crumbs: [["Home", "/"], ["Compare", "/compare/"]],
-    body: `<section class="article"><div class="wrap"><h1>Compare</h1><p class="lede" style="max-width:680px">Plain comparisons for LongMill and AltMill owners, including where the other tool is the better pick. Facts checked against each product's own site, ${site.checked}.</p></div></section>
-<section style="padding-top:24px"><div class="wrap"><div class="grid grid--2">${competitors.map((c) => `<a class="card" href="${href(`/compare/carvcam-vs-${c.slug}/`)}"><span class="eyebrow">Comparison</span><h3>CarvCAM vs ${c.name}</h3><p>${esc(c.summary)}</p><span class="more">Read the comparison</span></a>`).join("")}</div>
-<p style="margin-top:28px"><a href="${href("/best-cnc-software-for-longmill/")}" style="font-weight:600">Best CNC software for LongMill and AltMill →</a></p></div></section>`,
+    schema: [{ "@context": "https://schema.org", "@type": "ItemList", name: "CarvCAM comparisons", itemListElement: comparisons.map((c, i) => ({ "@type": "ListItem", position: i + 1, url: site.url + vsUrl(c), name: `CarvCAM vs ${c.name}` })) }],
+    body: `<section class="article"><div class="wrap"><span class="eyebrow">Compare · Checked ${checked}</span><h1 style="margin-top:12px">CarvCAM vs the usual LongMill software</h1><p class="lede" style="max-width:720px">Six honest comparisons for LongMill and AltMill owners, each with prices, limits, what owners report and where the other tool is the better pick. Every fact links to its source.</p></div></section>
+<section style="padding-top:8px"><div class="wrap">
+<div class="tablewrap"><table class="cmp cmp--matrix"><thead><tr><th></th><th class="us">CarvCAM</th>${comparisons.map((c) => `<th><a href="${href(vsUrl(c))}">${esc(c.name)}</a></th>`).join("")}</tr></thead><tbody>
+<tr><td>Design + CAM</td><td class="us">${cell("yes")}</td><td>${cell("yes")}</td><td>${cell("no")}</td><td>${cell("yes")}</td><td>${cell("yes")}</td><td>${cell("yes")}</td><td>${cell("yes")}</td></tr>
+<tr><td>Runs a LongMill or AltMill</td><td class="us">${cell("yes")}</td><td>Beta on SLB, USB</td><td>${cell("yes")}</td><td>${cell("no")}</td><td>${cell("no")}</td><td>${cell("no")}</td><td>${cell("no")}</td></tr>
+<tr><td>Works offline</td><td class="us">${cell("yes")}</td><td>${cell("no")}</td><td>${cell("yes")}</td><td>${cell("yes")}</td><td>${cell("yes")}</td><td>Limited</td><td>21 days</td></tr>
+<tr><td>Free option for a LongMill</td><td class="us">At launch</td><td>1 carve/week</td><td>${cell("yes")}</td><td>No export</td><td>Trial</td><td>Personal use</td><td>Trial</td></tr>
+<tr><td>Programs to go from idea to carve</td><td class="us"><b>1</b></td><td>1 (online)</td><td>2–3</td><td>2</td><td>2</td><td>2</td><td>2</td></tr>
+</tbody></table></div>
+<div class="grid grid--3" style="margin-top:40px">${comparisons.map((c) => `<a class="card" href="${href(vsUrl(c))}"><span class="eyebrow">CarvCAM vs ${esc(c.name)}</span><h3>${esc(c.kicker)}</h3><p>${esc(c.summary)}</p><span class="more">Read the comparison</span></a>`).join("")}</div>
+<p style="margin-top:28px"><a href="${href("/best-cnc-software-for-longmill/")}" style="font-weight:600">Best CNC software for LongMill and AltMill →</a></p></div></section>${finalCta()}`,
   });
-  for (const c of competitors) {
+
+  for (const c of comparisons) {
+    const { list, cite } = citer();
+    const toc = [["verdict", "The short answer"], ["glance", "At a glance"], ["workflow", "The workflow"], ["features", "Feature by feature"], ["pricing", "Pricing"], ["see-it", "See CarvCAM"], ["reports", "What owners report"], ["stronger", `Where ${c.name} wins`], ["switch", "Switching"], ["faq", "FAQ"]];
+    const allFaq = [...c.faq];
     layout({
-      path: at(`/compare/carvcam-vs-${c.slug}/`),
+      path: at(vsUrl(c)),
       title: `${c.title} | CarvCAM`,
       description: c.description,
-      crumbs: [["Home", "/"], ["Compare", "/compare/"], [`CarvCAM vs ${c.name}`, `/compare/carvcam-vs-${c.slug}/`]],
-      schema: [{ "@context": "https://schema.org", "@type": "Article", headline: c.title, description: c.description, dateModified: "2026-10-27", author: { "@type": "Organization", name: "CarvCAM" } }],
-      body: `<section class="article"><div class="narrow">
-<span class="eyebrow">Comparison · Checked ${site.checked}</span>
-<h1 style="margin-top:12px">CarvCAM vs ${esc(c.name)}</h1>
+      crumbs: [["Home", "/"], ["Compare", "/compare/"], [`CarvCAM vs ${c.name}`, vsUrl(c)]],
+      schema: [
+        { "@context": "https://schema.org", "@type": "Article", headline: c.title, description: c.description, datePublished: "2026-10-27", dateModified: "2026-10-27", author: { "@type": "Organization", name: "CarvCAM", url: site.url }, publisher: { "@type": "Organization", name: "CarvCAM", url: site.url }, mainEntityOfPage: site.url + vsUrl(c), about: [{ "@type": "SoftwareApplication", name: "CarvCAM", operatingSystem: "Windows" }, { "@type": "SoftwareApplication", name: c.name, publisher: c.maker }], citation: c.sources.map((s) => s.url) },
+        faqLd(allFaq),
+      ],
+      body: `<section class="vhero"><div class="wrap">
+<span class="eyebrow">Comparison · Checked ${checked} · Sources cited</span>
+<h1>CarvCAM vs ${esc(c.name)}</h1>
+<p class="vhero__kicker">${esc(c.kicker)}</p>
 <p class="lede">${esc(c.summary)}</p>
+${downloadCta()}
+<nav class="vtoc" aria-label="On this page">${toc.map(([id, t]) => `<a href="#${id}">${esc(t)}</a>`).join("")}</nav>
 </div></section>
-<section style="padding-top:8px"><div class="narrow">
+
+<section id="verdict" class="vsec"><div class="wrap">
+<h2>The short answer</h2>
+<div class="vpick">
+<div class="vpick__col"><span class="eyebrow">Pick ${esc(c.name)} if</span><ul class="ticks">${c.chooseThem.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div>
+<div class="vpick__col us"><span class="eyebrow">Pick CarvCAM if</span><ul class="ticks">${c.chooseUs.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div>
+</div></div></section>
+
+<section id="glance" class="vsec soft"><div class="wrap">
+<h2>At a glance</h2>
+<div class="vglance">${c.glance.map(([k, us, them]) => `<div class="vglance__card"><span class="vglance__k">${esc(k)}</span><div class="vglance__row us"><span>CarvCAM</span><b>${esc(us)}</b></div><div class="vglance__row"><span>${esc(c.name)}</span><b>${esc(them)}</b></div></div>`).join("")}</div>
+</div></section>
+
+<section id="workflow" class="vsec"><div class="wrap">
+<h2>From idea to carved sign: the workflow</h2>
+<p class="lede" style="max-width:720px">${esc(c.workflow.note)}</p>
+<div class="vflow">${flowLane(`With ${c.name}`, c.workflow.them, false)}${flowLane("With CarvCAM", CARV_FLOW, true)}</div>
+</div></section>
+
+<section id="features" class="vsec"><div class="wrap narrowish">
+<h2>Feature by feature</h2>
 <div class="tablewrap"><table class="cmp"><thead><tr><th></th><th class="us">CarvCAM</th><th>${esc(c.name)}</th></tr></thead><tbody>
 ${c.rows.map(([k, a, b]) => `<tr><td>${esc(k)}</td><td class="us">${cell(a)}</td><td>${cell(b)}</td></tr>`).join("")}
 </tbody></table></div>
-<div class="prose">
-<h2>Where ${esc(c.name)} is stronger</h2><p>${esc(c.strongerThere)}</p>
-<h2>Where CarvCAM is stronger</h2><ul><li>Design, toolpaths and machine control in one desktop app that works offline.</li><li>A wiring map and a real connection test for your exact LongMill or AltMill.</li><li>Feeds and speeds set for your Sienci machine, router or spindle and bit.</li><li>Guided homing, touch plate zero, bit changes and alarm recovery.</li></ul>
-<h2>Which one should you pick?</h2><p>${esc(c.verdict)}</p>
-<p class="note">Sources: ${c.sources.map(([n, u]) => `<a href="${u}" rel="nofollow noopener">${esc(n)}</a>`).join(", ")}. Checked ${site.checked}. Product details change; check the vendor's site for current terms.</p>
-</div>
-<p style="margin-top:32px">More comparisons: ${competitors.filter((x) => x !== c).map((x) => `<a href="${href(`/compare/carvcam-vs-${x.slug}/`)}">vs ${x.name}</a>`).join(" · ")}</p>
+<p class="note" style="margin-top:12px">${esc(c.name)} details from ${c.sources.slice(0, 3).map((s) => cite(s.url, s.title)).join(" ")}. CarvCAM details from the app itself.</p>
+</div></section>
+
+<section id="pricing" class="vsec soft"><div class="wrap narrowish">
+<h2>${esc(c.name)} pricing in 2026</h2>
+<div class="vprice">${c.pricing.map((p) => `<div class="vprice__card"><span class="vprice__plan">${esc(p.plan)}</span><b class="vprice__amt">${esc(p.price)}</b><p>${esc(p.notes)}</p>${p.source ? `<span class="vprice__src">Source ${cite(p.source)}</span>` : ""}</div>`).join("")}</div>
+<p class="note" style="margin-top:16px">List prices in USD as shown by the cited source on ${checked}. CarvCAM pricing will be announced at launch.</p>
+${c.limits.length ? `<h3 style="margin-top:36px">Limits to know about</h3><ul class="vlimits">${c.limits.map((l) => `<li>${esc(l.text)} ${cite(l.source)}</li>`).join("")}</ul>` : ""}
+</div></section>
+
+<section id="see-it" class="vsec"><div class="wrap">
+<h2>See it in CarvCAM</h2>
+<div class="vclips">${c.clips.map(([scene, cap]) => `<figure>${clip(scene, cap)}<figcaption>${esc(cap)}</figcaption></figure>`).join("")}</div>
+</div></section>
+
+<section id="reports" class="vsec soft"><div class="wrap">
+<h2>What ${esc(c.name)} users report</h2>
+<p class="lede" style="max-width:720px">Paraphrased from public forum threads and reviews, with links. Every tool has rough edges; these are the ones that come up most for Sienci owners.</p>
+<div class="vquotes">${c.painPoints.map((q) => `<blockquote class="vquote"><p>${esc(q.text)}</p><footer>${esc(host(q.source))} ${cite(q.source)}</footer></blockquote>`).join("")}</div>
+</div></section>
+
+<section id="stronger" class="vsec"><div class="wrap narrowish">
+<h2>Where ${esc(c.name)} is the better pick</h2>
+<p>We'd rather you pick the right tool than the wrong one. ${esc(c.name)} is genuinely stronger here:</p>
+<ul class="ticks">${c.stronger.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
+<h2 style="margin-top:48px">Where CarvCAM is stronger</h2>
+<ul class="ticks"><li>Design, toolpaths and machine control in one desktop app that works with no internet.</li><li>A wiring map and a real connection test for your exact LongMill or AltMill, over USB or Ethernet.</li><li>Feeds and speeds from Sienci's published speed tables ${cite("https://resources.sienci.com/view/lm-feeds-and-speeds/", "Sienci feeds and speeds")} for your machine, router or spindle and bit.</li><li>Guided homing, touch plate zero, bit changes and alarm recovery, explained on screen.</li></ul>
+</div></section>
+
+<section id="switch" class="vsec soft"><div class="wrap narrowish">
+<h2>Switching from ${esc(c.name)}</h2>
+<ol class="dsteps">${c.switching.map(([t, x]) => `<li><h3>${esc(t)}</h3><p>${esc(x)}</p></li>`).join("")}</ol>
+<p>Step by step in the docs: <a href="${href("/docs/quickstart/")}">Quickstart</a> · <a href="${href("/docs/import-and-trace/")}">Import SVG or DXF</a> · <a href="${href("/docs/connect/")}">Connect your machine</a></p>
+</div></section>
+
+<section id="faq" class="vsec"><div class="narrow faq">
+<h2>Frequently asked questions</h2>
+${allFaq.map(([q, a]) => `<details><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join("")}
+</div></section>
+
+<section class="vsec soft"><div class="wrap narrowish">
+<h2 style="font-size:22px">Sources and method</h2>
+<p class="note">We checked each product's own pricing and feature pages, Sienci Labs' documentation and public forum threads on ${checked}. Prices and plans change; check the vendor's site before you buy. Spotted something out of date? Tell us and we'll fix it.</p>
+<ol class="vsrc">${list.map((s, i) => `<li id="src-${i + 1}"><a href="${s.url}" rel="noopener" target="_blank">${esc(s.title)}</a> <span>${esc(host(s.url))}</span></li>`).join("")}</ol>
+<p style="margin-top:32px">More comparisons: ${comparisons.filter((x) => x !== c).map((x) => `<a href="${href(vsUrl(x))}">vs ${esc(x.name)}</a>`).join(" · ")} · <a href="${href("/best-cnc-software-for-longmill/")}">Best software for LongMill</a></p>
 </div></section>
 ${finalCta()}`,
     });
   }
+
   // Página-hub comercial ("best software for LongMill").
+  const { list, cite } = citer();
+  const pick = (slug) => comparisons.find((c) => c.slug === slug);
+  const rec = sienciRecs.find((r) => /most of our customers/.test(r.text));
   layout({
     path: at("/best-cnc-software-for-longmill/"),
     title: "Best CNC Software for LongMill and AltMill (2026 Guide)",
-    description: "What software a LongMill or AltMill needs, explained simply: design, CAM and sender, the popular options, and when one app for everything makes sense.",
+    description: "What software a LongMill or AltMill needs, explained simply: design, CAM and sender. Prices, limits and the best pick for beginners, sign makers and 3D work, checked October 2026.",
     crumbs: [["Home", "/"], ["Best CNC software for LongMill", "/best-cnc-software-for-longmill/"]],
-    schema: [{ "@context": "https://schema.org", "@type": "Article", headline: "Best CNC Software for LongMill and AltMill", dateModified: "2026-10-27", author: { "@type": "Organization", name: "CarvCAM" } }],
-    body: `<section class="article"><div class="narrow">
-<span class="eyebrow">Guide · Updated ${site.checked}</span>
-<h1 style="margin-top:12px">Best CNC software for LongMill and AltMill</h1>
-<p class="lede">Every CNC job needs three things: a design, toolpaths (CAM) and a program that runs the machine (a sender). You can use three programs, or one that does all three.</p>
+    schema: [
+      { "@context": "https://schema.org", "@type": "Article", headline: "Best CNC Software for LongMill and AltMill (2026)", datePublished: "2026-10-27", dateModified: "2026-10-27", author: { "@type": "Organization", name: "CarvCAM" } },
+      { "@context": "https://schema.org", "@type": "ItemList", itemListElement: ["CarvCAM", ...comparisons.map((c) => c.name), ...others.map((o) => o.name)].map((n, i) => ({ "@type": "ListItem", position: i + 1, name: n })) },
+    ],
+    body: `<section class="vhero"><div class="wrap">
+<span class="eyebrow">Guide · Updated ${checked}</span>
+<h1>Best CNC software for LongMill and AltMill</h1>
+<p class="lede">Every CNC job needs three things: a design, toolpaths (CAM) and a program that runs the machine (a sender). You can use three programs, or one that does all three. Here's how the popular options stack up for Sienci owners.</p>
+<nav class="vtoc" aria-label="On this page"><a href="#picks">Quick picks</a><a href="#parts">Design, CAM, sender</a><a href="#options">All options</a><a href="#choose">How to choose</a></nav>
 </div></section>
-<section style="padding-top:8px"><div class="narrow prose">
+<section id="picks" class="vsec"><div class="wrap">
 <h2>Quick picks</h2>
-<div class="tablewrap"><table class="cmp"><thead><tr><th>Software</th><th>Does</th><th>Best for</th></tr></thead><tbody>
-<tr><td class="us">CarvCAM</td><td class="us">Design + CAM + sender, offline</td><td class="us">LongMill and AltMill owners who want one app from idea to carve</td></tr>
-<tr><td>gSender</td><td>Sender</td><td>Running G-code you made in another program</td></tr>
-<tr><td>Easel</td><td>Design + CAM + sender, in the browser</td><td>Owners of many machine brands who like a browser tool</td></tr>
-<tr><td>Carbide Create</td><td>Design + CAM</td><td>Shapeoko owners</td></tr>
-<tr><td>VCarve</td><td>Design + CAM</td><td>Advanced sign work, inlays and nesting (Pro)</td></tr>
-</tbody></table></div>
+<div class="vglance">
+<div class="vglance__card"><span class="vglance__k">One app, idea to carve</span><b class="vbig">CarvCAM</b><p>Design, CAM and machine control for LongMill and AltMill, offline.</p></div>
+<div class="vglance__card"><span class="vglance__k">Free sender</span><b class="vbig">gSender</b><p>Sienci's own, open source; pair it with a CAM program. ${cite(pick("gsender").sources[0].url, pick("gsender").sources[0].title)}</p></div>
+<div class="vglance__card"><span class="vglance__k">Advanced sign CAM</span><b class="vbig">VCarve Pro</b><p>Inlays, nesting, full bed; ~$699 one-time. ${cite(pick("vcarve").sources[0].url, pick("vcarve").sources[0].title)}</p></div>
+<div class="vglance__card"><span class="vglance__k">3D parts</span><b class="vbig">Fusion</b><p>Parametric 3D CAD/CAM; free personal use with CAM limits. ${cite(pick("fusion-360").sources[0].url, pick("fusion-360").sources[0].title)}</p></div>
+</div>
+${rec ? `<p class="note" style="margin-top:20px">Sienci Labs itself notes that most LongMill customers use VCarve Pro or Carveco for CAM and gSender to run the machine ${cite(rec.source, "Sienci LongMill MK3 product page")}. CarvCAM puts those jobs in one app.</p>` : ""}
+</div></section>
+<section id="parts" class="vsec soft"><div class="wrap narrowish">
 <h2>Design, CAM, sender: what each part does</h2>
-<p><b>Design</b> is where the shapes and letters are drawn. <b>CAM</b> turns them into the path the bit follows, with depths and speeds. The <b>sender</b> streams that path to the controller and lets you home, zero and pause the machine.</p>
-<p>When those are three programs, every change means exporting and importing again, and every mistake hides between them. In CarvCAM they are one: change the text and the toolpaths, time and checks update on the spot.</p>
+<div class="vflow">${flowLane("The usual toolchain", ["Design (CAD): draw the shapes and letters", "CAM: turn them into toolpaths with depths and speeds, then export G-code", "Sender: stream the G-code, home, zero and pause"], false)}${flowLane("CarvCAM", CARV_FLOW, true)}</div>
+<p style="margin-top:24px">When those are three programs, every change means exporting and importing again, and mistakes hide between them: a wrong post-processor, a zero that doesn't match, a file in inches instead of millimeters. In one app, change the text and the toolpaths, time and checks update on the spot.</p>
+</div></section>
+<section id="options" class="vsec"><div class="wrap">
+<h2>All the options, compared</h2>
+<div class="tablewrap"><table class="cmp"><thead><tr><th>Software</th><th>Does</th><th>Price</th><th>Platforms</th><th>Best for</th></tr></thead><tbody>
+<tr><td class="us">CarvCAM</td><td class="us">Design + CAM + sender, offline</td><td class="us">At launch</td><td class="us">Windows (Mac, Linux in development)</td><td class="us">LongMill and AltMill owners who want one app</td></tr>
+${comparisons.map((c) => `<tr><td><a href="${href(vsUrl(c))}">${esc(c.name)}</a></td><td>${esc(c.type.split(";")[0].split(" (")[0])}</td><td>${esc(c.pricing[0].price)}${c.pricing[1] ? ` · ${esc(c.pricing[1].price)}` : ""} ${cite(c.pricing[0].source || c.sources[0].url)}</td><td>${esc(c.platformsShort)}</td><td>${esc(c.chooseThem[0])}</td></tr>`).join("")}
+${others.map((o) => `<tr><td>${esc(o.name)}</td><td>${esc(o.type.split(" (")[0])}</td><td>${esc(o.price)} ${cite(o.source.url, o.source.title)}</td><td>${esc(o.platforms.split(" (")[0])}</td><td>Free or low-cost option</td></tr>`).join("")}
+</tbody></table></div>
+</div></section>
+<section id="choose" class="vsec soft"><div class="wrap narrowish">
 <h2>How to choose</h2>
-<ul><li><b>Just starting out?</b> Pick the option with the fewest moving parts and a guided setup.</li><li><b>Already design elsewhere?</b> Keep your design tool and run files with a sender.</li><li><b>Need 3D or inlays?</b> Look at VCarve Pro or Aspire.</li></ul>
-<h2>Comparisons</h2>
-<p>${competitors.map((c) => `<a href="${href(`/compare/carvcam-vs-${c.slug}/`)}">CarvCAM vs ${c.name}</a>`).join(" · ")}</p>
-<h2>Guides for your machine</h2>
-<p>${machines.map((m) => `<a href="${href(`/machines/${m.slug}/`)}">${m.name} software</a>`).join(" · ")}</p>
+<ul class="ticks"><li><span><b>Just starting out?</b> Pick the option with the fewest moving parts and a guided setup. Fewer programs means fewer places for a mismatch.</span></li><li><span><b>Already design elsewhere?</b> Keep your design tool and run files with gSender.</span></li><li><span><b>Signs, plaques, engraving?</b> CarvCAM, VCarve or Carveco.</span></li><li><span><b>Need 3D reliefs, inlays or nesting?</b> VCarve Pro, Aspire or Carveco Maker Plus.</span></li><li><span><b>Mechanical parts and furniture?</b> Fusion.</span></li></ul>
+<h2 style="margin-top:48px">Comparisons</h2>
+<div class="grid grid--3">${comparisons.map((c) => `<a class="card" href="${href(vsUrl(c))}"><span class="eyebrow">Comparison</span><h3>CarvCAM vs ${esc(c.name)}</h3><p>${esc(c.kicker)}</p><span class="more">Read it</span></a>`).join("")}</div>
+<h2 style="margin-top:48px">Sources</h2>
+<ol class="vsrc">${list.map((s, i) => `<li id="src-${i + 1}"><a href="${s.url}" rel="noopener" target="_blank">${esc(s.title)}</a> <span>${esc(host(s.url))}</span></li>`).join("")}</ol>
+<p style="margin-top:24px">Guides for your machine: ${machines.map((m) => `<a href="${href(`/machines/${m.slug}/`)}">${m.name} software</a>`).join(" · ")}</p>
 </div></section>
 ${finalCta()}`,
   });
@@ -644,5 +803,37 @@ await cp(new URL("./assets/", import.meta.url).pathname, join(OUT, "assets"), { 
 await cp(new URL("./src/styles.css", import.meta.url).pathname, join(OUT, "assets/site.css"));
 const urls = pages.filter((p) => !p.path.endsWith(".html"));
 await writeFile(join(OUT, "sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((p) => `<url><loc>${site.url}${p.path}</loc><lastmod>2026-10-27</lastmod></url>`).join("\n")}\n</urlset>\n`);
-await writeFile(join(OUT, "robots.txt"), `User-agent: *\nAllow: /\nSitemap: ${site.url}/sitemap.xml\n`);
+// Markdown de cada página + índices para agentes
+const mdPages = urls.map((p) => ({ ...p, md: `# ${p.title}\n\n> ${p.description}\n\nSource: ${site.url}${p.path}\n\n${htmlToMd(p.body, p.path)}\n` }));
+for (const p of mdPages) await writeFile(join(OUT, p.path, "index.md"), p.md);
+const group = (pre) => mdPages.filter((p) => p.path.startsWith(pre));
+const line = (p) => `- [${p.title.replace(/ \| CarvCAM( Docs)?$/, "")}](${site.url}${p.path}index.md): ${p.description}`;
+await writeFile(
+  join(OUT, "llms.txt"),
+  `# CarvCAM
+
+> CarvCAM is a Windows desktop app for Sienci Labs LongMill and AltMill CNC routers that does sign design, CAM (toolpaths with feeds and speeds tuned to the machine, router or spindle and bit) and machine control (connects over USB or Ethernet, guided wiring check, homing, touch-plate zero, carving) in one app that works offline. Mac and Linux versions are in development.
+
+Every page is also available as Markdown by adding \`index.md\` to its URL. The full documentation in one file: ${site.url}/llms-full.txt
+
+## Docs
+${group("/docs/").map(line).join("\n")}
+
+## Product
+${[...group("/features/"), ...group("/machines/"), ...group("/download/")].map(line).join("\n")}
+
+## Comparisons
+${[...group("/compare/"), ...group("/best-cnc-software")].map(line).join("\n")}
+
+## Guides
+${group("/learn/").map(line).join("\n")}
+
+## Optional
+- [Home](${site.url}/index.md): ${mdPages.find((p) => p.path === "/").description}
+`,
+);
+await writeFile(join(OUT, "llms-full.txt"), [...group("/docs/"), ...group("/compare/"), ...group("/learn/")].map((p) => p.md).join("\n\n---\n\n"));
+// Robôs: tudo liberado, inclusive crawlers de IA e agentes de busca.
+const bots = ["GPTBot", "OAI-SearchBot", "ChatGPT-User", "ClaudeBot", "Claude-User", "Claude-SearchBot", "PerplexityBot", "Perplexity-User", "Google-Extended", "Applebot-Extended", "CCBot", "Amazonbot", "Bingbot", "DuckAssistBot", "meta-externalagent", "MistralAI-User"];
+await writeFile(join(OUT, "robots.txt"), `User-agent: *\nAllow: /\n\n${bots.map((b) => `User-agent: ${b}`).join("\n")}\nAllow: /\n\n# Para agentes e LLMs: ${site.url}/llms.txt\nSitemap: ${site.url}/sitemap.xml\n`);
 console.log(`${pages.length} pages → dist/${PREVIEW ? " (preview links)" : ""}`);
