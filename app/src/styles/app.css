@@ -19,7 +19,7 @@ body {
   overflow: hidden;
 }
 a { color: var(--text); }
-a:hover { color: var(--accent); }
+a:not([class]):hover { color: var(--accent); }
 button { font: inherit; color: inherit; cursor: pointer; }
 button:disabled { cursor: not-allowed; }
 input, select, textarea { font: inherit; color: inherit; }

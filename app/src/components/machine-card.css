@@ -106,7 +106,7 @@
 .bcard__toggle:hover { border-color: #c9c7c1; }
 .bcard__toggle.is-on { background: var(--pc-ok-bg); border-color: transparent; color: var(--pc-ok); }
 .bcard__buy { white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; height: 34px; padding: 0 12px; border-radius: 9px; background: var(--pc-ink); color: #fff; font: 600 12.5px var(--font); text-decoration: none; }
-.bcard__buy:hover { background: var(--pc-accent); }
+.bcard__buy:hover { background: var(--pc-accent); color: #fff; }
 
 .bgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(252px, 1fr)); gap: 14px; }
 .bsection { display: flex; flex-direction: column; gap: 12px; }
