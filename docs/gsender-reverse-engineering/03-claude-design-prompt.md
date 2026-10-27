@@ -1,247 +1,247 @@
-PAPEL
-Você é um(a) Product Designer sênior especializado em software para iniciantes em fabricação digital (referências: Bambu Studio, Glowforge, Cricut Design Space, Linear, Teenage Engineering). Vai desenhar uma interface nova para o gSender, um programa open source que controla fresadoras CNC (máquinas que esculpem madeira, MDF, acrílico e alumínio a partir de arquivos G-code).
+ROLE
+You are a senior Product Designer specializing in software for beginners in digital fabrication (references: Bambu Studio, Glowforge, Cricut Design Space, Linear, Teenage Engineering). You will design a new interface for gSender, an open-source program that controls CNC routers (machines that carve wood, MDF, acrylic and aluminum from G-code files).
 
-OBJETIVO
-Desenhar uma interface minimalista, bonita e diferente de tudo no mercado de CNC. Uma pessoa sem experiência precisa ir do zero ao primeiro corte em menos de 10 minutos, sem atrapalhar o usuário avançado. A grande novidade é um assistente de IA que cria modelos a partir de um texto ("uma placa com o nome Casa da Ana em relevo") e os prepara para cortar. Na primeira versão, ele cria placas e letreiros (veja "Escopo inicial").
+GOAL
+Design an interface that is minimalist, beautiful and unlike anything else on the CNC market. A person with no experience needs to go from zero to their first cut in under 10 minutes, without getting in the way of the advanced user. The big new feature is an AI assistant that creates models from text ("a plate with the name Casa da Ana in relief") and prepares them for cutting. In the first version, it creates plates and signs (see "Initial scope").
 
-Entregue design e protótipo navegável com dados simulados. Não precisa conectar a uma máquina real.
-
----
-
-O QUE O GSENDER FAZ HOJE (nenhuma função pode se perder; pode ser reorganizada ou escondida)
-
-Navegação atual: barra lateral com 4 itens.
-1. Carve (tela principal): barra superior com conexão, estado da máquina, ícones de status e spindle/laser. Visualizador 3D do percurso da fresa. Coluna com posição atual dos eixos (X, Y, Z), botões de zerar e "ir para". Área com controle de arquivo, controle do job e abas: Jog (mover a máquina), Probe (medir altura com placa de toque), Macros, Spindle, Coolant, Rotary (4º eixo), Console e troca automática de ferramenta. Barra de macros no modo retrato.
-2. Tools: 8 ferramentas (Surfacing para aplainar a mesa, Rotary Surfacing, Movement Tuning para calibrar eixos, XY Squaring para alinhar, atalhos de teclado, Gamepad, gerenciador de cartão SD, instalação de acessórios).
-3. Stats: visão geral, alarmes, histórico de jobs, manutenção, sobre.
-4. Config: 16 seções e cerca de 155 campos (Basics, Customize UI, Motors, Probe, Action Buttons, Homing/Limits, Spindle/Laser, Accessory Outputs, Rotary, Automations, Tool Changing, Ethernet, Status Lights, Advanced Motors, More Settings, Accessibility).
-
-Assistentes passo a passo existentes: troca de ferramenta manual, semiautomática e automática; primeira troca de ferramenta; medir comprimento da ferramenta.
-
-Outras funções: arquivos recentes, pasta monitorada, editor de G-code, overrides ao vivo (velocidade de avanço, rotação do spindle, movimentos rápidos), pausar/retomar, modo laser, modo remoto pelo celular/tablet, notificações e alertas de manutenção, modal de fim de job.
-
-JORNADA ATUAL DE UM CORTE
-1. Conectar (escolher porta USB ou IP)
-2. Destravar alarme e encontrar o zero da máquina (homing)
-3. Carregar arquivo G-code feito em outro programa
-4. Mover a fresa até o material e definir o ponto zero (manual ou com probe)
-5. Conferir (contorno, limites, tempo estimado)
-6. Rodar, ajustando velocidades e trocando ferramentas quando pedido
-7. Finalizar e ver o resumo
-
-PROBLEMAS QUE A NOVA INTERFACE PRECISA RESOLVER
-1. A tela principal mostra tudo de uma vez: posição, jog, probe, macros, spindle, coolant, rotary e console.
-2. A configuração tem cerca de 155 campos sem separar o que é seguro do que é perigoso.
-3. A ordem conectar → zerar → cortar fica implícita; o usuário precisa saber de cor.
-4. Muito jargão: GRBL, $-settings, MDI, WCS, override, homing.
-5. O programa não cria nada; quem quer cortar precisa de outro software para gerar o arquivo.
-6. Os alarmes aparecem como código numérico, sem dizer o que fazer.
+Deliver the design and a clickable prototype with simulated data. It does not need to connect to a real machine.
 
 ---
 
-PRINCÍPIOS DE UX (obrigatórios)
-- Fluxo linear com 4 etapas fixas e sempre visíveis: Criar → Preparar → Posicionar → Cortar. Cada etapa tem um único botão primário. Usuários avançados podem pular etapas.
-- Revelação progressiva: modo Simples por padrão; modo Pro mostra posição detalhada, console, comandos manuais, macros e overrides finos. Nada é removido, só escondido.
-- Linguagem humana: "Encontrar o zero da máquina" em vez de "Homing"; "Altura da ferramenta" em vez de "Z0". O termo técnico aparece menor, para quem quer aprender.
-- Prevenção antes de correção: checklist automático antes de cortar (arquivo cabe na mesa, fresa definida, zero definido, spindle ok), com ✓ ou ⚠ e correção a um clique.
-- Alarmes viram instruções: o que aconteceu (uma frase), por que importa e um botão "Resolver" com passo a passo. O código fica num detalhe expansível.
-- Feedback físico constante: mini-visualização 3D com a posição real da fresa sempre visível. Estado da máquina num único "pill" com cor + ícone + texto (nunca só cor).
-- Segurança: botão Parar sempre visível, grande, na mesma posição, com atalho Espaço/Esc. Confirmações descrevem o resultado ("A fresa vai descer 5 mm"), nunca "Tem certeza?".
-- Heurísticas de Nielsen, WCAG 2.2 AA, alvos de toque ≥ 44 px, navegação por teclado, foco visível, tema claro e escuro, respeito a prefers-reduced-motion.
-- Mesmo design em desktop, tablet e celular.
+WHAT GSENDER DOES TODAY (no function may be lost; it can be reorganized or hidden)
 
-ARQUITETURA DE INFORMAÇÃO
-- Topo fixo: logo · Criar · Preparar · Posicionar · Cortar · pill de status da máquina · botão Parar
-- Centro: viewport 3D ocupando cerca de 70% da tela (é o palco)
-- Direita: um painel contextual com só o que a etapa atual precisa
-- Sempre disponível: barra do assistente de IA (atalho ⌘K)
-- Menu secundário: Biblioteca (projetos, fresas, materiais) · Máquina (configuração) · Histórico · Ferramentas
+Current navigation: sidebar with 4 items.
+1. Carve (main screen): top bar with connection, machine state, status icons and spindle/laser. 3D visualizer of the bit's toolpath. Column with the current axis position (X, Y, Z), zero and "go to" buttons. Area with file control, job control and tabs: Jog (move the machine), Probe (measure height with a touch plate), Macros, Spindle, Coolant, Rotary (4th axis), Console and automatic tool change. Macro bar in portrait mode.
+2. Tools: 8 tools (Surfacing to flatten the spoilboard, Rotary Surfacing, Movement Tuning to calibrate axes, XY Squaring to align, keyboard shortcuts, Gamepad, SD card manager, accessory installation).
+3. Stats: overview, alarms, job history, maintenance, about.
+4. Config: 16 sections and about 155 fields (Basics, Customize UI, Motors, Probe, Action Buttons, Homing/Limits, Spindle/Laser, Accessory Outputs, Rotary, Automations, Tool Changing, Ethernet, Status Lights, Advanced Motors, More Settings, Accessibility).
 
-AS 4 ETAPAS
-1. Criar: prompt de IA, importar arquivo (STL, SVG, DXF, G-code) ou escolher modelo da galeria.
-2. Preparar: material, tamanho do bloco, fresa (biblioteca visual) e estratégia com presets "Rápido / Equilibrado / Detalhado". Tempo estimado e prévia animada do percurso.
-3. Posicionar: conectar (detecção automática), encontrar o zero da máquina e definir a origem com jog visual (arrastar na prévia 3D ou D-pad grande com passos 0.1 / 1 / 10 mm). Probe guiado com ilustrações.
-4. Cortar: checklist pré-voo → Iniciar. Durante o job: progresso, tempo restante, fresa em tempo real, Pausar/Parar, sliders simples de velocidade com limites seguros. No fim: resumo e "Cortar de novo".
+Existing step-by-step wizards: manual, semi-automatic and automatic tool change; first tool change; measure tool length.
 
-CONFIGURAÇÃO
-Organizada por intenção, não por parâmetro: Minha máquina, Ferramentas, Conexão, Segurança, Acessibilidade, Avançado. Assistente de primeira configuração com perfis prontos (Sienci LongMill, AltMill, Shapeoko, genérico). Parâmetros de firmware só em Avançado, com aviso, valor padrão e botão restaurar. As 8 ferramentas atuais (Surfacing, Squaring etc.) viram assistentes acessíveis pelo menu Ferramentas.
+Other functions: recent files, watched folder, G-code editor, live overrides (feed rate, spindle speed, rapid moves), pause/resume, laser mode, remote mode from phone/tablet, notifications and maintenance alerts, end-of-job modal.
 
-ESCOPO INICIAL DO ASSISTENTE (v1): PLACAS E LETREIROS
-Na primeira versão, a IA cria só placas e letreiros em 2D/2.5D. Todos os exemplos, prompts sugeridos, galeria e telas do assistente devem girar em torno disso:
-- Placas com nome ou número (casa, porta, mesa, pet), em relevo (letras altas) ou gravadas (letras baixas)
-- Letreiros recortados (letras soltas ou palavra contínua cortada do material)
-- Placas com borda (reta, arredondada, chanfrada) e ícones simples (folha, coração, estrela, casa)
-- Placas com furos de fixação ou rasgo para pendurar
-- Parâmetros principais: largura, altura, espessura, texto, fonte, tamanho e profundidade das letras, tipo de borda, ícone, furos
-- Materiais sugeridos: MDF, madeira maciça, compensado, acrílico
-Fora do escopo da v1 (mostrar como "em breve" na galeria, sem telas próprias): relevos artísticos 3D, caixas com encaixe, peças mecânicas. Se o usuário pedir algo fora do escopo, a IA explica em uma frase e oferece uma alternativa dentro dele (ex.: "um leão em relevo" → "placa com silhueta de leão gravada").
-Importar STL/SVG/DXF e G-code pronto continua disponível na etapa Criar.
+CURRENT JOURNEY OF A CUT
+1. Connect (choose USB port or IP)
+2. Clear the alarm and find the machine's zero (homing)
+3. Load a G-code file made in another program
+4. Move the bit to the material and set the zero point (manually or with the probe)
+5. Check (outline, limits, estimated time)
+6. Run, adjusting speeds and changing tools when asked
+7. Finish and see the summary
 
-ASSISTENTE DE IA (desenhe todas estas telas e estados)
-- Barra de prompt fixa, estilo conversa curta, com prompts de exemplo e histórico.
-- Estado "gerando": animação elegante, sem spinner genérico.
-- A IA responde com 3 variações em miniatura 3D; o usuário escolhe uma e refina conversando ("letras mais grossas", "adicione uma folha no canto").
-- Parâmetros editáveis como chips e sliders (largura, profundidade, fonte, raio da borda) que atualizam o modelo na hora.
-- Aviso de fabricabilidade em linguagem simples: "Esse detalhe é menor que a fresa de 3 mm. Vou engrossar para 3.2 mm. Ok?"
-- Sugestão automática de material, fresa e profundidade, que preenche a etapa Preparar.
-- Estado "fora do escopo": resposta amigável com alternativa dentro de placas e letreiros.
-- Galeria com "remix" de placas e letreiros prontos, e uma seção "em breve" para relevos e caixas.
-- Regra visual clara: a IA só cria arquivos; iniciar o corte é sempre uma ação explícita do usuário.
-
-DIREÇÃO VISUAL — "Calm Precision"
-Fuja do painel industrial cinza cheio de botões. A referência é um instrumento de precisão sereno.
-- Palco escuro, interface leve: viewport 3D com luz de estúdio suave, sombra de contato e material com textura real (veios de madeira, acrílico translúcido). Painéis flutuantes de vidro sutil (blur 20 px, borda 1 px a 8% de opacidade).
-- Paleta: grafite #111214, superfície #1A1B1E, papel #F5F3EF no tema claro. Um único acento, laranja-sinal #FF5B1F, só para a ação primária e para a fresa. Estados: Pronto verde-menta, Rodando azul-elétrico, Pausado âmbar, Alarme vermelho, sempre com ícone + texto.
-- Tipografia: Inter Tight ou Geist na interface; mono tabular (Geist Mono ou JetBrains Mono) para coordenadas e números. Escala 12/14/16/20/28/40.
-- Grid de 8 pt, raio 14 px nos painéis e 10 px nos controles, muito espaço livre, no máximo uma ação primária por tela.
-- Movimento: transições de 180–240 ms com ease-out, câmera 3D que voa suavemente entre etapas, botões de jog que afundam ao toque.
-- Ícones Lucide com traço de 1.5 px; ilustrações de passo a passo em linha fina, monocromáticas com o acento.
-- Detalhes de assinatura: o pill de status pulsa devagar durante o corte, como respiração; a coordenada da fresa aparece como etiqueta presa à ponta da ferramenta no 3D; a barra de etapas se preenche como um percurso sendo cortado; ao terminar, a câmera dá uma volta de 360° na peça pronta.
-
-ENTREGÁVEIS
-1. Mapa de fluxo das 4 etapas, do onboarding (primeira conexão e perfil da máquina) e dos estados de erro e alarme.
-2. Telas em alta fidelidade, desktop (1440×900) e celular, para: onboarding; Criar (vazio, gerando, 3 variações, refinando); Preparar; Posicionar (conectar, zero da máquina, jog, probe); Cortar (checklist, rodando, pausado, alarme com resolução guiada, concluído); Configuração (Simples e Avançado); menu Ferramentas; Histórico.
-3. Modo Simples vs. modo Pro na tela de Cortar, lado a lado.
-4. Tema claro e escuro de pelo menos uma tela.
-5. Design system: tokens (cor, tipografia, espaçamento, raio, sombra, movimento) e componentes (Button, IconButton, Segmented, Slider, Stepper, Panel, Toast, Dialog, StatusPill, JogPad, CoordinateReadout, PromptBar, ModelCard, ChecklistItem, AlarmCard).
-6. Protótipo navegável com dados simulados cobrindo o caminho completo: prompt → modelo → preparar → posicionar → cortar → concluído.
-7. Microcopy em português do Brasil, incluindo 5 alarmes comuns reescritos como instruções (ex.: limite de curso atingido, probe falhou, parada de emergência, perda de posição, porta aberta).
-
-CRITÉRIOS DE ACEITE
-- Uma pessoa leiga entende o que fazer em cada tela sem ler documentação.
-- No modo Simples, cada tela tem no máximo uma ação primária e no máximo 7 controles visíveis.
-- O botão Parar está visível em todas as telas de máquina conectada.
-- Todo alarme tem explicação humana e resolução guiada.
-- Contraste AA em textos e estados; nenhum estado comunicado só por cor.
-- Todas as funções listadas em "O que o gSender faz hoje" têm um lugar no novo design.
-
-Comece pelo mapa de fluxo e pelos wireframes das 4 etapas. Mostre-os antes de partir para alta fidelidade.
+PROBLEMS THE NEW INTERFACE MUST SOLVE
+1. The main screen shows everything at once: position, jog, probe, macros, spindle, coolant, rotary and console.
+2. The configuration has about 155 fields without separating what is safe from what is dangerous.
+3. The connect → zero → cut order is implicit; the user has to know it by heart.
+4. Lots of jargon: GRBL, $-settings, MDI, WCS, override, homing.
+5. The program creates nothing; anyone who wants to cut needs other software to generate the file.
+6. Alarms appear as numeric codes, without saying what to do.
 
 ---
 
-MUDANÇAS APÓS O MOTOR DE CAM (atualize o design com isto)
+UX PRINCIPLES (mandatory)
+- Linear flow with 4 fixed, always-visible steps: Create → Prepare → Position → Cut. Each step has a single primary button. Advanced users can skip steps.
+- Progressive disclosure: Simple mode by default; Pro mode shows detailed position, console, manual commands, macros and fine overrides. Nothing is removed, only hidden.
+- Human language: "Find the machine's zero" instead of "Homing"; "Tool height" instead of "Z0". The technical term appears smaller, for those who want to learn.
+- Prevention before correction: automatic checklist before cutting (file fits on the bed, bit defined, zero defined, spindle ok), with ✓ or ⚠ and a one-click fix.
+- Alarms become instructions: what happened (one sentence), why it matters and a "Resolve" button with step-by-step guidance. The code sits in an expandable detail.
+- Constant physical feedback: a mini 3D view with the real bit position, always visible. Machine state in a single "pill" with color + icon + text (never color alone).
+- Safety: Stop button always visible, large, in the same position, with the Space/Esc shortcut. Confirmations describe the result ("The bit will move down 5 mm"), never "Are you sure?".
+- Nielsen heuristics, WCAG 2.2 AA, touch targets ≥ 44 px, keyboard navigation, visible focus, light and dark theme, respect for prefers-reduced-motion.
+- Same design on desktop, tablet and phone.
 
-O motor que transforma a placa em G-code já existe. Ele mudou algumas premissas do fluxo. Ajuste o design assim:
+INFORMATION ARCHITECTURE
+- Fixed top: logo · Create · Prepare · Position · Cut · machine status pill · Stop button
+- Center: 3D viewport taking about 70% of the screen (it is the stage)
+- Right: one contextual panel with only what the current step needs
+- Always available: AI assistant bar (⌘K shortcut)
+- Secondary menu: Library (projects, bits, materials) · Machine (configuration) · History · Tools
 
-1. MATERIAL, ESPESSURA E FRESA SOBEM PARA A ETAPA CRIAR
-Se uma peça pode ser cortada depende da fresa e do material: uma letra fina pode ser possível com fresa de 1/16" e impossível com 1/8"; uma profundidade de 3 mm não serve numa placa de 3 mm. Por isso:
-- Mostre material, espessura e fresa como chips no topo do painel de Criar, já com padrões (MDF 15 mm, fresa reta 1/8"), editáveis ali mesmo.
-- Trocar qualquer chip revalida o modelo na hora.
+THE 4 STEPS
+1. Create: AI prompt, import a file (STL, SVG, DXF, G-code) or pick a model from the gallery.
+2. Prepare: material, stock size, bit (visual library) and strategy with "Fast / Balanced / Detailed" presets. Estimated time and an animated toolpath preview.
+3. Position: connect (automatic detection), find the machine's zero and set the origin with visual jogging (drag in the 3D preview or a large D-pad with 0.1 / 1 / 10 mm steps). Guided probing with illustrations.
+4. Cut: pre-flight checklist → Start. During the job: progress, time remaining, real-time bit, Pause/Stop, simple speed sliders with safe limits. At the end: summary and "Cut again".
 
-2. CRIAR VIRA CONVERSA + EDITOR DE PARÂMETROS
-A IA não desenha livremente: ela preenche campos. O usuário refina conversando ou mexendo nos mesmos controles:
-- Placa: largura, altura, borda (reta, arredondada, chanfrada) e raio, moldura
-- Textos (até 6): conteúdo, fonte, tamanho da letra, modo (relevo, gravado, vazado), profundidade, posição (automática ou arrastando na prévia)
-- Ícones: coração, estrela, casa, folha (tamanho, posição, modo)
-- Furos e rasgo para pendurar
-- Tipo: placa ou letreiro recortado
-Fontes disponíveis: Archivo Black (grossa, a mais fácil de cortar), Pacifico (cursiva, letras ligadas) e Bebas Neue (condensada). O seletor de fonte é visual e indica qual é mais fácil de cortar.
+CONFIGURATION
+Organized by intent, not by parameter: My machine, Tools, Connection, Safety, Accessibility, Advanced. First-setup wizard with ready-made profiles (Sienci LongMill, AltMill, Shapeoko, generic). Firmware parameters only under Advanced, with a warning, the default value and a restore button. The current 8 tools (Surfacing, Squaring etc.) become wizards reachable from the Tools menu.
 
-3. AVISOS VIRAM UM COMPONENTE CENTRAL
-Toda mudança devolve avisos em português, com sugestão. Desenhe dois níveis:
-- Erro: bloqueia o botão "Continuar". Tem botão "Aplicar sugestão". Exemplos: "O texto não cabe na placa → reduzir para 18 mm"; "Os traços de 'desde 2024' são mais finos que a fresa de 3,17 mm → aumentar o texto ou usar fresa 1/16""; "O furo de 2 mm é menor que a fresa".
-- Aviso: deixa seguir e destaca na prévia onde vai sobrar material. Exemplos: "Cerca de 4% da folha não será cortada"; "Os miolos do 'o' vão se soltar no vazado"; "Peças pequenas sem aba: prenda com fita dupla-face".
-Desenhe também como a IA comenta esses avisos na conversa ("Vou reduzir o texto para 18 mm. Ok?").
+INITIAL SCOPE OF THE ASSISTANT (v1): PLATES AND SIGNS
+In the first version, the AI creates only 2D/2.5D plates and signs. All examples, suggested prompts, the gallery and the assistant screens should revolve around this:
+- Plates with a name or number (house, door, table, pet), in relief (raised letters) or engraved (recessed letters)
+- Cut-out signs (separate letters or a continuous word cut from the material)
+- Plates with a border (straight, rounded, chamfered) and simple icons (leaf, heart, star, house)
+- Plates with mounting holes or a hanging slot
+- Main parameters: width, height, thickness, text, font, letter size and depth, border type, icon, holes
+- Suggested materials: MDF, solid wood, plywood, acrylic
+Out of scope for v1 (show as "coming soon" in the gallery, without dedicated screens): artistic 3D reliefs, boxes with joinery, mechanical parts. If the user asks for something out of scope, the AI explains in one sentence and offers an in-scope alternative (e.g. "a lion in relief" → "plate with an engraved lion silhouette").
+Importing STL/SVG/DXF and ready-made G-code remains available in the Create step.
 
-4. A PRÉVIA MOSTRA O CORTE REAL
-A prévia é a simulação do que a fresa vai fazer, não um modelo idealizado: fundo rebaixado, furos atravessando, abas de fixação, cantos internos arredondados pelo raio da fresa e áreas que a fresa não alcança. Desenhe:
-- Vista de cima com legenda de profundidade (face intacta, rebaixado, atravessou)
-- Vista 3D da peça simulada
-- Destaque das áreas com aviso
+AI ASSISTANT (design all of these screens and states)
+- Fixed prompt bar, short-conversation style, with example prompts and history.
+- "Generating" state: an elegant animation, no generic spinner.
+- The AI replies with 3 variations as 3D thumbnails; the user picks one and refines it by chatting ("thicker letters", "add a leaf in the corner").
+- Editable parameters as chips and sliders (width, depth, font, border radius) that update the model instantly.
+- Manufacturability warning in plain language: "This detail is smaller than the 3 mm bit. I'll thicken it to 3.2 mm. OK?"
+- Automatic suggestion of material, bit and depth, which fills in the Prepare step.
+- "Out of scope" state: a friendly reply with an alternative within plates and signs.
+- Gallery with "remix" of ready-made plates and signs, and a "coming soon" section for reliefs and boxes.
+- Clear visual rule: the AI only creates files; starting the cut is always an explicit user action.
 
-5. PREPARAR FICA MAIS ENXUTO
-Sobram:
-- Preset de velocidade: Rápido / Equilibrado / Detalhado (mostra RPM e avanço só no modo Pro)
-- Abas de fixação: quantidade e altura
-- Segunda fresa opcional (ex.: gravar com 1/16", recortar com 1/8")
-- Resumo: tempo estimado, lista de operações (rebaixo, furos, recorte), tamanho do bloco necessário e selo "G-code verificado ✓"
+VISUAL DIRECTION — "Calm Precision"
+Stay away from the gray industrial panel full of buttons. The reference is a serene precision instrument.
+- Dark stage, light interface: 3D viewport with soft studio lighting, contact shadow and material with a real texture (wood grain, translucent acrylic). Subtle floating glass panels (20 px blur, 1 px border at 8% opacity).
+- Palette: graphite #111214, surface #1A1B1E, paper #F5F3EF in the light theme. A single accent, signal orange #FF5B1F, only for the primary action and for the bit. States: Ready mint green, Running electric blue, Paused amber, Alarm red, always with icon + text.
+- Typography: Inter Tight or Geist in the interface; tabular mono (Geist Mono or JetBrains Mono) for coordinates and numbers. Scale 12/14/16/20/28/40.
+- 8 pt grid, 14 px radius on panels and 10 px on controls, lots of free space, at most one primary action per screen.
+- Motion: 180–240 ms transitions with ease-out, a 3D camera that flies smoothly between steps, jog buttons that sink when touched.
+- Lucide icons with a 1.5 px stroke; step-by-step illustrations in thin line, monochrome with the accent.
+- Signature details: the status pill pulses slowly during the cut, like breathing; the bit coordinate appears as a label attached to the tool tip in 3D; the step bar fills in like a toolpath being cut; when finished, the camera does a 360° orbit around the finished part.
 
-6. POSICIONAR: ZERO SEMPRE NO MESMO LUGAR
-O zero do trabalho é o canto inferior esquerdo do bloco, na face de cima. Ilustre isso claramente. Mostre o tamanho mínimo do bloco (a placa mais 10 mm de margem de cada lado quando há recorte).
+DELIVERABLES
+1. Flow map of the 4 steps, the onboarding (first connection and machine profile) and the error and alarm states.
+2. High-fidelity screens, desktop (1440×900) and phone, for: onboarding; Create (empty, generating, 3 variations, refining); Prepare; Position (connect, machine zero, jog, probe); Cut (checklist, running, paused, alarm with guided resolution, finished); Configuration (Simple and Advanced); Tools menu; History.
+3. Simple mode vs. Pro mode on the Cut screen, side by side.
+4. Light and dark theme for at least one screen.
+5. Design system: tokens (color, typography, spacing, radius, shadow, motion) and components (Button, IconButton, Segmented, Slider, Stepper, Panel, Toast, Dialog, StatusPill, JogPad, CoordinateReadout, PromptBar, ModelCard, ChecklistItem, AlarmCard).
+6. Clickable prototype with simulated data covering the complete path: prompt → model → prepare → position → cut → finished.
+7. Microcopy in English, including 5 common alarms rewritten as instructions (e.g. travel limit reached, probe failed, emergency stop, position lost, door open).
 
-7. CORTAR: TROCA DE FRESA E ABAS
-- Se o projeto usa duas fresas, o corte pausa no meio: desenhe a tela "Troque para a fresa 1/8"" com ilustração e botão "Pronto, continuar" (com novo zero de altura da fresa).
-- No fim, um estado "Peça pronta: corte as abas e lixe as bordas" com ilustração.
+ACCEPTANCE CRITERIA
+- A lay person understands what to do on each screen without reading documentation.
+- In Simple mode, each screen has at most one primary action and at most 7 visible controls.
+- The Stop button is visible on every screen with a connected machine.
+- Every alarm has a human explanation and guided resolution.
+- AA contrast on text and states; no state communicated by color alone.
+- Every function listed in "What gSender does today" has a place in the new design.
 
-8. NOVOS ESTADOS PARA O PROTÓTIPO
-Inclua no protótipo navegável:
-- Criar com erro bloqueando, depois "Aplicar sugestão" resolvendo
-- Troca de fresa no meio do corte
-- Letreiro recortado (tipo "letreiro") com letras cursivas ligadas
+Start with the flow map and the wireframes of the 4 steps. Show them before moving on to high fidelity.
 
 ---
 
-MÁQUINAS E FRESAS DA SIENCI LABS (atualize o design com isto)
+CHANGES AFTER THE CAM ENGINE (update the design with this)
 
-A ferramenta passa a ser feita para as máquinas da Sienci Labs. Máquina, router/spindle e fresas reais entram no fluxo, com configurações padrão para cada máquina e projetos prontos para os primeiros cortes. O motor já tem esses dados; o design precisa mostrá-los.
+The engine that turns the plate into G-code already exists. It changed some assumptions of the flow. Adjust the design as follows:
 
-Dados que a interface vai receber:
-- Máquinas: LongMill MK2 (12×30, 30×30, 48×30), LongMill MK3 (30×30, 48×30), AltMill (2×4, 4×4, 4×8). Cada uma tem área útil real, velocidade máxima e os cabeçotes possíveis.
-- Cabeçotes: Makita RT0701 (rotação no dial, à mão, posições 1 a 6), AutoSpin T1 (rotação automática pelo programa) e Spindle 1,5 kW / 2,2 kW (rotação automática).
-- Fresas Sienci: retas 1/16″, 1/8″ e 1/4″ (upcut, downcut, 1 canal, compressão), V-bits de 30°, 60° e 90°, fresa de aplainar 22 mm e ball nose. Cada uma tem diâmetro, haste, comprimento de corte, indicação de uso e link da loja.
-- Compatibilidade: cada fresa é "cabe", "precisa de acessório" (ex.: haste 1/8″ no Makita precisa da pinça de 1/8″) ou "não cabe".
-- Velocidades: tabela oficial da Sienci (Reduzida, Regular, Máxima) por fresa e material.
-- 7 projetos de primeiros cortes, cada um com nível, fresas, material, o que a pessoa aprende e em quais máquinas cabe.
+1. MATERIAL, THICKNESS AND BIT MOVE UP TO THE CREATE STEP
+Whether a part can be cut depends on the bit and the material: a thin letter may be possible with a 1/16" bit and impossible with a 1/8" one; a 3 mm depth does not work on a 3 mm plate. Therefore:
+- Show material, thickness and bit as chips at the top of the Create panel, with defaults already set (MDF 15 mm, 1/8" straight bit), editable right there.
+- Changing any chip revalidates the model instantly.
 
-1. ONBOARDING "MINHA OFICINA" (primeira vez que abre)
-Três passos curtos, com ilustrações (não use logotipo nem fotos de produto sem autorização da Sienci):
-- Qual é a sua máquina? Cards por família (LongMill MK2, LongMill MK3, AltMill), depois o tamanho. Mostre a área útil em cm. Se o gSender já tiver um perfil de máquina configurado, abra com ele sugerido ("Encontramos uma LongMill MK3 30×30. É essa?").
-- O que gira a fresa? Makita RT0701, AutoSpin T1 ou Spindle, com o padrão da máquina já marcado (MK2 = Makita, MK3 = AutoSpin, AltMill = Spindle 2,2 kW).
-- Quais fresas você tem? Grade de cards das fresas Sienci. Atalho "Tenho o Starter End Mill Set (Beginner's Kit)" marca as 5 fresas do kit de uma vez.
-No fim: "Primeiro passo: aplainar a mesa" (abre a ferramenta Surfacing do gSender com a fresa de 22 mm).
+2. CREATE BECOMES CONVERSATION + PARAMETER EDITOR
+The AI does not draw freely: it fills in fields. The user refines by chatting or by adjusting the same controls:
+- Plate: width, height, border (straight, rounded, chamfered) and radius, frame
+- Texts (up to 6): content, font, letter size, mode (relief, engraved, cut-through), depth, position (automatic or by dragging in the preview)
+- Icons: heart, star, house, leaf (size, position, mode)
+- Holes and hanging slot
+- Type: plate or cut-out sign
+Available fonts: Archivo Black (bold, the easiest to cut), Pacifico (script, connected letters) and Bebas Neue (condensed). The font picker is visual and indicates which one is easiest to cut.
 
-2. CHIP DE MÁQUINA SEMPRE VISÍVEL
-No topo, ao lado do status: "LongMill MK3 30×30 · AutoSpin". Tocar abre a troca de máquina (há quem tenha mais de uma). Trocar de máquina revalida o projeto na hora: área, fresas e velocidades.
+3. WARNINGS BECOME A CENTRAL COMPONENT
+Every change returns warnings in plain English, with a suggestion. Design two levels:
+- Error: blocks the "Continue" button. Has an "Apply suggestion" button. Examples: "The text does not fit on the plate → reduce to 18 mm"; "The strokes of 'since 2024' are thinner than the 3.17 mm bit → enlarge the text or use a 1/16" bit"; "The 2 mm hole is smaller than the bit".
+- Warning: lets the user continue and highlights in the preview where material will be left. Examples: "About 4% of the leaf will not be cut"; "The centers of the 'o' will come loose in the cut-through"; "Small parts without tabs: hold them down with double-sided tape".
+Also design how the AI comments on these warnings in the conversation ("I'll reduce the text to 18 mm. OK?").
 
-3. A MESA REAL NO PALCO 3D
-O viewport mostra a mesa no tamanho da área útil da máquina escolhida, com o bloco posicionado nela. Se a peça não couber, a parte que sai da área aparece em vermelho, e o aviso diz em qual máquina caberia.
+4. THE PREVIEW SHOWS THE REAL CUT
+The preview is the simulation of what the bit will do, not an idealized model: recessed floor, holes going through, holding tabs, inside corners rounded by the bit radius and areas the bit cannot reach. Design:
+- Top view with a depth legend (untouched face, recessed, cut through)
+- 3D view of the simulated part
+- Highlighting of the areas with warnings
 
-4. BIBLIOTECA DE FRESAS (Minhas fresas + Loja Sienci)
-- Card de fresa: silhueta desenhada do perfil (reta, V, bola, compressão), diâmetro em mm e polegadas, haste, comprimento de corte e uma frase de uso ("Relevo e gravação sem lascar a face de cima").
-- Selos de compatibilidade com o cabeçote atual: "Cabe no seu AutoSpin ✓", "Precisa da pinça 1/8″ · ver na loja", "Não serve para placas (ainda)".
-- Filtro por intenção: Gravar, Relevo, Recortar, Plástico, Aplainar.
-- Duas abas: "Minhas fresas" (as que a pessoa marcou) e "Todas as fresas Sienci" (com botão "Ver na loja").
+5. PREPARE GETS LEANER
+What remains:
+- Speed preset: Fast / Balanced / Detailed (shows RPM and feed only in Pro mode)
+- Holding tabs: count and height
+- Optional second bit (e.g. engrave with 1/16", cut out with 1/8")
+- Summary: estimated time, list of operations (pocket, holes, cutout), required stock size and a "G-code verified ✓" badge
 
-5. CRIAR E PREPARAR USAM AS FRESAS REAIS
-- O chip de fresa em Criar só oferece fresas de "Minhas fresas" que cabem no cabeçote.
-- Se a IA sugerir uma fresa que a pessoa não tem: "Para esse detalhe o ideal é a 1/16″ downcut, que você ainda não tem. Usar a 1/8″ (alguns detalhes somem) ou ver na loja?"
-- Projetos com duas fresas mostram as duas, na ordem de uso.
+6. POSITION: ZERO ALWAYS IN THE SAME PLACE
+The work zero is the bottom-left corner of the stock, on the top face. Illustrate this clearly. Show the minimum stock size (the plate plus 10 mm of margin on each side when there is a cutout).
 
-6. VELOCIDADE = TABELA OFICIAL SIENCI
-O preset de Preparar passa a ser a tabela da Sienci: Detalhado = Reduzida, Equilibrado = Regular, Rápido = Máxima. O padrão depende da máquina (LongMill = Equilibrado, AltMill = Rápido). Mostre a fonte com discrição: "Valores da tabela oficial Sienci Labs". No modo Pro, mostre RPM, avanço, mergulho e passada.
+7. CUT: BIT CHANGE AND TABS
+- If the project uses two bits, the cut pauses halfway: design the "Switch to the 1/8" bit" screen with an illustration and a "Done, continue" button (with a new bit-height zero).
+- At the end, a "Part finished: cut the tabs and sand the edges" state with an illustration.
 
-7. MAKITA: DIAL À MÃO
-Com o Makita, a rotação não é automática. Desenhe:
-- No checklist antes de cortar: ilustração do dial com a posição destacada ("Gire o dial para 3 · 17.000 RPM").
-- Na troca de fresa no meio do corte: o novo valor do dial, se mudar.
-Com AutoSpin ou Spindle, mostre apenas "Rotação automática ✓".
+8. NEW STATES FOR THE PROTOTYPE
+Include in the clickable prototype:
+- Create with a blocking error, then "Apply suggestion" resolving it
+- Bit change in the middle of the cut
+- Cut-out sign ("sign" type) with connected script letters
 
-8. PRIMEIROS CORTES (galeria e trilha "Comece aqui")
-Uma área "Primeiros cortes" na tela inicial e no estado vazio de Criar, com cards. Cada card tem:
-- Prévia da simulação
-- Nível (Primeiro corte, Fácil, Intermediário)
-- Tempo estimado na máquina da pessoa
-- Fresas necessárias, com ✓ para as que ela tem e ✗ para as que faltam
-- O que ela aprende
-- Botão "Fazer este projeto" (abre já configurado, pode editar)
-Se não couber na máquina, o card aparece esmaecido com "Precisa de uma 48×30 ou AltMill".
-Projetos:
-- Teste de profundidade: 1, 2 e 3 gravados a 1, 2 e 3 mm numa sobra de MDF, sem recorte (primeiro corte)
-- Porta-copos com inicial: disco de 10 cm recortado com abas (primeiro corte)
-- Placa de porta em relevo: "Casa da Ana", moldura e furos (fácil)
-- Plaquinha de pet: duas fresas, troca no meio (intermediário)
-- Letreiro "Bem-vindos": cursiva recortada em compensado com fresa de compressão (intermediário)
-- Chaveiro de acrílico: gravação em V e furo (intermediário)
-- Placa de endereço grande: 90 × 30 cm, só máquinas grandes (intermediário)
-A trilha "Comece aqui" é: Aplainar a mesa → Teste de profundidade → Porta-copos → Placa de porta. Mostre o progresso com marcas de concluído, sem exagero de gamificação.
+---
 
-9. NOVOS AVISOS
-- "Precisa de acessório": aviso amarelo com botão "Ver na loja".
-- "Fresa não serve para placas": erro, com sugestão de outra fresa que a pessoa tem.
-- "Fresa de compressão: passada aumentada para 3,5 mm": aviso informativo.
-- "Peça maior que a sua máquina": erro, mostrando em quais máquinas caberia.
+SIENCI LABS MACHINES AND BITS (update the design with this)
 
-10. CONFIGURAÇÃO > MINHA MÁQUINA
-Mostre os dados da máquina só para leitura (área útil, velocidade máxima, cabeçote, controlador). Botão "Trocar máquina" refaz o onboarding. No fim da lista de máquinas, deixe uma opção discreta "Outra máquina (GRBL genérica)".
+The tool is now made for Sienci Labs machines. The machine, router/spindle and real bits enter the flow, with default settings for each machine and ready-made projects for the first cuts. The engine already has this data; the design needs to show it.
 
-Comece pelo onboarding "Minha oficina" e pela galeria "Primeiros cortes"; depois atualize Criar (chip de fresa), Preparar (velocidade) e Cortar (dial do Makita).
+Data the interface will receive:
+- Machines: LongMill MK2 (12×30, 30×30, 48×30), LongMill MK3 (30×30, 48×30), AltMill (2×4, 4×4, 4×8). Each one has its real work area, maximum speed and possible heads.
+- Heads: Makita RT0701 (speed set on the dial, by hand, positions 1 to 6), AutoSpin T1 (speed set automatically by the program) and 1.5 kW / 2.2 kW Spindle (automatic speed).
+- Sienci bits: 1/16″, 1/8″ and 1/4″ straight bits (upcut, downcut, single flute, compression), 30°, 60° and 90° V-bits, a 22 mm surfacing bit and a ball nose. Each one has a diameter, shank, cutting length, intended use and a store link.
+- Compatibility: each bit is "fits", "needs an accessory" (e.g. a 1/8″ shank on the Makita needs the 1/8″ collet) or "does not fit".
+- Speeds: Sienci's official table (Reduced, Regular, Maximum) per bit and material.
+- 7 first-cut projects, each with a level, bits, material, what the person learns and which machines it fits.
+
+1. "MY WORKSHOP" ONBOARDING (first time the app opens)
+Three short steps, with illustrations (do not use Sienci's logo or product photos without authorization):
+- What is your machine? Cards by family (LongMill MK2, LongMill MK3, AltMill), then the size. Show the work area in cm. If gSender already has a machine profile configured, open with it suggested ("We found a LongMill MK3 30×30. Is this the one?").
+- What spins the bit? Makita RT0701, AutoSpin T1 or Spindle, with the machine's default already selected (MK2 = Makita, MK3 = AutoSpin, AltMill = 2.2 kW Spindle).
+- Which bits do you have? A grid of Sienci bit cards. The "I have the Starter End Mill Set (Beginner's Kit)" shortcut selects the kit's 5 bits at once.
+At the end: "First step: surface the spoilboard" (opens gSender's Surfacing tool with the 22 mm bit).
+
+2. MACHINE CHIP ALWAYS VISIBLE
+At the top, next to the status: "LongMill MK3 30×30 · AutoSpin". Tapping it opens the machine switcher (some people have more than one). Switching machines revalidates the project instantly: area, bits and speeds.
+
+3. THE REAL BED ON THE 3D STAGE
+The viewport shows the bed at the size of the chosen machine's work area, with the stock placed on it. If the part does not fit, the part outside the area appears in red, and the warning says which machine it would fit on.
+
+4. BIT LIBRARY (My bits + Sienci Store)
+- Bit card: a drawn silhouette of the profile (straight, V, ball, compression), diameter in mm and inches, shank, cutting length and a one-line use ("Relief and engraving without chipping the top face").
+- Compatibility badges with the current head: "Fits your AutoSpin ✓", "Needs the 1/8″ collet · see in store", "Not for plates (yet)".
+- Filter by intent: Engrave, Relief, Cut out, Plastic, Surface.
+- Two tabs: "My bits" (the ones the person selected) and "All Sienci bits" (with a "See in store" button).
+
+5. CREATE AND PREPARE USE THE REAL BITS
+- The bit chip in Create only offers bits from "My bits" that fit the head.
+- If the AI suggests a bit the person does not have: "For this detail the ideal is the 1/16″ downcut, which you don't have yet. Use the 1/8″ (some details disappear) or see it in the store?"
+- Projects with two bits show both, in order of use.
+
+6. SPEED = OFFICIAL SIENCI TABLE
+The Prepare preset now maps to Sienci's table: Detailed = Reduced, Balanced = Regular, Fast = Maximum. The default depends on the machine (LongMill = Balanced, AltMill = Fast). Show the source discreetly: "Values from the official Sienci Labs table". In Pro mode, show RPM, feed, plunge and step down.
+
+7. MAKITA: DIAL BY HAND
+With the Makita, the speed is not automatic. Design:
+- In the pre-cut checklist: an illustration of the dial with the position highlighted ("Turn the dial to 3 · 17,000 RPM").
+- At a bit change in the middle of the cut: the new dial value, if it changes.
+With AutoSpin or Spindle, show only "Automatic speed ✓".
+
+8. FIRST CUTS (gallery and "Start here" track)
+A "First cuts" area on the home screen and in the empty state of Create, with cards. Each card has:
+- A simulation preview
+- Level (First cut, Easy, Intermediate)
+- Estimated time on the person's machine
+- Required bits, with ✓ for the ones they have and ✗ for the missing ones
+- What they learn
+- A "Make this project" button (opens already configured, can be edited)
+If it does not fit the machine, the card appears dimmed with "Needs a 48×30 or AltMill".
+Projects:
+- Depth test: 1, 2 and 3 engraved at 1, 2 and 3 mm on an MDF offcut, no cutout (first cut)
+- Coaster with initial: a 10 cm disc cut out with tabs (first cut)
+- Raised door sign: "Casa da Ana", frame and holes (easy)
+- Pet tag: two bits, changed halfway (intermediate)
+- "Welcome" sign: script cut out of plywood with a compression bit (intermediate)
+- Acrylic keychain: V engraving and a hole (intermediate)
+- Large address sign: 90 × 30 cm, large machines only (intermediate)
+The "Start here" track is: Surface the spoilboard → Depth test → Coaster → Door sign. Show progress with completion marks, without overdoing the gamification.
+
+9. NEW WARNINGS
+- "Needs an accessory": yellow warning with a "See in store" button.
+- "Bit not suitable for plates": error, suggesting another bit the person has.
+- "Compression bit: step down increased to 3.5 mm": informational warning.
+- "Part larger than your machine": error, showing which machines it would fit on.
+
+10. CONFIGURATION > MY MACHINE
+Show the machine data read-only (work area, maximum speed, head, controller). A "Change machine" button reruns the onboarding. At the end of the machine list, leave a discreet "Other machine (generic GRBL)" option.
+
+Start with the "My workshop" onboarding and the "First cuts" gallery; then update Create (bit chip), Prepare (speed) and Cut (Makita dial).

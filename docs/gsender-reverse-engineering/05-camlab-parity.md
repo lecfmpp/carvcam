@@ -1,61 +1,61 @@
-# Paridade com o CAMLab
+# Parity with CAMLab
 
-O CAMLab é o CAM 3D da Sienci, roda no navegador e é **baseado no Kiri:Moto** (Stewart Allen). Fontes: a captura de tela do CAMLab, a página [Choosing Software](https://resources.sienci.com/view/lmk2-choosing-software/), a [documentação de operações do Kiri:Moto](https://docs.grid.space/kiri-moto/CAM/ops/) e o repositório [GridSpace/grid-apps](https://github.com/gridspace/grid-apps) (**licença MIT**).
+CAMLab is Sienci's 3D CAM; it runs in the browser and is **based on Kiri:Moto** (Stewart Allen). Sources: the CAMLab screenshot, the [Choosing Software](https://resources.sienci.com/view/lmk2-choosing-software/) page, the [Kiri:Moto operations documentation](https://docs.grid.space/kiri-moto/CAM/ops/) and the [GridSpace/grid-apps](https://github.com/gridspace/grid-apps) repository (**MIT license**).
 
-## Recurso por recurso
+## Feature by feature
 
-| CAMLab | Para quê | Nós hoje | O que falta |
+| CAMLab | What for | Us today | What is missing |
 |---|---|---|---|
-| **MACHINE** | Escolher a máquina | ✅ Catálogo Sienci com curso e velocidades reais | — |
-| **IMPORT +** (STL, várias peças) | Trazer modelos 3D | ❌ | Importar STL (e SVG, já planejado) |
-| **Material Size** X×Y×Z | Bloco | ✅ Bloco calculado da peça + margem | Bloco livre, maior que a peça |
-| **Positioning:** origin center / origin top / snap to top / z top offset / z segment | Onde fica o zero | ⚠️ Fixo: canto inferior esquerdo, face de cima | Origem no centro, offset de Z no topo, "snap to top" para STL |
-| **TOOLS** (biblioteca) | Escolher a fresa | ✅ Fresas Sienci com compatibilidade | Usar ball nose (hoje bloqueada por ser 3D) |
-| **ARRANGE** | Várias peças no bloco | ❌ (uma peça por projeto) | Arranjo/aninhamento de peças |
-| **GENERATE / EXPORT** | Gerar e salvar o G-code | ✅ Gera, **verifica** e baixa o .nc | — |
-| **Settings load/save** | Salvar configurações e projeto | ⚠️ Salvo só no navegador | Salvar/abrir arquivo de projeto |
-| **Path Alterations:** pocket only / depth first / clockwise | Ajuste fino do percurso | ⚠️ "Pocket only" ≈ sem recorte externo; sentido existe no motor mas não aparece na tela; profundidade primeiro não existe | Expor no modo Pro |
-| **ROUGHING** | Desbaste 3D | ❌ | CAM 3D |
-| **FINISHING** (step down, feed, plunge) | Acabamento | ⚠️ 2.5D sim, com valores da tabela Sienci; o Pro mostra mas não deixa editar | Campos editáveis no Pro; acabamento 3D |
-| **RELIEF** | Relevo 3D | ❌ (só relevo 2.5D de letras e formas) | Acabamento 3D com ball nose |
-| **DRILLING** | Furação | ✅ Furos em bicadas ou pocket | Detectar furos num STL |
-| **CUTOUT TABS** | Abas de fixação | ✅ Quantidade e altura | Posicionar abas à mão |
-| **FEEDS** | Avanço e rotação | ✅ **Melhor:** tabela oficial Sienci por fresa e material | — |
-| **?** (ajuda) | Ajuda | ✅ Vídeos por etapa (falta preencher os links) | — |
-| Prévia / animação | Ver antes de cortar | ✅ **Melhor:** simulação da remoção de material em 2D/3D | Prévia 3D de STL |
+| **MACHINE** | Choose the machine | ✅ Sienci catalog with real travel and speeds | — |
+| **IMPORT +** (STL, multiple parts) | Bring in 3D models | ❌ | STL import (and SVG, already planned) |
+| **Material Size** X×Y×Z | Stock | ✅ Stock computed from the part + margin | Free-form stock, larger than the part |
+| **Positioning:** origin center / origin top / snap to top / z top offset / z segment | Where zero is | ⚠️ Fixed: bottom-left corner, top face | Origin at center, Z offset at top, "snap to top" for STL |
+| **TOOLS** (library) | Choose the bit | ✅ Sienci bits with compatibility | Use ball nose (currently blocked because it is 3D) |
+| **ARRANGE** | Multiple parts on the stock | ❌ (one part per project) | Part arrangement/nesting |
+| **GENERATE / EXPORT** | Generate and save the G-code | ✅ Generates, **verifies** and downloads the .nc | — |
+| **Settings load/save** | Save settings and project | ⚠️ Saved only in the browser | Save/open a project file |
+| **Path Alterations:** pocket only / depth first / clockwise | Fine-tuning the toolpath | ⚠️ "Pocket only" ≈ no outer cutout; direction exists in the engine but is not shown on screen; depth first does not exist | Expose in Pro mode |
+| **ROUGHING** | 3D roughing | ❌ | 3D CAM |
+| **FINISHING** (step down, feed, plunge) | Finishing | ⚠️ 2.5D yes, with values from the Sienci table; Pro shows them but does not allow editing | Editable fields in Pro; 3D finishing |
+| **RELIEF** | 3D relief | ❌ (only 2.5D relief of letters and shapes) | 3D finishing with ball nose |
+| **DRILLING** | Drilling | ✅ Peck-drilled or pocketed holes | Detect holes in an STL |
+| **CUTOUT TABS** | Holding tabs | ✅ Count and height | Place tabs by hand |
+| **FEEDS** | Feed and spindle speed | ✅ **Better:** official Sienci table per bit and material | — |
+| **?** (help) | Help | ✅ Videos per step (links still to be filled in) | — |
+| Preview / animation | See it before cutting | ✅ **Better:** material-removal simulation in 2D/3D | 3D preview of STL |
 
-**Onde já somos melhores:** desenho de placas e letreiros sem outro programa, avisos que dizem o que fazer, tabela oficial de velocidades, compatibilidade fresa × router, simulação do corte, verificador de G-code e o fluxo completo até cortar.
+**Where we are already better:** designing signs and lettering without another program, warnings that tell you what to do, the official speeds table, bit × router compatibility, cut simulation, G-code verifier and the complete flow all the way to cutting.
 
-**Onde estamos atrás:** tudo que começa num **STL** (importar, desbaste 3D, acabamento 3D/relevo, arranjo) e parte do ajuste fino (origem, ordem dos passes, valores editáveis).
+**Where we are behind:** everything that starts from an **STL** (import, 3D roughing, 3D finishing/relief, arrangement) and part of the fine-tuning (origin, pass order, editable values).
 
-## Como chegar à paridade
+## How to reach parity
 
-### Fase 1: ajustes 2.5D (pequeno, dias)
-- **Modo Pro editável:** avanço, mergulho, passada, sobreposição e RPM (o motor já aceita `cut` como sobrescrita).
-- **Sentido do corte** (concordante/convencional; o motor já tem `direction`) e **profundidade primeiro** (cada elemento até o fundo antes de ir para o próximo).
-- **Origem no centro** e offset de Z no topo (o pós-processador só desloca as coordenadas; o verificador acompanha).
-- **Bloco livre**, maior que a peça.
-- **Salvar/abrir projeto** (`.gsproj`, JSON da especificação) e exportar só o G-code.
+### Phase 1: 2.5D adjustments (small, days)
+- **Editable Pro mode:** feed, plunge, step down, stepover and RPM (the engine already accepts `cut` as an override).
+- **Cut direction** (climb/conventional; the engine already has `direction`) and **depth first** (each element all the way to the bottom before moving on to the next).
+- **Origin at center** and Z offset at the top (the post-processor only shifts the coordinates; the verifier follows along).
+- **Free-form stock**, larger than the part.
+- **Save/open project** (`.gsproj`, JSON of the specification) and export only the G-code.
 
-### Fase 2: STL e 3D com o motor do Kiri:Moto (médio, semanas)
-- **Por que o Kiri:Moto:** é o que o próprio CAMLab usa. Tem licença MIT e uma **API de engine que roda num Web Worker** (`kiri.newEngine().load(stl).setMode("CAM").setStock().setTools().setProcess({ops}).slice().prepare().export()`), com as operações Rough, Outline, Contour (acabamento X/Y), Level, Drill, Trace e Pocket. Refazer CAM 3D do zero seria meses de trabalho.
-- **Integração:**
-  - Em Criar, uma opção "Peça 3D (STL)": importar, escalar, girar e "snap to top".
-  - Fresas de desbaste e de acabamento escolhidas entre as fresas Sienci; a ball nose passa a ser liberada.
-  - Velocidades da tabela Sienci (que já tem linhas de ball nose para acabamento).
-- **O que continua nosso:**
-  - O G-code do Kiri passa pelo **nosso verificador**.
-  - A prévia usa a **nossa simulação**, que precisa aprender o formato da ball nose.
-  - Preparar, Posicionar e Cortar continuam iguais.
-- **Risco:** o fórum do Kiri:Moto relata bugs na API da engine (roughing que depende de outline, origem exigindo chamadas extras). O plano é fixar uma versão, cobrir com testes de aceite (como já fazemos com a placa "Casa da Ana") e reportar ou corrigir upstream.
+### Phase 2: STL and 3D with the Kiri:Moto engine (medium, weeks)
+- **Why Kiri:Moto:** it is what CAMLab itself uses. It has an MIT license and an **engine API that runs in a Web Worker** (`kiri.newEngine().load(stl).setMode("CAM").setStock().setTools().setProcess({ops}).slice().prepare().export()`), with the Rough, Outline, Contour (X/Y finishing), Level, Drill, Trace and Pocket operations. Rebuilding 3D CAM from scratch would be months of work.
+- **Integration:**
+  - In Create, a "3D part (STL)" option: import, scale, rotate and "snap to top".
+  - Roughing and finishing bits chosen from the Sienci bits; ball nose becomes allowed.
+  - Speeds from the Sienci table (which already has ball nose rows for finishing).
+- **What stays ours:**
+  - Kiri's G-code goes through **our verifier**.
+  - The preview uses **our simulation**, which needs to learn the ball nose shape.
+  - Prepare, Position and Cut stay the same.
+- **Risk:** the Kiri:Moto forum reports bugs in the engine API (roughing that depends on outline, origin requiring extra calls). The plan is to pin a version, cover it with acceptance tests (as we already do with the "Casa da Ana" sign) and report or fix upstream.
 
-### Fase 3: arranjo e extras
-- Várias peças num bloco (arranjo manual e depois automático) e abas posicionadas à mão.
-- Imagem → relevo (mapa de profundidade) como evolução do relevo 3D.
+### Phase 3: arrangement and extras
+- Multiple parts on one stock (manual arrangement first, then automatic) and hand-placed tabs.
+- Image → relief (depth map) as an evolution of 3D relief.
 
-## Ordem sugerida, junto com o que já foi pedido
-1. Modo gControl (em andamento)
-2. Importador de SVG
-3. Paridade fase 1 (ajustes 2.5D)
-4. Paridade fase 2 (STL + 3D via Kiri:Moto)
-5. Fase 3
+## Suggested order, together with what has already been requested
+1. gControl mode (in progress)
+2. SVG importer
+3. Parity phase 1 (2.5D adjustments)
+4. Parity phase 2 (STL + 3D via Kiri:Moto)
+5. Phase 3

@@ -1,154 +1,154 @@
-# Prompt — Nova UI/UX para o gSender com assistente de IA 3D
+# Prompt — New UI/UX for gSender with a 3D AI assistant
 
-> Copie tudo abaixo da linha e cole no seu agente (Claude Code, Lovable, v0, Cursor…). O prompt é autocontido e se apoia no [relatório de engenharia reversa](./01-reverse-engineering-report.md).
+> Copy everything below the line and paste it into your agent (Claude Code, Lovable, v0, Cursor…). The prompt is self-contained and builds on the [reverse engineering report](./01-reverse-engineering-report.md).
 
 ---
 
-## PAPEL
+## ROLE
 
-Você é um(a) Product Designer sênior e engenheiro(a) front-end. Já desenhou softwares industriais para iniciantes (estilo Bambu Studio, Glowforge, Cricut Design Space) e conhece bem o ecossistema CNC (GRBL, grblHAL, G-code, CAM). Vai projetar e implementar uma **interface nova** para o gSender, um sender de G-code open source para fresadoras CNC.
+You are a senior Product Designer and front-end engineer. You have designed industrial software for beginners (in the style of Bambu Studio, Glowforge, Cricut Design Space) and you know the CNC ecosystem well (GRBL, grblHAL, G-code, CAM). You will design and implement a **new interface** for gSender, an open-source G-code sender for CNC routers.
 
-## OBJETIVO
+## GOAL
 
-Criar uma interface **minimalista, bonita e diferente de tudo no mercado de CNC**, que uma pessoa sem experiência consiga usar do zero ao primeiro corte em menos de 10 minutos. Ao mesmo tempo, ela não pode atrapalhar o usuário avançado. A grande novidade é um **assistente de IA que cria modelos 3D a partir de prompts** e os transforma em G-code pronto para cortar.
+Create an interface that is **minimalist, beautiful and unlike anything else on the CNC market**, which a person with no experience can use from zero to their first cut in under 10 minutes. At the same time, it must not get in the way of advanced users. The big new feature is an **AI assistant that creates 3D models from prompts** and turns them into ready-to-cut G-code.
 
-## CONTEXTO TÉCNICO (vem da engenharia reversa; não reinvente)
+## TECHNICAL CONTEXT (comes from the reverse engineering; do not reinvent it)
 
-- O gSender tem um **servidor Node embutido**, separado da UI:
-  - REST em `/api/*`: `gcode`, `file`, `macros`, `state`, `preferences`, `machines`, `maintenance`, `jobstats`, `alarmList`, `remote`, `version`
-  - **Socket.IO** para tempo real
-- Comandos principais via `controller.command(...)`: `gcode`, `gcode:start|pause|resume|stop`, `gcode:safe`, `homing`, `unlock`, `reset`, `jog:cancel`, `feedOverride`, `spindleOverride`, `rapidOverride`, `macro:run`, `toolchange:*`, `sdcard:*`
-- Eventos: `serialport:list`, `serialport:openController`, `networkScan`, `file:load`
-- O estado da máquina (posição, status Idle/Run/Hold/Alarm, alarmes, overrides) chega por socket. Hoje ele é guardado em Redux nos slices `controller`, `connection`, `fileInfo` e `visualizer`.
-- **A nova UI substitui só o renderer.** Ela se conecta ao mesmo servidor, como o Remote Mode já faz pelo navegador. Não mexa em `server/controllers` nem em `cncengine`.
-- Stack sugerida: React 18 + TypeScript + Vite, Tailwind, Radix UI (primitivos acessíveis), Zustand ou Redux Toolkit, Three.js / React Three Fiber para 3D, Framer Motion para movimento.
-- Segurança Electron: `contextIsolation: true`, `nodeIntegration: false` e uma ponte `contextBridge` com uma lista fechada de funções. A versão atual expõe `fs` no `window`; não repita isso.
+- gSender has an **embedded Node server**, separate from the UI:
+  - REST at `/api/*`: `gcode`, `file`, `macros`, `state`, `preferences`, `machines`, `maintenance`, `jobstats`, `alarmList`, `remote`, `version`
+  - **Socket.IO** for real time
+- Main commands via `controller.command(...)`: `gcode`, `gcode:start|pause|resume|stop`, `gcode:safe`, `homing`, `unlock`, `reset`, `jog:cancel`, `feedOverride`, `spindleOverride`, `rapidOverride`, `macro:run`, `toolchange:*`, `sdcard:*`
+- Events: `serialport:list`, `serialport:openController`, `networkScan`, `file:load`
+- Machine state (position, Idle/Run/Hold/Alarm status, alarms, overrides) arrives over the socket. Today it is kept in Redux in the `controller`, `connection`, `fileInfo` and `visualizer` slices.
+- **The new UI replaces only the renderer.** It connects to the same server, as Remote Mode already does from the browser. Do not touch `server/controllers` or `cncengine`.
+- Suggested stack: React 18 + TypeScript + Vite, Tailwind, Radix UI (accessible primitives), Zustand or Redux Toolkit, Three.js / React Three Fiber for 3D, Framer Motion for motion.
+- Electron security: `contextIsolation: true`, `nodeIntegration: false` and a `contextBridge` bridge with a closed list of functions. The current version exposes `fs` on `window`; do not repeat that.
 
-## PROBLEMAS DA UI ATUAL QUE VOCÊ PRECISA RESOLVER
+## PROBLEMS IN THE CURRENT UI THAT YOU MUST SOLVE
 
-1. A tela principal mostra tudo de uma vez: DRO, jog, probe, macros, spindle, coolant, rotary e console.
-2. A Config tem 16 seções e ~155 campos sem separar "seguro" de "perigoso".
-3. A sequência conectar → home → zerar → rodar fica implícita; o usuário precisa saber de cor.
-4. Muito jargão: GRBL, $-settings, MDI, WCS, override.
-5. O app não cria nada; quem quer cortar algo precisa de um CAM externo.
-6. Os alarmes aparecem como código, sem dizer o que fazer.
+1. The main screen shows everything at once: DRO, jog, probe, macros, spindle, coolant, rotary and console.
+2. Config has 16 sections and ~155 fields without separating "safe" from "dangerous".
+3. The connect → home → zero → run sequence is implicit; the user has to know it by heart.
+4. Lots of jargon: GRBL, $-settings, MDI, WCS, override.
+5. The app creates nothing; anyone who wants to cut something needs an external CAM.
+6. Alarms appear as codes, without saying what to do.
 
-## PRINCÍPIOS DE UX (obrigatórios)
+## UX PRINCIPLES (mandatory)
 
-- **Um fluxo linear com 4 etapas fixas, sempre visível:** `Criar → Preparar → Posicionar → Cortar`. Cada etapa tem um único botão primário. A próxima etapa só destrava quando a anterior está pronta, mas um usuário avançado pode pular etapas.
-- **Revelação progressiva.** O modo Simples é o padrão. O modo Pro (atalho ou toggle) mostra DRO completo, console, MDI, macros e overrides finos. Nada é removido, só escondido.
-- **Linguagem humana.** Escreva "Encontrar o zero da máquina", não "Homing". Escreva "Altura da ferramenta", não "Z0 / TLO". O termo técnico aparece em texto menor para quem quer aprender.
-- **Prevenção antes de correção.** Antes de cortar, rode um checklist automático: arquivo cabe na mesa, fresa definida, zero definido, spindle ok. Mostre ✓ ou ⚠ com a correção a um clique.
-- **Alarmes viram instruções:** o que aconteceu (1 frase), por que importa e um botão "Resolver" que guia passo a passo. O código do alarme fica num detalhe expansível.
-- **Feedback físico constante.** Uma mini-visualização 3D da máquina com a posição real da fresa, sempre visível. O estado da máquina usa cor e forma (nunca só cor) e aparece num único "pill" de status.
-- **Segurança em primeiro lugar.** O botão de **Parar** fica sempre visível, grande, na mesma posição, com atalho `Espaço`/`Esc`. Ações perigosas pedem confirmação com o resultado descrito ("A fresa vai descer 5 mm"), nunca um "Tem certeza?" genérico.
-- **Heurísticas de Nielsen, WCAG 2.2 AA, alvos de toque ≥ 44 px.** Navegação completa por teclado, suporte a leitor de tela (anúncios de progresso do job), `prefers-reduced-motion`, tema claro/escuro.
-- **Funciona em desktop, tablet e celular** (Remote Mode), com o mesmo design.
+- **A linear flow with 4 fixed steps, always visible:** `Create → Prepare → Position → Cut`. Each step has a single primary button. The next step only unlocks when the previous one is ready, but an advanced user can skip steps.
+- **Progressive disclosure.** Simple mode is the default. Pro mode (shortcut or toggle) shows the full DRO, console, MDI, macros and fine overrides. Nothing is removed, only hidden.
+- **Human language.** Write "Find the machine's zero", not "Homing". Write "Tool height", not "Z0 / TLO". The technical term appears in smaller text for those who want to learn.
+- **Prevention before correction.** Before cutting, run an automatic checklist: file fits on the bed, bit defined, zero defined, spindle ok. Show ✓ or ⚠ with the fix one click away.
+- **Alarms become instructions:** what happened (1 sentence), why it matters, and a "Resolve" button that guides step by step. The alarm code sits in an expandable detail.
+- **Constant physical feedback.** A mini 3D view of the machine with the real bit position, always visible. Machine state uses color and shape (never color alone) and appears in a single status "pill".
+- **Safety first.** The **Stop** button is always visible, large, in the same position, with the `Space`/`Esc` shortcut. Dangerous actions ask for confirmation describing the result ("The bit will move down 5 mm"), never a generic "Are you sure?".
+- **Nielsen heuristics, WCAG 2.2 AA, touch targets ≥ 44 px.** Full keyboard navigation, screen reader support (job progress announcements), `prefers-reduced-motion`, light/dark theme.
+- **Works on desktop, tablet and phone** (Remote Mode), with the same design.
 
-## ARQUITETURA DE INFORMAÇÃO
+## INFORMATION ARCHITECTURE
 
 ```
-Topo fixo:  [logo]  Criar · Preparar · Posicionar · Cortar   [status da máquina ●]  [Parar ■]
-Canvas:     viewport 3D ocupando ~70% da tela (é o "palco")
-Painel:     um painel contextual à direita, com só o que a etapa atual precisa
-Dock:       assistente de IA (⌘K / barra de prompt) disponível em qualquer etapa
-Escondido:  Biblioteca (projetos, fresas, materiais) · Máquina (config) · Histórico
+Fixed top:  [logo]  Create · Prepare · Position · Cut   [machine status ●]  [Stop ■]
+Canvas:     3D viewport taking ~70% of the screen (it is the "stage")
+Panel:      one contextual panel on the right, with only what the current step needs
+Dock:       AI assistant (⌘K / prompt bar) available at any step
+Hidden:     Library (projects, bits, materials) · Machine (config) · History
 ```
 
-### Etapas
+### Steps
 
-1. **Criar.** Prompt de IA, importar arquivo (STL, SVG, DXF, G-code) ou escolher um modelo da galeria.
-2. **Preparar.** Material (madeira, MDF, acrílico, alumínio), tamanho do bloco, fresa (biblioteca visual) e estratégia (desbaste + acabamento) com presets "Rápido / Equilibrado / Detalhado". Mostre tempo estimado e prévia do toolpath animada.
-3. **Posicionar.** Conectar (detecção automática da porta), encontrar o zero da máquina e definir o ponto de origem com jog visual: arrastar na prévia 3D ou usar um joystick/D-pad grande com passos 0.1 / 1 / 10 mm. Probe guiado com ilustrações.
-4. **Cortar.** Checklist pré-voo, depois Iniciar. Durante o job: barra de progresso, tempo restante, linha atual, prévia da fresa em tempo real, Pausar/Parar e sliders simples de velocidade (overrides) com limites seguros. No fim: resumo, foto (se houver câmera) e "Cortar de novo".
+1. **Create.** AI prompt, import a file (STL, SVG, DXF, G-code) or pick a model from the gallery.
+2. **Prepare.** Material (wood, MDF, acrylic, aluminum), stock size, bit (visual library) and strategy (roughing + finishing) with "Fast / Balanced / Detailed" presets. Show the estimated time and an animated toolpath preview.
+3. **Position.** Connect (automatic port detection), find the machine's zero and set the origin with visual jogging: drag in the 3D preview or use a large joystick/D-pad with 0.1 / 1 / 10 mm steps. Guided probing with illustrations.
+4. **Cut.** Pre-flight checklist, then Start. During the job: progress bar, time remaining, current line, real-time bit preview, Pause/Stop and simple speed sliders (overrides) with safe limits. At the end: summary, photo (if there is a camera) and "Cut again".
 
-### Configuração (Máquina)
+### Configuration (Machine)
 
-Organize por **intenção**, não por parâmetro: "Minha máquina", "Ferramentas", "Conexão", "Segurança", "Acessibilidade", "Avançado". Use um assistente de primeira configuração com perfis prontos (Sienci LongMill, AltMill, Shapeoko, genérico GRBL). Campos de firmware (`$`) ficam só em Avançado, com aviso, valor padrão e "restaurar".
+Organize by **intent**, not by parameter: "My machine", "Tools", "Connection", "Safety", "Accessibility", "Advanced". Use a first-setup wizard with ready-made profiles (Sienci LongMill, AltMill, Shapeoko, generic GRBL). Firmware fields (`$`) live only under Advanced, with a warning, the default value and "restore".
 
-## ASSISTENTE DE IA — CRIAÇÃO DE MODELOS 3D POR PROMPT
+## AI ASSISTANT — CREATING 3D MODELS FROM PROMPTS
 
-### Escopo inicial (v1): placas e letreiros 2D/2.5D
+### Initial scope (v1): 2D/2.5D plates and signs
 
-Implemente primeiro só este escopo. Ele cobre a maior parte do que um iniciante corta numa CNC de 3 eixos e evita o CAM 3D completo.
+Implement only this scope first. It covers most of what a beginner cuts on a 3-axis CNC and avoids full 3D CAM.
 
-> **O motor de CAM desta v1 já existe:** a pasta `cam-engine/` (TypeScript, 35 testes passando) gera G-code GRBL verificado a partir do JSON abaixo. **Use esse pacote; não reescreva o CAM.** O trabalho da UI é chamar `generatePlate(spec, opções)`, mostrar `warnings`, desenhar a prévia a partir de `layout` e da simulação, e enviar o `gcode` quando `ok` for verdadeiro. Detalhes em `cam-engine/README.md`.
+> **The CAM engine for this v1 already exists:** the `cam-engine/` folder (TypeScript, 35 passing tests) generates verified GRBL G-code from the JSON below. **Use that package; do not rewrite the CAM.** The UI's job is to call `generatePlate(spec, options)`, show the `warnings`, draw the preview from `layout` and the simulation, and send the `gcode` when `ok` is true. Details in `cam-engine/README.md`.
 
-- **Tipos de peça:** placa com texto em relevo, gravado ou vazado; letreiro recortado (letras soltas ou palavra contínua); placa com borda (reta, arredondada, chanfrada) e ícones simples (coração, estrela, casa, folha); furos de fixação e rasgo para pendurar.
-- **Bibliotecas (todas no navegador, sem servidor):**
-  - **opentype.js** (MIT): texto → contornos vetoriais a partir de fontes TTF/OTF. Fontes incluídas: Archivo Black, Pacifico, Bebas Neue (SIL OFL).
-  - **Clipper2 via `clipper2-ts`** (BSL-1.0): união e diferença das regiões e offsets da fresa (pocket por anéis, recorte por fora e por dentro, checagem de detalhes menores que a fresa). O pacote `clipper2-js` foi descartado: o offset negativo dele está quebrado.
-  - **Zod** (MIT): valida o JSON que a IA preenche antes de qualquer cálculo.
-  - **Three.js / React Three Fiber**: prévia 3D, alimentada pelo mapa de alturas da simulação do `cam-engine`.
-  - Não usamos kernel CAD 3D (Replicad/OpenCascade/manifold) na v1.
-- **Aproveitado do rudra496/cnc (MIT):** só ideias, nenhum arquivo copiado. A simulação de remoção de material por mapa de alturas (reescrita em `cam-engine/src/sim/heightmap.ts`, sem Three.js e com resolução de 0,25 mm) e a fórmula de avanço da calculadora (avanço por dente × canais × RPM, em `cam-engine/src/materials.ts`). Os presets de material dele (metais) não servem; usamos MDF, compensado, madeira macia/dura e acrílico.
-- **Schema da IA:** a IA preenche um JSON fechado, sem código livre: `PlateSpecSchema` em `cam-engine/src/schema.ts` (`type`, `width`, `height`, `thickness`, `material`, `texts[]` com `content/font/size/mode/depth/x/y`, `edge`, `frame`, `icons[]`, `holes[]`, `slots[]`, `outerCutout`, `margin`). Use o próprio schema Zod como definição da ferramenta (tool use) da Claude API.
-- **Operações de CAM (prontas):** gravação e relevo por pocket de anéis concêntricos, vazado (estêncil), furos (bicada ou pocket), rasgos, recorte externo com abas e troca entre duas fresas (`T# M6`). Fresas: reta e V-bit (a V-bit só grava seguindo o contorno). V-carve de profundidade variável e entrada em rampa ficam para a v1.1.
-- **Saída e segurança:** G-code GRBL com cabeçalho (G21 G90 G17 G94), altura segura e passadas por material e fresa. O verificador relê o texto final e bloqueia `$`, G20/G91, G0 dentro do material, corte com spindle desligado, avanço acima do máximo e saída da área. Ele também deve rodar sobre G-code importado.
-- **Avisos de fabricabilidade:** já saem com código estável e texto em pt-BR (`TEXT_DOES_NOT_FIT` com tamanho sugerido, `DETAIL_SMALLER_THAN_BIT` com % não cortado, `ELEMENT_NOT_MACHINABLE`, `LOOSE_ISLANDS`…). A IA deve ler esses códigos e propor a correção ("vou reduzir o texto para 16 mm. Ok?").
-- **Máquinas Sienci Labs:** o produto é feito para as máquinas da Sienci. Use o catálogo `cam-engine/src/catalog/sienci/` (máquinas LongMill MK2/MK3 e AltMill, cabeçotes Makita/AutoSpin/spindle, 15 fresas da loja com regra de compatibilidade, tabela oficial de avanço e rotação, 7 projetos de primeiros cortes). Passe `sienci: { machine, head, bit, cutoutBit, speed }` para `generatePlate`. Pré-selecione a máquina a partir do perfil já escolhido no gSender e mostre `manualAdjustments` (dial do Makita) no checklist antes de cortar.
-- **Integração com o gSender:** confira os limites do catálogo com os parâmetros reais do firmware ($110–$112, $130–$132), porque o usuário pode ter alterado, e mande o G-code por `POST /api/gcode`.
-- **Fora do escopo da v1:** relevo artístico (heightmap), malhas STL convertidas em toolpath 3D, caixas com encaixe, 4º eixo. Pedidos assim recebem resposta amigável com uma alternativa dentro do escopo (ex.: silhueta gravada). Importar G-code pronto continua funcionando.
-- **Pronto quando:** "placa 20×10 cm, MDF 15 mm, 'Casa da Ana' em relevo de 3 mm, borda arredondada, 2 furos" gera um G-code que passa no verificador e é simulado corretamente no visualizador.
+- **Part types:** plate with raised, engraved or cut-through text; cut-out sign (separate letters or a continuous word); plate with a border (straight, rounded, chamfered) and simple icons (heart, star, house, leaf); mounting holes and a hanging slot.
+- **Libraries (all in the browser, no server):**
+  - **opentype.js** (MIT): text → vector outlines from TTF/OTF fonts. Bundled fonts: Archivo Black, Pacifico, Bebas Neue (SIL OFL).
+  - **Clipper2 via `clipper2-ts`** (BSL-1.0): union and difference of regions and bit offsets (ring pocketing, outside and inside cutouts, checking for details smaller than the bit). The `clipper2-js` package was rejected: its negative offset is broken.
+  - **Zod** (MIT): validates the JSON the AI fills in before any computation.
+  - **Three.js / React Three Fiber**: 3D preview, fed by the heightmap from the `cam-engine` simulation.
+  - We do not use a 3D CAD kernel (Replicad/OpenCascade/manifold) in v1.
+- **Taken from rudra496/cnc (MIT):** only ideas, no files copied. The heightmap-based material-removal simulation (rewritten in `cam-engine/src/sim/heightmap.ts`, without Three.js and at 0.25 mm resolution) and the calculator's feed formula (feed per tooth × flutes × RPM, in `cam-engine/src/materials.ts`). Its material presets (metals) are not suitable; we use MDF, plywood, softwood/hardwood and acrylic.
+- **AI schema:** the AI fills in a closed JSON, with no free-form code: `PlateSpecSchema` in `cam-engine/src/schema.ts` (`type`, `width`, `height`, `thickness`, `material`, `texts[]` with `content/font/size/mode/depth/x/y`, `edge`, `frame`, `icons[]`, `holes[]`, `slots[]`, `outerCutout`, `margin`). Use the Zod schema itself as the tool definition (tool use) for the Claude API.
+- **CAM operations (ready):** engraving and relief via concentric-ring pocketing, cut-through (stencil), holes (peck or pocket), slots, outer cutout with tabs and switching between two bits (`T# M6`). Bits: straight and V-bit (the V-bit only engraves along the outline). Variable-depth V-carving and ramp entry are left for v1.1.
+- **Output and safety:** GRBL G-code with a header (G21 G90 G17 G94), safe height and passes per material and bit. The verifier re-reads the final text and blocks `$`, G20/G91, G0 inside the material, cutting with the spindle off, feed above the maximum and leaving the work area. It must also run on imported G-code.
+- **Manufacturability warnings:** they already come out with a stable code and human-readable text (`TEXT_DOES_NOT_FIT` with a suggested size, `DETAIL_SMALLER_THAN_BIT` with the % not cut, `ELEMENT_NOT_MACHINABLE`, `LOOSE_ISLANDS`…). The AI should read these codes and propose the fix ("I'll reduce the text to 16 mm. OK?").
+- **Sienci Labs machines:** the product is made for Sienci's machines. Use the `cam-engine/src/catalog/sienci/` catalog (LongMill MK2/MK3 and AltMill machines, Makita/AutoSpin/spindle heads, 15 bits from the store with a compatibility rule, the official feeds and speeds table, 7 first-cut projects). Pass `sienci: { machine, head, bit, cutoutBit, speed }` to `generatePlate`. Preselect the machine from the profile already chosen in gSender and show `manualAdjustments` (Makita dial) in the pre-cut checklist.
+- **gSender integration:** check the catalog limits against the real firmware parameters ($110–$112, $130–$132), because the user may have changed them, and send the G-code via `POST /api/gcode`.
+- **Out of scope for v1:** artistic relief (heightmap), STL meshes converted into 3D toolpaths, boxes with joinery, 4th axis. Requests like these get a friendly reply with an in-scope alternative (e.g. an engraved silhouette). Importing ready-made G-code keeps working.
+- **Done when:** "20×10 cm plate, 15 mm MDF, 'Casa da Ana' raised 3 mm, rounded border, 2 holes" generates G-code that passes the verifier and is simulated correctly in the visualizer.
 
-### Experiência
+### Experience
 
-- Uma barra de prompt fixa, como uma conversa curta: "Uma placa de 20×10 cm com o nome *Casa da Ana* em relevo e borda arredondada".
-- A IA responde com **3 variações** em miniatura 3D. O usuário escolhe uma e refina conversando ("letras mais grossas", "adicione uma folha no canto").
-- Parâmetros editáveis aparecem como chips/sliders gerados pela IA (largura, profundidade, fonte, raio da borda). Mudar um slider atualiza o modelo na hora, sem nova chamada à IA.
-- A IA sempre confere se o modelo pode ser fabricado e avisa em linguagem simples: "detalhe menor que a fresa de 3 mm, vou engrossar para 3.2 mm. Ok?"
-- Ela também sugere material, fresa e profundidade, preenchendo a etapa Preparar.
-- Prompts de exemplo, histórico e "remix" de projetos da galeria.
+- A fixed prompt bar, like a short conversation: "A 20×10 cm plate with the name *Casa da Ana* raised and a rounded border".
+- The AI replies with **3 variations** as 3D thumbnails. The user picks one and refines it by chatting ("thicker letters", "add a leaf in the corner").
+- Editable parameters appear as AI-generated chips/sliders (width, depth, font, border radius). Changing a slider updates the model instantly, without a new AI call.
+- The AI always checks whether the model can be manufactured and warns in plain language: "detail smaller than the 3 mm bit, I'll thicken it to 3.2 mm. OK?"
+- It also suggests material, bit and depth, filling in the Prepare step.
+- Example prompts, history and "remix" of gallery projects.
 
-### Pipeline técnico (CNC exige geometria precisa, não malha "artística")
+### Technical pipeline (CNC needs precise geometry, not an "artistic" mesh)
 
-1. **LLM → especificação paramétrica.** A IA (Claude API, modelo mais recente com tool use) não gera malha nem código. Na v1 ela preenche o `PlateSpecSchema` do `cam-engine`, que vira geometria 2.5D com opentype.js + Clipper2. Para fases futuras (caixas, peças), avalie um kernel CAD no navegador (Replicad/OpenCascade.js ou manifold-3d).
-2. **Relevos orgânicos (2.5D).** Para pedidos artísticos ("um leão em relevo"), gere uma imagem → mapa de profundidade (heightmap) → superfície 2.5D. É o tipo de modelo que uma fresa de 3 eixos corta bem.
-3. **Text-to-3D por malha** (opcional, para importar STL) entra só como modo "experimental", com aviso de que a malha será convertida em 2.5D.
-4. **Validação de fabricabilidade:** cabe no material/mesa; sem undercuts em 3 eixos; espessura mínima ≥ diâmetro da fresa; profundidade ≤ comprimento útil.
-5. **CAM no navegador:** na v1 é o `cam-engine` (pocket, perfil com abas, furos → G-code GRBL). Rode-o num Web Worker e mostre a simulação de remoção de material. Desbaste 3D (waterline/raster) fica para os relevos artísticos, fora da v1.
-6. **Envio:** `POST /api/gcode` e depois o fluxo normal (Posicionar → Cortar) pelo servidor do gSender.
+1. **LLM → parametric specification.** The AI (Claude API, latest model with tool use) does not generate meshes or code. In v1 it fills in the `cam-engine`'s `PlateSpecSchema`, which becomes 2.5D geometry with opentype.js + Clipper2. For future phases (boxes, parts), evaluate an in-browser CAD kernel (Replicad/OpenCascade.js or manifold-3d).
+2. **Organic reliefs (2.5D).** For artistic requests ("a lion in relief"), generate an image → depth map (heightmap) → 2.5D surface. It is the kind of model a 3-axis router cuts well.
+3. **Mesh-based text-to-3D** (optional, for importing STL) comes in only as an "experimental" mode, with a warning that the mesh will be converted to 2.5D.
+4. **Manufacturability validation:** fits the material/bed; no undercuts on 3 axes; minimum thickness ≥ bit diameter; depth ≤ usable cutting length.
+5. **CAM in the browser:** in v1 it is the `cam-engine` (pocket, profile with tabs, holes → GRBL G-code). Run it in a Web Worker and show the material-removal simulation. 3D roughing (waterline/raster) is for artistic reliefs, outside v1.
+6. **Sending:** `POST /api/gcode` and then the normal flow (Position → Cut) through the gSender server.
 7. **Guardrails:**
-   - A IA **nunca envia comandos para a máquina.** Ela só produz arquivos. Toda execução exige uma ação explícita do usuário.
-   - O G-code gerado passa por um verificador: limites da mesa, feeds máximos do perfil, sem `$` settings, sem comandos fora da lista permitida.
+   - The AI **never sends commands to the machine.** It only produces files. Every run requires an explicit user action.
+   - The generated G-code goes through a verifier: bed limits, profile maximum feeds, no `$` settings, no commands outside the allowed list.
 
-## DIREÇÃO VISUAL — "Calm Precision"
+## VISUAL DIRECTION — "Calm Precision"
 
-Fuja do visual "painel industrial cinza cheio de botões". A referência é um **instrumento de precisão sereno**: estúdio fotográfico, relógio suíço, Teenage Engineering, Linear, Arc.
+Stay away from the "gray industrial panel full of buttons" look. The reference is a **serene precision instrument**: photo studio, Swiss watch, Teenage Engineering, Linear, Arc.
 
-- **Palco escuro, interface leve.** O viewport 3D é o centro, com iluminação de estúdio suave, sombra de contato e o material com textura real (veios de madeira, acrílico translúcido). A UI flutua em painéis de vidro sutil (blur 20 px, borda 1 px com 8% de opacidade).
-- **Paleta:**
-  - Neutros quentes: grafite `#111214`, superfície `#1A1B1E`, papel `#F5F3EF` no tema claro
-  - **Um** acento vivo: laranja-sinal `#FF5B1F`, usado só para a ação primária e para a fresa
-  - Estados: Pronto = verde-menta, Rodando = azul-elétrico, Pausado = âmbar, Alarme = vermelho, sempre com ícone + texto
-- **Tipografia:** Inter Tight ou Geist para a UI, e **mono tabular** (Geist Mono / JetBrains Mono) para coordenadas e números, que nunca "pulam". Escala 12/14/16/20/28/40.
-- **Grid de 8 pt**, raio 14 px nos painéis e 10 px nos controles, muito espaço em branco, no máximo 1 ação primária por tela.
-- **Movimento com propósito:** transições de 180–240 ms com ease-out, câmera 3D que "voa" suavemente entre etapas, microinterações táteis no jog (o botão afunda e a posição desliza). Tudo respeita `prefers-reduced-motion`.
-- **Ícones:** Lucide com traço de 1.5 px. Ilustrações de passo a passo em linha fina, monocromáticas com o acento.
-- **Detalhes de assinatura (o "diferente"):**
-  - O "pill" de status pulsa devagar enquanto corta, como uma respiração
-  - A coordenada da fresa aparece como etiqueta flutuante presa à ponta da ferramenta no 3D
-  - A barra de etapas no topo é uma linha contínua que "se preenche" como um toolpath sendo cortado
-  - Ao terminar o job, a câmera faz uma volta de 360° na peça pronta
+- **Dark stage, light interface.** The 3D viewport is the center, with soft studio lighting, contact shadow and the material with a real texture (wood grain, translucent acrylic). The UI floats in subtle glass panels (20 px blur, 1 px border at 8% opacity).
+- **Palette:**
+  - Warm neutrals: graphite `#111214`, surface `#1A1B1E`, paper `#F5F3EF` in the light theme
+  - **One** vivid accent: signal orange `#FF5B1F`, used only for the primary action and for the bit
+  - States: Ready = mint green, Running = electric blue, Paused = amber, Alarm = red, always with icon + text
+- **Typography:** Inter Tight or Geist for the UI, and **tabular mono** (Geist Mono / JetBrains Mono) for coordinates and numbers, which never "jump". Scale 12/14/16/20/28/40.
+- **8 pt grid**, 14 px radius on panels and 10 px on controls, lots of white space, at most 1 primary action per screen.
+- **Purposeful motion:** 180–240 ms transitions with ease-out, a 3D camera that "flies" smoothly between steps, tactile micro-interactions on the jog (the button sinks and the position glides). Everything respects `prefers-reduced-motion`.
+- **Icons:** Lucide with a 1.5 px stroke. Step-by-step illustrations in thin line, monochrome with the accent.
+- **Signature details (the "different" part):**
+  - The status "pill" pulses slowly while cutting, like breathing
+  - The bit coordinate appears as a floating label attached to the tool tip in 3D
+  - The step bar at the top is a continuous line that "fills in" like a toolpath being cut
+  - When the job finishes, the camera does a 360° orbit around the finished part
 
-## ENTREGÁVEIS
+## DELIVERABLES
 
-1. **Fluxos e wireframes** das 4 etapas, do onboarding, da configuração e dos estados de erro e alarme (desktop + celular).
-2. **Design system:** tokens (cor, tipo, espaçamento, raio, sombra, motion) em CSS variables / Tailwind config, e componentes Radix estilizados (Button, IconButton, Segmented, Slider, Stepper, Panel, Toast, Dialog, StatusPill, JogPad, CoordinateReadout, PromptBar, ModelCard).
-3. **Protótipo funcional** em React + TS conectado ao servidor do gSender (REST + Socket.IO), com um **modo simulador** (máquina fake) para testar sem CNC.
-4. **Módulo de IA:** PromptBar + chamada à Claude API com tool use → código paramétrico → render 3D → validação → CAM → G-code. Inclua o system prompt do assistente e os schemas JSON.
-5. **Microcopy** completa em PT-BR e EN (i18n), incluindo todos os alarmes GRBL reescritos como instruções.
-6. **Plano de testes de usabilidade:** 5 usuários leigos, tarefa "do prompt ao primeiro corte". Métricas: tempo, erros, SUS ≥ 80.
+1. **Flows and wireframes** for the 4 steps, onboarding, configuration and the error and alarm states (desktop + phone).
+2. **Design system:** tokens (color, type, spacing, radius, shadow, motion) as CSS variables / Tailwind config, and styled Radix components (Button, IconButton, Segmented, Slider, Stepper, Panel, Toast, Dialog, StatusPill, JogPad, CoordinateReadout, PromptBar, ModelCard).
+3. **Working prototype** in React + TS connected to the gSender server (REST + Socket.IO), with a **simulator mode** (fake machine) for testing without a CNC.
+4. **AI module:** PromptBar + Claude API call with tool use → parametric code → 3D render → validation → CAM → G-code. Include the assistant's system prompt and the JSON schemas.
+5. **Complete microcopy** in English, structured for i18n, including all GRBL alarms rewritten as instructions.
+6. **Usability test plan:** 5 lay users, task "from prompt to first cut". Metrics: time, errors, SUS ≥ 80.
 
-## CRITÉRIOS DE ACEITE
+## ACCEPTANCE CRITERIA
 
-- [ ] Uma pessoa leiga faz "prompt → modelo → G-code → posicionar → cortar" sem ler documentação, em menos de 10 minutos.
-- [ ] A tela inicial mostra no máximo 1 ação primária e no máximo 7 controles visíveis no modo Simples.
-- [ ] O botão Parar fica sempre visível e responde por teclado em menos de 100 ms.
-- [ ] Todo alarme tem explicação humana e um botão de resolução guiada.
-- [ ] WCAG 2.2 AA (contraste, foco visível, teclado, leitor de tela) verificado com axe.
-- [ ] A IA nunca executa movimento na máquina; todo G-code gerado passa pelo verificador.
-- [ ] Funciona em 1280×800, 1920×1080, tablet e celular (Remote Mode).
-- [ ] Nenhuma alteração no `server/` do gSender. A UI nova fala com ele só via REST e Socket.IO.
+- [ ] A lay person does "prompt → model → G-code → position → cut" without reading documentation, in under 10 minutes.
+- [ ] The home screen shows at most 1 primary action and at most 7 visible controls in Simple mode.
+- [ ] The Stop button is always visible and responds to the keyboard in under 100 ms.
+- [ ] Every alarm has a human explanation and a guided-resolution button.
+- [ ] WCAG 2.2 AA (contrast, visible focus, keyboard, screen reader) verified with axe.
+- [ ] The AI never moves the machine; all generated G-code goes through the verifier.
+- [ ] Works at 1280×800, 1920×1080, tablet and phone (Remote Mode).
+- [ ] No changes to gSender's `server/`. The new UI talks to it only via REST and Socket.IO.
 
-Comece pelos fluxos e pelo design system. Mostre os wireframes das 4 etapas e espere minha aprovação antes de implementar.
+Start with the flows and the design system. Show the wireframes for the 4 steps and wait for my approval before implementing.

@@ -1,107 +1,107 @@
-# gControl, versão online e posicionamento
+# gControl, online version and positioning
 
-Fontes consultadas em out/2026:
+Sources consulted in Oct 2026:
 - [gControl Panel Computer](https://sienci.com/product/gcontrol/)
 - [Choosing Software – Sienci Resources](https://resources.sienci.com/view/lmk2-choosing-software/)
 
 ---
 
-## 1. gControl: o que muda na interface
+## 1. gControl: what changes in the interface
 
-**O aparelho.** Windows 11 IoT, tela touch de 15,6″ em 1920×1080, processador Intel N150 (modesto), 8 GB de RAM. Vem com o gSender pré-instalado e fica preso na máquina. Duas reclamações nas avaliações: "seria melhor se abrisse o gSender sozinho" e "queria um processador mais rápido".
+**The device.** Windows 11 IoT, 15.6″ touchscreen at 1920×1080, Intel N150 processor (modest), 8 GB of RAM. It ships with gSender preinstalled and is mounted on the machine. Two complaints in the reviews: "it would be better if it opened gSender by itself" and "I wish it had a faster processor".
 
-**Consequências para o design:**
+**Consequences for the design:**
 
-| Fato | Impacto | O que fazer |
+| Fact | Impact | What to do |
 |---|---|---|
-| Touch, uso de pé ao lado da máquina, mão suja ou de luva | Alvos de 44 px ficam pequenos; não existe hover | Modo "Painel": alvos ≥ 56 px, nada que dependa de hover, arrastar com tolerância maior, jog pad grande |
-| 15,6″ a ~1 m de distância | Textos de 12–13 px ficam ilegíveis | Escala tipográfica +2 px, números de coordenada maiores |
-| O Windows usa escala de 125–150% nessa tela | A janela útil cai para **1536×864 ou 1280×720** | O layout precisa funcionar em 1280×720 (hoje o mínimo é 1280×760) |
-| N150 | Prévia 3D e simulação em alta resolução pesam | Simulação em resolução menor, 3D sob demanda, worker do motor com prioridade baixa durante o corte |
-| O teclado é o virtual do Windows | Digitar é ruim | Em Criar, priorizar chips, sliders e o assistente; campos numéricos com ± |
-| Fica na máquina | É o lugar de Posicionar e Cortar | Abrir direto em Posicionar/Cortar quando detectar o gControl; Criar continua disponível |
-| "Seria bom abrir sozinho" | Atrito toda vez que liga | Modo quiosque: abrir em tela cheia ao ligar o Windows |
+| Touch, used standing next to the machine, with dirty or gloved hands | 44 px targets are too small; there is no hover | "Panel" mode: targets ≥ 56 px, nothing that depends on hover, dragging with greater tolerance, large jog pad |
+| 15.6″ at ~1 m away | 12–13 px text becomes unreadable | Type scale +2 px, larger coordinate numbers |
+| Windows uses 125–150% scaling on this screen | The usable window drops to **1536×864 or 1280×720** | The layout must work at 1280×720 (today the minimum is 1280×760) |
+| N150 | 3D preview and high-resolution simulation are heavy | Lower-resolution simulation, 3D on demand, engine worker at low priority during the cut |
+| The keyboard is the Windows on-screen keyboard | Typing is painful | In Create, prioritize chips, sliders and the assistant; numeric fields with ± |
+| It stays on the machine | It is the place for Position and Cut | Open straight into Position/Cut when gControl is detected; Create remains available |
+| "It would be nice if it opened by itself" | Friction every time it is turned on | Kiosk mode: open full screen when Windows starts |
 
-**Detecção:** `pointer: coarse` com largura ≤ 1920 (ou parâmetro `?panel=1` / opção em Settings) liga o modo Painel. A troca é por variáveis CSS (`--control-h`, `--font-scale`, `--panel-w`), sem duplicar telas.
-
----
-
-## 2. Versão online: vale a pena?
-
-O motor de CAM já roda inteiro no navegador (Web Worker). Ter uma versão web custa pouco tecnicamente. A questão é **o que** fica online.
-
-### A favor
-- **Sem instalação:** abre no Mac, Chromebook, tablet e celular. Dá para desenhar no sofá e cortar na oficina.
-- **Atualizações instantâneas** para todo mundo, sem baixar instalador.
-- **Assistente de IA sem pedir chave:** o servidor guarda a chave da Claude API, então o custo e o controle ficam com a Sienci (ou com você).
-- **Projetos na nuvem:** salvar, compartilhar, galeria de "remix", e abrir no gControl o que foi desenhado em casa.
-- **Aquisição:** quem ainda não tem máquina testa o fluxo inteiro e vê quanto tempo levaria numa LongMill. Isso vira um funil de vendas.
-- **Precedentes:** o Easel (online) e o próprio CAMLab da Sienci (online, baseado no Kiri:Moto).
-
-### Contra
-- **Controlar a máquina pelo navegador é frágil:**
-  - O Web Serial só existe no Chrome e no Edge (não no Safari nem no Firefox).
-  - Abas em segundo plano são estranguladas pelo navegador e o computador pode dormir no meio de um corte de 40 minutos.
-  - A AltMill e a SLB-EXT por Ethernet não são acessíveis direto do navegador.
-  - O gSender usa um servidor Node local justamente por isso.
-- **Oficina sem internet:** um app que só funciona online para no pior lugar.
-- **Custos recorrentes:** hospedagem, IA, suporte, contas de usuário, LGPD/GDPR.
-- **Segurança:** G-code vindo da nuvem precisa do mesmo verificador local antes de ir para a máquina (já existe no motor).
-
-### Recomendação: híbrido, um só código
-1. **Web ("Studio"):** Criar + Preparar + exportar ou enviar o G-code para a oficina. Nada de mover máquina.
-2. **Desktop e gControl (Electron com o servidor do gSender):** o fluxo completo, funcionando offline.
-3. **Ponte:** projeto salvo na nuvem → aparece em "Recentes" no gControl. A máquina só é comandada pelo app local.
+**Detection:** `pointer: coarse` with width ≤ 1920 (or the `?panel=1` parameter / an option in Settings) turns on Panel mode. The switch is done with CSS variables (`--control-h`, `--font-scale`, `--panel-w`), without duplicating screens.
 
 ---
 
-## 3. Posicionamento
+## 2. Online version: is it worth it?
 
-### O que o gSender diz hoje
+The CAM engine already runs entirely in the browser (Web Worker). A web version costs little technically. The question is **what** goes online.
+
+### For
+- **No installation:** opens on Mac, Chromebook, tablet and phone. You can design on the couch and cut in the workshop.
+- **Instant updates** for everyone, without downloading an installer.
+- **AI assistant without asking for a key:** the server holds the Claude API key, so the cost and control stay with Sienci (or with you).
+- **Cloud projects:** save, share, a "remix" gallery, and open on gControl what was designed at home.
+- **Acquisition:** people who don't own a machine yet can try the whole flow and see how long it would take on a LongMill. That becomes a sales funnel.
+- **Precedents:** Easel (online) and Sienci's own CAMLab (online, based on Kiri:Moto).
+
+### Against
+- **Controlling the machine from the browser is fragile:**
+  - Web Serial only exists in Chrome and Edge (not in Safari or Firefox).
+  - Background tabs get throttled by the browser, and the computer can go to sleep in the middle of a 40-minute cut.
+  - The AltMill and the SLB-EXT over Ethernet are not reachable directly from the browser.
+  - gSender uses a local Node server precisely for this reason.
+- **Workshop without internet:** an app that only works online stops in the worst possible place.
+- **Recurring costs:** hosting, AI, support, user accounts, LGPD/GDPR.
+- **Security:** G-code coming from the cloud needs the same local verifier before it goes to the machine (it already exists in the engine).
+
+### Recommendation: hybrid, a single codebase
+1. **Web ("Studio"):** Create + Prepare + export or send the G-code to the workshop. No machine movement at all.
+2. **Desktop and gControl (Electron with the gSender server):** the complete flow, working offline.
+3. **Bridge:** project saved in the cloud → shows up in "Recent" on gControl. The machine is only commanded by the local app.
+
+---
+
+## 3. Positioning
+
+### What gSender says today
 > "No. gSender is strictly a CNC control software and has no features currently for g-code generation […] You'll need to use gSender in combination with some other CAM, or design + CAM, software."
 
-A própria página de software da Sienci mostra um exemplo de três programas (Illustrator → Carbide Create → gSender) e um assistente que escolhe entre mais de 80 ferramentas. Para quem está começando, isso é a maior barreira entre "a máquina chegou" e "meu primeiro corte".
+Sienci's own software page shows an example with three programs (Illustrator → Carbide Create → gSender) and a wizard that picks among more than 80 tools. For beginners, this is the biggest barrier between "the machine arrived" and "my first cut".
 
-### Estamos substituindo as ferramentas que eles sugerem?
+### Are we replacing the tools they suggest?
 
-| Ferramenta sugerida | Para quê | Substituímos? |
+| Suggested tool | What for | Do we replace it? |
 |---|---|---|
-| **Vectr** (design 2D online) | Placas simples | **Sim**, para placas e letreiros |
-| **Easel** (design + CAM + interface, online) | Placas, recortes simples | **Em boa parte:** texto, formas, ícones, relevo, gravação, recorte com abas, furos. Falta importar SVG e imagem |
-| **Carbide Create** (design + CAM 2D/2.5D) | Placas, V-carve, SVG/DXF | **Parcialmente:** placas sim; V-carve de verdade e importar SVG/DXF ainda não |
-| **Inkscape** (vetores + plugins CNC) | Arte vetorial | **Não:** não desenhamos arte livre; o caminho é importar SVG |
-| **F-Engrave** (gravação e V-carve) | Textos em V | **Parcialmente:** gravamos com V-bit seguindo o contorno, sem profundidade variável |
-| **Halftoner** (meio-tom de foto) | Fotos | **Não** |
-| **Kiri:Moto / CAMLab** (CAM 3D no navegador) | Relevos 3D a partir de STL | **Não.** O CAMLab é da Sienci: o caminho é integrar, não refazer |
-| **Carveco, VCarve, Onshape, Fusion** | Uso avançado | **Não** e não deve: é outro público |
+| **Vectr** (online 2D design) | Simple signs | **Yes**, for signs and lettering |
+| **Easel** (design + CAM + interface, online) | Signs, simple cutouts | **Largely:** text, shapes, icons, relief, engraving, cutout with tabs, holes. SVG and image import are missing |
+| **Carbide Create** (2D/2.5D design + CAM) | Signs, V-carve, SVG/DXF | **Partially:** signs yes; real V-carve and SVG/DXF import not yet |
+| **Inkscape** (vectors + CNC plugins) | Vector art | **No:** we don't do freehand art; the path is SVG import |
+| **F-Engrave** (engraving and V-carve) | V-carved text | **Partially:** we engrave with a V-bit following the outline, without variable depth |
+| **Halftoner** (photo halftone) | Photos | **No** |
+| **Kiri:Moto / CAMLab** (3D CAM in the browser) | 3D reliefs from STL | **No.** CAMLab belongs to Sienci: the path is to integrate it, not rebuild it |
+| **Carveco, VCarve, Onshape, Fusion** | Advanced use | **No**, and we shouldn't: it is a different audience |
 
-**Conclusão:** resolvemos o problema para o **primeiro corte e para o projeto mais comum de quem começa**: placa, letreiro, nome, porta-copos, chaveiro, recorte simples. É a faixa em que hoje a pessoa precisa aprender dois ou três programas. Não substituímos o kit de ferramentas inteiro, e isso precisa ficar claro na mensagem.
+**Conclusion:** we solve the problem for the **first cut and for the most common beginner project**: sign, lettering, name plaque, coaster, keychain, simple cutout. That is the range where today a person has to learn two or three programs. We do not replace the whole toolkit, and the messaging needs to make that clear.
 
-### Lacunas, em ordem de impacto
-1. **Importar SVG/DXF** (logos, arte da internet, Inkscape/Illustrator). Destrava a maior parte dos casos "Easel/Carbide Create". O motor já trabalha com regiões 2D; falta o leitor de SVG.
-2. **V-carve de verdade** (profundidade variável com V-bit): é o "visual de placa profissional" que leva gente ao Carbide Create e ao VCarve.
-3. **Imagem → gravação** (silhueta ou meio-tom).
-4. **Relevo 3D:** integrar o CAMLab (Sienci) dentro do mesmo fluxo, em vez de mandar a pessoa para outro site.
+### Gaps, in order of impact
+1. **SVG/DXF import** (logos, art from the internet, Inkscape/Illustrator). Unlocks most of the "Easel/Carbide Create" cases. The engine already works with 2D regions; only the SVG reader is missing.
+2. **Real V-carve** (variable depth with a V-bit): it is the "professional sign look" that draws people to Carbide Create and VCarve.
+3. **Image → engraving** (silhouette or halftone).
+4. **3D relief:** integrate CAMLab (Sienci) into the same flow, instead of sending the person to another site.
 
-### Proposta de mensagem
+### Proposed messaging
 
-**Uma frase:**
+**One sentence:**
 > **gSender now designs, too: go from idea to your first cut without leaving gSender.**
 
-**Para a FAQ (substituindo o texto atual):**
+**For the FAQ (replacing the current text):**
 > **Can gSender make the g-code for me?**
 > Yes, for the projects most people start with. gSender's **Create** step lets you design signs, name plaques, coasters, cut-out lettering and simple shapes, by typing what you want or editing it directly. It already knows your machine, your router and the Sienci bits you own, picks safe speeds from our official table and checks the job before you carve. For artwork-heavy work (V-carved art, photos, 3D reliefs), keep using your favourite design + CAM software. gSender still opens their files, just like before.
 
-**Pilares:**
-1. **Do zero ao primeiro corte num só lugar:** sem toolchain para montar.
-2. **Feito para a sua máquina:** área, router, fresas e velocidades da Sienci já configurados.
-3. **Seguro por padrão:** cada arquivo é verificado e simulado antes de cortar.
-4. **Cresce com você:** quando quiser mais, importe de qualquer CAM. O gSender continua sendo o melhor sender.
+**Pillars:**
+1. **From zero to first cut in one place:** no toolchain to assemble.
+2. **Made for your machine:** Sienci work area, router, bits and speeds already configured.
+3. **Safe by default:** every file is verified and simulated before cutting.
+4. **Grows with you:** when you want more, import from any CAM. gSender is still the best sender.
 
-**Para quem é (e para quem não é):**
-- **Para:** quem acabou de receber uma LongMill ou AltMill, quem faz placas e presentes, escolas e makerspaces.
-- **Não substitui:** VCarve ou Fusion para quem já domina e faz arte complexa ou peças mecânicas.
+**Who it is for (and who it is not for):**
+- **For:** people who just received a LongMill or AltMill, people who make signs and gifts, schools and makerspaces.
+- **Does not replace:** VCarve or Fusion for people who have already mastered them and make complex art or mechanical parts.
 
-**Riscos de posicionamento:**
-- **Não prometer substituir o CAM inteiro.** Quem tentar fazer um V-carve artístico vai se frustrar. Mostre os limites na própria interface: na galeria, um "Coming soon: SVG import, V-carve".
-- **Parceiros:** a Sienci recomenda Carbide Create, Vectric e Carveco, e vende o VCarve Pro na loja. A mensagem deve ser "começa aqui, cresce com eles", não "você não precisa deles".
+**Positioning risks:**
+- **Don't promise to replace the whole CAM.** Anyone who tries to do an artistic V-carve will be frustrated. Show the limits in the interface itself: in the gallery, a "Coming soon: SVG import, V-carve".
+- **Partners:** Sienci recommends Carbide Create, Vectric and Carveco, and sells VCarve Pro in its store. The message should be "start here, grow with them", not "you don't need them".

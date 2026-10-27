@@ -1,135 +1,135 @@
-# Carbide Create Core e máquinas Shapeoko
+# Carbide Create Core and Shapeoko machines
 
-Fonte: https://carbide3d.com/carbidecreate/core-vs-pro/ (lida em 25/10/2026), especificações da Shapeoko 4, da Shapeoko 5.1 Pro e do Carbide Compact Router na loja da Carbide 3D, e a comunidade da Carbide 3D.
+Source: https://carbide3d.com/carbidecreate/core-vs-pro/ (read on 10/25/2026), specifications of the Shapeoko 4, the Shapeoko 5.1 Pro and the Carbide Compact Router on the Carbide 3D store, and the Carbide 3D community.
 
-## 1. O ponto que muda o posicionamento
+## 1. The point that changes the positioning
 
-O **Carbide Create Core** é grátis, mas **só gera G-code para máquinas Carbide 3D** (Shapeoko e Nomad). Salvar "G-code padrão para qualquer CNC" é recurso do **Pro**, que custa US$ 120 por ano ou US$ 360 vitalício.
+**Carbide Create Core** is free, but **it only generates G-code for Carbide 3D machines** (Shapeoko and Nomad). Saving "standard G-code for any CNC" is a **Pro** feature, which costs US$ 120 per year or US$ 360 for a lifetime license.
 
-Daí saem duas consequências:
+Two consequences follow:
 
-- **Dono de Sienci:** não pode usar o Core. Nosso produto entrega de graça o que a Carbide cobra (G-code para qualquer máquina GRBL). Isso reforça o posicionamento do doc 04.
-- **Dono de Shapeoko:** já tem o Core de graça, e ele tem mais ferramentas de desenho que nós. Para atrair essa pessoa, não basta funcionar com a máquina dela. Precisamos de, no mínimo, os recursos de desenho do Core, mais o que ele não tem: assistente de IA, roteiro guiado, checagem antes de cortar e navegador ou gControl.
+- **Sienci owners:** cannot use Core. Our product delivers for free what Carbide charges for (G-code for any GRBL machine). This reinforces the positioning in doc 04.
+- **Shapeoko owners:** already have Core for free, and it has more design tools than we do. To attract these people, working with their machine is not enough. We need, at a minimum, Core's design features, plus what it lacks: an AI assistant, a guided workflow, pre-cut checks, and browser or gControl support.
 
-Todas as Shapeoko rodam **GRBL 1.1** (placa ATmega, inclusive a 5 Pro). O G-code do nosso pós-processador GRBL já roda nelas. O Carbide Motion, que é o programa de controle delas, carrega qualquer arquivo `.nc`. A troca de fresa com BitSetter usa `M6 Tn`, que já emitimos quando o projeto tem mais de uma fresa.
+All Shapeokos run **GRBL 1.1** (ATmega board, including the 5 Pro). The G-code from our GRBL post-processor already runs on them. Carbide Motion, their control program, loads any `.nc` file. Bit changes with the BitSetter use `M6 Tn`, which we already emit when the project has more than one bit.
 
-## 2. Recursos do Core comparados com os nossos
+## 2. Core features compared with ours
 
-Legenda: ✅ temos · 🟡 parcial · ❌ não temos.
+Legend: ✅ we have it · 🟡 partial · ❌ we don't have it.
 
-### Desenho
+### Design
 
-| Recurso do Core | Nós | Observação e o que falta |
+| Core feature | Us | Notes and what is missing |
 | --- | --- | --- |
-| Formas básicas, polígonos, polilinhas | 🟡 | Temos retângulo (com raio), círculo e linha. Faltam polígono regular, estrela e polilinha livre. |
-| Curvas Bézier | ❌ | Por enquanto só chegam por SVG importado. Falta a ferramenta de caneta com nós editáveis. |
-| Texto reto e em arco | 🟡 | Texto reto com 3 fontes. Falta texto em arco e mais fontes (inclusive de traço único para gravar com V). |
-| Operações booleanas (soldar, unir, interseção, subtrair) | 🟡 | O motor já faz tudo isso (Clipper2), mas a interface não expõe. Hoje elementos em relevo se unem sozinhos. |
-| Offset de vetor (para dentro e para fora) | ❌ | O motor já tem `offset()`. Falta a ação na interface ("contorno de X mm", que serve para moldura de letreiro). |
-| Ferramentas de alinhamento | ❌ | Hoje é só arrastar. Faltam alinhar e distribuir, e centralizar na placa. |
-| Imagem de fundo para decalcar | ❌ | É simples: imagem como camada de referência, que não é cortada. |
-| Imagem para vetor automático | ❌ | Exige vetorizador (potrace em WASM ou imagetracer.js), com limiar e suavização. |
-| Importar SVG e DXF | 🟡 | **SVG feito nesta rodada.** Falta DXF (LINE, LWPOLYLINE, ARC, CIRCLE, SPLINE). |
-| Biblioteca de elementos de design | 🟡 | 4 ícones. Falta uma biblioteca em SVG (bordas, molduras, ícones), que agora dá para alimentar pelo importador. |
+| Basic shapes, polygons, polylines | 🟡 | We have rectangle (with radius), circle and line. Regular polygon, star and freehand polyline are missing. |
+| Bézier curves | ❌ | For now they only come in through imported SVG. The pen tool with editable nodes is missing. |
+| Straight and arched text | 🟡 | Straight text with 3 fonts. Arched text and more fonts are missing (including single-stroke fonts for V engraving). |
+| Boolean operations (weld, union, intersection, subtract) | 🟡 | The engine already does all of this (Clipper2), but the interface does not expose it. Today raised elements merge automatically. |
+| Vector offset (inward and outward) | ❌ | The engine already has `offset()`. The interface action is missing ("X mm outline", which works as a sign frame). |
+| Alignment tools | ❌ | Today you can only drag. Align and distribute, and centering on the plate, are missing. |
+| Background image for tracing | ❌ | It is simple: an image as a reference layer that is not cut. |
+| Automatic image to vector | ❌ | Requires a vectorizer (potrace in WASM or imagetracer.js), with threshold and smoothing. |
+| SVG and DXF import | 🟡 | **SVG done in this round.** DXF is missing (LINE, LWPOLYLINE, ARC, CIRCLE, SPLINE). |
+| Design element library | 🟡 | 4 icons. An SVG library (borders, frames, icons) is missing, which can now be fed through the importer. |
 
-### Usinagem
+### Machining
 
-| Recurso do Core | Nós | Observação e o que falta |
+| Core feature | Us | Notes and what is missing |
 | --- | --- | --- |
-| Pocket (rebaixo) | ✅ | Por anéis concêntricos, com verificação e simulação. |
-| Contorno por dentro e por fora | 🟡 | Fazemos por fora (perfil com abas) e por dentro (vazados). Falta "no traço" e escolher dentro/fora por elemento. |
-| **V-carving** | ❌ | **É a maior lacuna.** Hoje a fresa em V só segue o traço numa profundidade fixa. V-carve de verdade varia a profundidade pela largura do traço (eixo medial), que é o que deixa letras bonitas. |
-| Gravação básica | ✅ | Gravado com fresa reta e traço com V. |
-| Biblioteca de fresas com avanços e rotações | ✅ | Catálogo Sienci com tabela oficial. Falta a biblioteca Carbide 3D (seção 3). |
-| Simulação 3D | ✅ | Mapa de alturas em 3D e vista de cima. |
+| Pocket | ✅ | Using concentric rings, with verification and simulation. |
+| Inside and outside contour | 🟡 | We do outside (profile with tabs) and inside (cut-throughs). "On the line" and choosing inside/outside per element are missing. |
+| **V-carving** | ❌ | **This is the biggest gap.** Today the V-bit only follows the line at a fixed depth. Real V-carving varies the depth with the stroke width (medial axis), which is what makes lettering look good. |
+| Basic engraving | ✅ | Engraving with a straight bit and line engraving with a V-bit. |
+| Bit library with feeds and speeds | ✅ | Sienci catalog with the official table. The Carbide 3D library is missing (section 3). |
+| 3D simulation | ✅ | 3D heightmap and top view. |
 
-### Recursos do Pro (para registrar)
+### Pro features (for the record)
 
-| Recurso | Nós | Observação |
+| Feature | Us | Notes |
 | --- | --- | --- |
-| G-code padrão para qualquer CNC | ✅ | **De graça para nós.** É o argumento principal. |
-| Gravação avançada (contorno com hachura) | ❌ | É fácil depois do V-carve: preencher com linhas paralelas. |
-| Usinagem de sobra (rest machining) | 🟡 | O motor já calcula onde a fresa não alcança (`unreachable`). Falta passar uma segunda fresa menor só ali. |
-| Entrada em rampa (contorno e pocket) | ❌ | Hoje mergulhamos reto e limitamos o mergulho a 300 mm/min. Rampa é melhor para a fresa e entra na fase 1 do doc 05. |
-| Desbaste e acabamento 3D, STL, imagem como relevo | ❌ | Fases 2 e 3 do doc 05 (motor do Kiri:Moto). |
-| Divisão em partes (tiling) | ❌ | Útil para Shapeoko 4 Standard e LongMill 12×30. Entra depois. |
+| Standard G-code for any CNC | ✅ | **Free for us.** This is the main argument. |
+| Advanced engraving (outline with hatching) | ❌ | Easy after V-carve: fill with parallel lines. |
+| Rest machining | 🟡 | The engine already computes where the bit cannot reach (`unreachable`). Running a second, smaller bit only there is missing. |
+| Ramp entry (contour and pocket) | ❌ | Today we plunge straight down and cap the plunge at 300 mm/min. A ramp is better for the bit and is part of phase 1 in doc 05. |
+| 3D roughing and finishing, STL, image as relief | ❌ | Phases 2 and 3 of doc 05 (Kiri:Moto engine). |
+| Splitting into parts (tiling) | ❌ | Useful for the Shapeoko 4 Standard and the LongMill 12×30. Comes later. |
 
-### Plataforma
+### Platform
 
-| | Core | Nós |
+| | Core | Us |
 | --- | --- | --- |
-| Mac e Windows, funciona sem internet | ✅ | Desktop (Electron, como o gSender) e navegador. Funcionar sem internet no navegador exige PWA, que falta. |
-| Treinamento em vídeo | ✅ | Cartões de vídeo na interface (os links ainda faltam). |
+| Mac and Windows, works without internet | ✅ | Desktop (Electron, like gSender) and browser. Working offline in the browser requires a PWA, which is missing. |
+| Video training | ✅ | Video cards in the interface (the links are still missing). |
 
-## 3. Como incluir as Shapeoko
+## 3. How to include the Shapeokos
 
-### Catálogo de máquinas multimarca
+### Multi-brand machine catalog
 
-Hoje o catálogo está no namespace `sienci`. A proposta é:
+Today the catalog lives in the `sienci` namespace. The proposal is:
 
-- Criar `catalog/carbide3d/` com a mesma forma de dados (máquinas, cabeçotes, fresas, tabela e projetos), atrás de um registro comum `catalog/index.ts` (`brands: sienci | carbide3d | generic`).
-- `SienciConfig` vira `MachineConfig { brand, machine, head, bit, ... }`. O nome antigo continua como apelido para não quebrar nada.
-- Na interface, o seletor de máquina ganha a marca no topo: **Sienci Labs** (primeiro, porque é o foco), **Carbide 3D** e **Outra máquina GRBL**. A última pede curso X/Y/Z e o tipo de cabeçote.
+- Create `catalog/carbide3d/` with the same data shape (machines, heads, bits, table and projects), behind a common registry `catalog/index.ts` (`brands: sienci | carbide3d | generic`).
+- `SienciConfig` becomes `MachineConfig { brand, machine, head, bit, ... }`. The old name stays as an alias so nothing breaks.
+- In the interface, the machine picker gets the brand at the top: **Sienci Labs** (first, because it is the focus), **Carbide 3D** and **Other GRBL machine**. The last one asks for X/Y/Z travel and the head type.
 
-### Máquinas (cursos oficiais da Carbide 3D)
+### Machines (official Carbide 3D travel)
 
-| Máquina | Curso X × Y × Z | Movimento | Cabeçote |
+| Machine | X × Y × Z travel | Motion | Head |
 | --- | --- | --- | --- |
-| Shapeoko 4 Standard | 17,5″ × 17,5″ × 4″ (445 × 445 × 102 mm) | Correia, rodas em V | Router de 65 mm |
-| Shapeoko 4 XL | 33″ × 17,5″ × 4″ (838 × 445 × 102 mm) | Correia | Router de 65 mm |
-| Shapeoko 4 XXL | 33″ × 33″ × 4″ (838 × 838 × 102 mm) | Correia | Router de 65 mm |
-| Shapeoko Pro (Std/XL/XXL) | Os mesmos cursos da 4 | Correia, trilhos lineares | Router de 65 mm |
-| Shapeoko 5.1 Pro 2×2 | 24,53″ × 24,53″ × 6,1″ (623 × 623 × 155 mm) | Fuso de esferas | Router ou spindle VFD de 65 mm |
-| Shapeoko 5.1 Pro 4×2 | 48,7″ × 24,53″ × 6,1″ (1237 × 623 × 155 mm) | Fuso de esferas | Router ou spindle VFD de 65 mm |
-| Shapeoko 5.1 Pro 4×4 | 48,7″ × 48,7″ × 6,1″ (1237 × 1237 × 155 mm) | Fuso de esferas | Router ou spindle VFD de 65 mm |
-| Shapeoko HDM | 690 × 610 × 145 mm | Fuso de esferas | Spindle VFD refrigerado a água |
-| Nomad 3 (mesa) | 8″ × 8″ × 3″ (203 × 203 × 76 mm) | Fechada | Spindle próprio de 130 W |
+| Shapeoko 4 Standard | 17.5″ × 17.5″ × 4″ (445 × 445 × 102 mm) | Belt, V-wheels | 65 mm router |
+| Shapeoko 4 XL | 33″ × 17.5″ × 4″ (838 × 445 × 102 mm) | Belt | 65 mm router |
+| Shapeoko 4 XXL | 33″ × 33″ × 4″ (838 × 838 × 102 mm) | Belt | 65 mm router |
+| Shapeoko Pro (Std/XL/XXL) | Same travel as the 4 | Belt, linear rails | 65 mm router |
+| Shapeoko 5.1 Pro 2×2 | 24.53″ × 24.53″ × 6.1″ (623 × 623 × 155 mm) | Ball screws | 65 mm router or VFD spindle |
+| Shapeoko 5.1 Pro 4×2 | 48.7″ × 24.53″ × 6.1″ (1237 × 623 × 155 mm) | Ball screws | 65 mm router or VFD spindle |
+| Shapeoko 5.1 Pro 4×4 | 48.7″ × 48.7″ × 6.1″ (1237 × 1237 × 155 mm) | Ball screws | 65 mm router or VFD spindle |
+| Shapeoko HDM | 690 × 610 × 145 mm | Ball screws | Water-cooled VFD spindle |
+| Nomad 3 (desktop) | 8″ × 8″ × 3″ (203 × 203 × 76 mm) | Enclosed | Built-in 130 W spindle |
 
-Antes de publicar, é preciso confirmar as velocidades máximas ($110–112) com os perfis do Carbide Motion. Elas não estão nas páginas públicas.
+Before publishing, the maximum speeds ($110–112) need to be confirmed against the Carbide Motion profiles. They are not on the public pages.
 
-### Cabeçotes
+### Heads
 
-- **Carbide Compact Router** (manual, dial de 1 a 6). A tabela da loja dá 1 ≈ 11.000, 2 ≈ 13.500, 3 ≈ 18.250, 4 ≈ 24.500, 5 ≈ 29.250 e 6 ≈ 31.000 rpm. A tabela antiga do fórum é diferente (1 = 10.000 até 6 = 32.000, com meios pontos), então vale usar a da loja e mostrar o número do dial como hoje fazemos com a Makita.
-- **Makita RT0701C**, aceita como alternativa nas máquinas de 65 mm. Já existe no catálogo.
-- **Carbide VFD Spindle**: rotação por G-code (S), como o AutoSpin.
+- **Carbide Compact Router** (manual, dial from 1 to 6). The store's table gives 1 ≈ 11,000, 2 ≈ 13,500, 3 ≈ 18,250, 4 ≈ 24,500, 5 ≈ 29,250 and 6 ≈ 31,000 rpm. The old forum table is different (1 = 10,000 up to 6 = 32,000, with half steps), so it is best to use the store's table and show the dial number as we do today with the Makita.
+- **Makita RT0701C**, accepted as an alternative on 65 mm machines. Already in the catalog.
+- **Carbide VFD Spindle**: speed set by G-code (S), like the AutoSpin.
 
-### Fresas Carbide 3D
+### Carbide 3D bits
 
-Fresas como #201 (1/4″ reta, que vem com a máquina), #102 (1/8″), #112 (1/16″), #301 (V de 90°) e #302 (V de 60°) seguem a mesma regra de compatibilidade por haste e pinça. Os números e diâmetros precisam ser conferidos na loja antes de entrar no catálogo; não copiamos a tabela de avanços da Carbide. Para Shapeoko usamos valores calculados por carga de cavaco e rigidez da máquina (correia vs fuso de esferas), marcados como "valores calculados" (o aviso `NO_SIENCI_TABLE` já cobre isso).
+Bits such as #201 (1/4″ straight, which ships with the machine), #102 (1/8″), #112 (1/16″), #301 (90° V) and #302 (60° V) follow the same shank-and-collet compatibility rule. The numbers and diameters need to be checked on the store before entering the catalog; we do not copy Carbide's feeds table. For Shapeoko we use values computed from chip load and machine rigidity (belt vs ball screw), marked as "calculated values" (the `NO_SIENCI_TABLE` warning already covers this).
 
-### Projetos iniciais
+### Starter projects
 
-Os 7 projetos atuais já se ajustam ao curso da máquina (`projectsForMachine`), então valem para Shapeoko sem mudança. Só muda o texto de "primeiro corte", que deve citar o BitSetter quando a máquina tiver.
+The current 7 projects already adapt to the machine's travel (`projectsForMachine`), so they work for Shapeoko without changes. Only the "first cut" text changes, which should mention the BitSetter when the machine has one.
 
-### Cuidados
+### Caveats
 
-- **Marca e imagens:** citar "compatível com Shapeoko" é uso nominativo. Não usar logotipo nem fotos da Carbide 3D.
-- **Relação com a Sienci:** se o produto for oferecido à Sienci, a inclusão de outras marcas pode incomodar. Vale deixar isso configurável no build (`MARCAS=sienci` ou `MARCAS=todas`).
+- **Trademark and images:** saying "Shapeoko compatible" is nominative use. Do not use Carbide 3D's logo or photos.
+- **Relationship with Sienci:** if the product is offered to Sienci, including other brands may be unwelcome. It is worth making this configurable at build time (`BRANDS=sienci` or `BRANDS=all`).
 
-## Situação (atualizada depois dos passos 2 e 3)
+## Status (updated after steps 2 and 3)
 
-Feito:
+Done:
 
-- **Formas:** polígono regular e estrela, ao lado de retângulo, círculo e linha.
-- **Texto em arco:** controle "Curve" de −100% a 100% (meia volta).
-- **Offset de vetor:** "Thicker / thinner" engrossa ou afina qualquer elemento; "Outline ring" acrescenta um anel em volta a uma distância escolhida.
-- **Booleanas:** união automática entre elementos que se tocam. "Subtract" tira a forma do elemento dos outros (por exemplo, uma lua). "Mask" faz os outros ficarem só com a parte de dentro.
-- **Alinhar e distribuir:** Shift+clique seleciona vários. Dá para alinhar à seleção, ou à placa quando há um só elemento, e distribuir quando há 3 ou mais. Arrastar move o grupo.
-- **Importar DXF:** junto com o SVG, pelo mesmo botão e por arrastar o arquivo. Lê linhas, polilinhas com arco, círculos, arcos, elipses e splines, com unidades.
-- **V-carve de verdade:** a profundidade acompanha a largura do traço. O valor de profundidade vira o limite. Onde o traço passaria do limite, o fundo fica plano e aparece o aviso `VCARVE_FLAT_BOTTOM`.
-- **Hachura** (recurso do Pro): "Outline + lines" em vez de esvaziar a área gravada, com espaçamento e ângulo.
+- **Shapes:** regular polygon and star, alongside rectangle, circle and line.
+- **Arched text:** "Curve" control from −100% to 100% (half turn).
+- **Vector offset:** "Thicker / thinner" thickens or thins any element; "Outline ring" adds a ring around it at a chosen distance.
+- **Booleans:** automatic union between elements that touch. "Subtract" removes the element's shape from the others (for example, a moon). "Mask" makes the others keep only the part inside.
+- **Align and distribute:** Shift+click selects several. You can align to the selection, or to the plate when there is only one element, and distribute when there are 3 or more. Dragging moves the group.
+- **DXF import:** together with SVG, through the same button and by dragging the file in. Reads lines, polylines with arcs, circles, arcs, ellipses and splines, with units.
+- **Real V-carve:** the depth follows the stroke width. The depth value becomes the limit. Where the stroke would exceed the limit, the bottom stays flat and the `VCARVE_FLAT_BOTTOM` warning appears.
+- **Hatching** (a Pro feature): "Outline + lines" instead of clearing out the engraved area, with spacing and angle.
 
-Ainda falta para igualar o Core: ferramenta de curvas Bézier livre, imagem de fundo para decalcar, vetorização automática de imagem e uma biblioteca maior de elementos. O "Subtract" vale para todos os elementos que a forma cobre, não para um só.
+Still missing to match Core: a freehand Bézier curve tool, a background image for tracing, automatic image vectorization and a larger element library. "Subtract" applies to every element the shape covers, not just one.
 
-## 4. Ordem sugerida
+## 4. Suggested order
 
-Combina com o doc 05 (paridade com o CAMLab):
+Matches doc 05 (parity with CAMLab):
 
-1. **Catálogo multimarca e Shapeoko** (máquinas, Compact Router, VFD, fresas e marca no seletor). É pequeno e destrava os donos de Shapeoko.
-2. **Paridade com o Core no desenho:** offset, booleanas na interface, alinhar e distribuir, polígono e estrela, texto em arco e DXF.
-3. **V-carve de verdade** (eixo medial e profundidade variável), mais hachura. É o recurso mais visível que falta.
-4. Fase 1 do doc 05: parâmetros editáveis no modo Pro, rampa, origem e salvar/abrir projeto.
-5. Imagem de fundo e vetorização automática.
-6. Fases 2 e 3 do doc 05 (3D, STL, imagem como relevo) e divisão em partes.
+1. **Multi-brand catalog and Shapeoko** (machines, Compact Router, VFD, bits and brand in the picker). It is small and unlocks Shapeoko owners.
+2. **Design parity with Core:** offset, booleans in the interface, align and distribute, polygon and star, arched text and DXF.
+3. **Real V-carve** (medial axis and variable depth), plus hatching. It is the most visible missing feature.
+4. Phase 1 of doc 05: editable parameters in Pro mode, ramping, origin and save/open project.
+5. Background image and automatic vectorization.
+6. Phases 2 and 3 of doc 05 (3D, STL, image as relief) and splitting into parts.
 
-Ao fim do passo 3, igualamos o Core em tudo, exceto vetorização de imagem, e ainda geramos G-code para qualquer máquina GRBL, que no Carbide Create exige o Pro.
+By the end of step 3, we match Core in everything except image vectorization, and we still generate G-code for any GRBL machine, which in Carbide Create requires Pro.
