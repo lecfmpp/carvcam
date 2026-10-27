@@ -10,14 +10,14 @@ export const site = {
   // Installers published by CI (desktop/, tag v*) under a fixed name on the latest GitHub
   // Release: the link always downloads the newest version, without changing the site on every release.
   downloads: {
-    windows: "https://github.com/lecfmpp/carvcam/releases/latest/download/CarvCAM-Windows-64Bit.exe",
-    appimage: "https://github.com/lecfmpp/carvcam/releases/latest/download/CarvCAM-Linux-x86_64.AppImage",
-    deb: "https://github.com/lecfmpp/carvcam/releases/latest/download/CarvCAM-Linux-amd64.deb",
+    windows: "https://github.com/lecfmpp/carvcam-releases/releases/latest/download/CarvCAM-Windows-64Bit.exe",
+    appimage: "https://github.com/lecfmpp/carvcam-releases/releases/latest/download/CarvCAM-Linux-x86_64.AppImage",
+    deb: "https://github.com/lecfmpp/carvcam-releases/releases/latest/download/CarvCAM-Linux-amd64.deb",
     // Raspberry Pi: 64-bit (Pi 4 and 5 on Raspberry Pi OS 64-bit) and 32-bit (armv7l)
-    piDeb: "https://github.com/lecfmpp/carvcam/releases/latest/download/CarvCAM-Linux-arm64.deb",
-    piAppImage: "https://github.com/lecfmpp/carvcam/releases/latest/download/CarvCAM-Linux-arm64.AppImage",
-    pi32Deb: "https://github.com/lecfmpp/carvcam/releases/latest/download/CarvCAM-Linux-armv7l.deb",
-    releases: "https://github.com/lecfmpp/carvcam/releases/latest",
+    piDeb: "https://github.com/lecfmpp/carvcam-releases/releases/latest/download/CarvCAM-Linux-arm64.deb",
+    piAppImage: "https://github.com/lecfmpp/carvcam-releases/releases/latest/download/CarvCAM-Linux-arm64.AppImage",
+    pi32Deb: "https://github.com/lecfmpp/carvcam-releases/releases/latest/download/CarvCAM-Linux-armv7l.deb",
+    releases: "https://github.com/lecfmpp/carvcam-releases/releases/latest",
   },
   checked: "October 2026",
 };
