@@ -213,3 +213,20 @@
 .create-chip__thick { display: flex; flex-direction: column; line-height: 1.05; font-size: 13px; }
 .create-chip__thick b { font-weight: 600; }
 .create-chip__thick small { font-size: 11px; color: var(--text-2); }
+
+/* Save · Clear | + · My projects, in the Create panel header. */
+.proj-actions { display: flex; align-items: center; gap: 6px; flex: none; }
+.proj-actions__group { display: inline-flex; border: 1px solid var(--line-2); border-radius: 10px; overflow: hidden; }
+.proj-actions__group .proj-actions__btn { border: 0; border-radius: 0; }
+.proj-actions__group .proj-actions__btn + .proj-actions__btn { border-left: 1px solid var(--line-2); background: var(--accent); color: #fff; }
+.proj-actions__group .proj-actions__btn + .proj-actions__btn:hover { background: var(--accent); filter: brightness(1.08); }
+.proj-actions__btn { height: 34px; min-width: 34px; padding: 0 9px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--line-2); border-radius: 10px; background: transparent; color: var(--text); font: 500 13px var(--font); }
+.proj-actions__btn:hover { background: rgba(255, 255, 255, 0.07); }
+.proj-actions__saved { display: inline-flex; align-items: center; gap: 4px; padding: 0 6px; font: 500 12px var(--font); color: var(--ready-text); }
+.proj-modal__text { margin: 0; font: 400 14px/1.5 var(--font); color: var(--text-2); }
+
+/* Upload design: the file upload is the highlight; tracing a picture is the second option. */
+.create-upload { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 12px; border: 1px solid rgba(255, 91, 31, 0.4); background: rgba(255, 91, 31, 0.07); }
+.create-upload__title { display: flex; align-items: center; gap: 8px; font: 600 14px var(--font); }
+.create-upload__or { display: flex; align-items: center; gap: 10px; font: 500 12px var(--font); color: var(--text-3); }
+.create-upload__or::before, .create-upload__or::after { content: ""; flex: 1; height: 1px; background: var(--line-2); }

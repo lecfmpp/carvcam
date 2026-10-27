@@ -17,15 +17,16 @@ import { SimCanvas } from "../../stage/SimCanvas";
 import { IntentChips } from "./Onboarding";
 import { BitCardBody, cm } from "./parts";
 import { AccountSetting } from "../../account/AccountChip";
+import { Projects } from "./Projects";
 import "./workshop.css";
 
-type Tab = "first-cuts" | "bits" | "settings";
+type Tab = "first-cuts" | "projects" | "bits" | "settings";
 
 export default function Workshop({ tab }: { tab: Tab }) {
   return (
     <div className="app app--plain">
       <TopBar variant="app" />
-      <main className="ws-main">{tab === "first-cuts" ? <FirstCuts /> : tab === "bits" ? <Library /> : <Settings />}</main>
+      <main className="ws-main">{tab === "first-cuts" ? <FirstCuts /> : tab === "projects" ? <Projects /> : tab === "bits" ? <Library /> : <Settings />}</main>
     </div>
   );
 }

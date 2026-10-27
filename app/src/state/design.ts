@@ -26,6 +26,8 @@ export interface Design {
   keepOut?: KeepOutZone[];
   /** Per-job inputs of the cost calculator (Pro). */
   jobCost?: JobCost;
+  /** Id in My projects once saved; later changes are saved there automatically. */
+  savedId?: string;
 }
 
 /**
@@ -93,6 +95,10 @@ interface DesignState {
   patch(p: Partial<Design>): void;
   patchSpec(fn: (s: PlateSpecInput) => PlateSpecInput): void;
   newBlank(): void;
+  /** Removes every element and the tracing image; keeps the board, wood, bit and settings. */
+  clearBoard(): void;
+  /** Records the My projects id without counting as a design change. */
+  markSaved(id: string | undefined): void;
   openProject(id: string): void;
   setMaterial(id: string, thickness?: number): void;
   setKeepOut(zones: KeepOutZone[]): void;
@@ -145,6 +151,12 @@ export const useDesign = create<DesignState>()(
       patch: (p) => set({ design: { ...get().design, ...p }, rev: get().rev + 1 }),
       patchSpec: (fn) => set({ design: { ...get().design, spec: fn(structuredClone(get().design.spec)) }, rev: get().rev + 1 }),
       newBlank: () => set({ design: structuredClone(BLANK), rev: get().rev + 1 }),
+      clearBoard: () => {
+        const d = get().design;
+        const spec: PlateSpecInput = { ...d.spec, texts: [], shapes: [], icons: [], svgs: [], holes: [], slots: [] };
+        set({ design: { ...d, spec, tracing: undefined }, rev: get().rev + 1 });
+      },
+      markSaved: (id) => rawSet({ design: { ...get().design, savedId: id } }),
       openProject: (id) => {
         const p = PROJECTS.find((x) => x.id === id);
         if (!p) return;

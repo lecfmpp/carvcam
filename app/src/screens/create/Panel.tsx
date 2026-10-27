@@ -1,5 +1,5 @@
 import type { PlateSpecInput } from "@carvcam/cam-engine";
-import { AlertCircle, AlertTriangle, ArrowRight, CheckCircle2, ChevronDown, ChevronRight, ChevronUp, Circle, Copy, FileUp, Heart, Hexagon, ImagePlus, Layers, Move, Wand2, Minus, MoveVertical, PenTool, Plus, Shapes, Square, Star, Trash2, Type, XCircle } from "lucide-react";
+import { AlertCircle, AlertTriangle, ArrowRight, CheckCircle2, ChevronDown, ChevronRight, ChevronUp, Circle, Copy, FileUp, Heart, Hexagon, ImagePlus, Layers, Move, Wand2, Minus, MoveVertical, PenTool, Shapes, Square, Star, Trash2, Type, XCircle } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { AccItem, Seg, Stepper } from "../../components/ui";
@@ -12,6 +12,7 @@ import type { UiIssue } from "./issues";
 import { useUi } from "../../state/ui";
 import { importSvgFile, pickSvgFile } from "./svgImport";
 import { TraceDialog } from "./traceDialog";
+import { ProjectActions } from "./ProjectActions";
 import { addLibraryElement, LibraryDialog } from "./libraryDialog";
 import { tracingFromFile, useTracingUi } from "./tracing";
 import type { TracingImage } from "../../state/design";
@@ -36,7 +37,7 @@ interface Props {
 /** Panel on the right of the Create screen: material, bit, issues, shape and elements. */
 export function CreatePanel(p: Props) {
   const nav = useNavigate();
-  const { design, patch, patchSpec, setMaterial, newBlank } = useDesign();
+  const { design, patch, patchSpec, setMaterial } = useDesign();
   const spec = design.spec;
   const material = materialById(design.material);
   const bit = bitById(design.bit);
@@ -83,17 +84,7 @@ export function CreatePanel(p: Props) {
       <div className="create-panel__head">
         <div className="create-panel__titlerow">
           <input className="create-panel__name" value={design.name} aria-label="Design name" onChange={(e) => patch({ name: e.target.value })} />
-          <button
-            className="btn btn--outline btn--sm"
-            onClick={() => {
-              newBlank();
-              p.setSel(null);
-              toast("Blank board ready. Pick the wood and add text or shapes.");
-            }}
-          >
-            <Plus size={14} strokeWidth={1.75} />
-            Blank board
-          </button>
+          <ProjectActions onReset={() => p.setSel(null)} />
         </div>
         <div className="create-status" aria-live="polite">
           {status}
@@ -326,11 +317,12 @@ function ShapeSection({ n, open, onToggle, spec, patchSpec }: { n: number; open:
 }
 
 /**
- * Tracing image: a reference under the design (not cut). You can draw over it with
+ * Upload design: an SVG or DXF file (the highlight), or a picture to trace: shown under the design (not cut), drawn over with
  * the pen, or convert it to vectors automatically.
  */
 function TracingSection({ n, open, onToggle, spec, onAdded }: { n: number; open: boolean; onToggle(): void; spec: PlateSpecInput; onAdded(id: ElementId): void }) {
   const t = useDesign((s) => s.design.tracing);
+  const patchSpec = useDesign((s) => s.patchSpec);
   const patch = useDesign((s) => s.patch);
   const { moving, setMoving } = useTracingUi();
   const [tracingOpen, setTracingOpen] = useState(false);
@@ -346,11 +338,32 @@ function TracingSection({ n, open, onToggle, spec, onAdded }: { n: number; open:
   };
   return (
     <>
-      <AccItem n={n} title="Tracing image" summary={t ? `${t.name} · not carved` : "Draw over a photo or logo"} open={open} onToggle={onToggle}>
+      <AccItem n={n} title="Upload design" summary={t ? `SVG or DXF file · tracing ${t.name}` : "SVG or DXF file, or trace a picture"} open={open} onToggle={onToggle}>
+        <div className="create-upload">
+          <div className="create-upload__title">
+            <FileUp size={16} strokeWidth={1.75} color="var(--accent)" /> Design file
+          </div>
+          <div className="tiny muted">Vector drawings from Inkscape, Illustrator, Affinity, Fusion or LightBurn come in ready to carve. You can also drop the file on the board.</div>
+          <button
+            className="btn btn--primary"
+            onClick={async () => {
+              const file = await pickSvgFile();
+              const out = file ? await importSvgFile(file, useDesign.getState().design.spec) : null;
+              if (!out) return;
+              patchSpec(() => out[0]);
+              onAdded(out[1]);
+            }}
+          >
+            <FileUp size={16} /> Upload SVG or DXF…
+          </button>
+        </div>
+        <div className="create-upload__or">
+          <span>or trace a picture</span>
+        </div>
         <div className="create-fields">
           {!t ? (
             <>
-              <div className="tiny muted">Put a picture under the board to trace it with the pen, or convert it to a carvable drawing automatically. The picture itself is never carved.</div>
+              <div className="tiny muted">A photo, scan or logo goes under the board: trace it with the pen, or convert it to a carvable drawing (with Polish to clean it up). The picture itself is never carved.</div>
               <button className="btn btn--outline" onClick={load}>
                 <ImagePlus size={16} /> Choose image…
               </button>
@@ -890,16 +903,6 @@ function AddChips({ spec, onAdd }: { spec: PlateSpecInput; onAdd(s: PlateSpecInp
           }}
         />
       ) : null}
-      <button
-        className="create-add__chip"
-        onClick={async () => {
-          const file = await pickSvgFile();
-          const out = file ? await importSvgFile(file, spec) : null;
-          if (out) onAdd(out[0], out[1]);
-        }}
-      >
-        <FileUp size={13} strokeWidth={1.75} /> SVG / DXF file
-      </button>
       {spec.type !== "lettering" && !hasHoles ? (
         <button className="create-add__chip" onClick={() => onAdd(withHoles(spec, "holes"), "holes")}>
           + Mounting holes

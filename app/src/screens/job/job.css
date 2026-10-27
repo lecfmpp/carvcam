@@ -193,17 +193,6 @@
 .job-tip .link { color: var(--text-2); white-space: nowrap; }
 
 /* Modals (setup sheet, batch) */
-.jmodal { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(10, 10, 12, 0.62); backdrop-filter: blur(4px); }
-.jmodal__card { width: min(640px, 100%); max-height: calc(100vh - 48px); display: flex; flex-direction: column; border-radius: 16px; background: var(--surface); border: 1px solid var(--line-2); box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5); overflow: hidden; }
-.jmodal__card--wide { width: min(980px, 100%); }
-.jmodal__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--line-2); }
-.jmodal__eyebrow { display: flex; align-items: center; gap: 8px; font: 500 12px var(--font); color: var(--text-3); margin-bottom: 4px; }
-.jmodal__title { margin: 0; font: 600 18px var(--font); }
-.jmodal__close { width: 36px; height: 36px; border: 0; border-radius: 8px; background: transparent; color: var(--text-2); display: flex; align-items: center; justify-content: center; flex: none; }
-.jmodal__close:hover { background: rgba(255, 255, 255, 0.08); color: var(--text); }
-.jmodal__body { flex: 1; min-height: 0; overflow: auto; padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; }
-.jmodal__foot { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 12px 20px; border-top: 1px solid var(--line-2); }
-.jmodal__foot > .job-fine:first-child { margin-right: auto; }
 .sheet-frame { width: 100%; height: min(72vh, 900px); border: 0; border-radius: 8px; background: #fff; }
 .job-sheet-btn { align-self: flex-start; gap: 6px; flex: none; }
 .cost, .batch-launch, .ko-sec, .job-tip { flex: none; }

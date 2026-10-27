@@ -1,6 +1,6 @@
 import { AccountChip } from "../account/AccountChip";
 import { Brand } from "./Brand";
-import { Check, ChevronDown, Maximize, Menu, Minimize, Monitor, Plus, Square } from "lucide-react";
+import { Check, ChevronDown, Maximize, Menu, Minimize, Monitor, Plus, Square, Unplug } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { machineById, machineName, HEADS } from "../lib/catalog";
@@ -32,11 +32,15 @@ export function TopBar(props: { variant: "app" | "job" | "tool" | "onboarding"; 
   const { mode, setMode } = useWorkshop();
   const status = useMachine((s) => s.status);
   const connected = status !== "disconnected" && status !== "connecting";
+  // Stop only while the machine is moving (carving, homing or waiting at a bit change); otherwise
+  // a connected machine offers Disconnect.
+  const moving = status === "running" || status === "paused" || status === "toolchange" || status === "homing";
+  useStopShortcuts();
 
   return (
     <header className="topbar" style={props.variant === "app" || props.variant === "onboarding" ? { paddingLeft: 20 } : undefined}>
       {props.variant === "job" ? (
-        <button className="icon-btn" aria-label="Menu: First cuts, My bits, Settings" onClick={() => nav("/workshop")}>
+        <button className="icon-btn" aria-label="Menu: First cuts, My projects, My bits, Settings" onClick={() => nav("/workshop")}>
           <Menu size={20} strokeWidth={1.5} />
         </button>
       ) : null}
@@ -48,6 +52,7 @@ export function TopBar(props: { variant: "app" | "job" | "tool" | "onboarding"; 
         <nav aria-label="Main" className="navtabs" style={{ marginLeft: 20 }}>
           {[
             ["/workshop", "First cuts"],
+            ["/workshop/projects", "My projects"],
             ["/workshop/bits", "My bits"],
             ["/workshop/settings", "Settings"],
           ].map(([to, label]) => (
@@ -92,7 +97,7 @@ export function TopBar(props: { variant: "app" | "job" | "tool" | "onboarding"; 
           <AccountChip className={props.variant === "job" ? "acct-chip--job" : undefined} />
           <MachineChip />
           <StatusPill />
-          {connected ? <StopButton /> : null}
+          {moving ? <StopButton /> : connected ? <DisconnectButton /> : null}
         </>
       ) : null}
     </header>
@@ -245,9 +250,8 @@ export function StatusPill() {
   );
 }
 
-/** Stop: always visible while the machine is connected. Shortcuts: Esc stops, Space pauses/resumes. */
-export function StopButton() {
-  const stop = useMachine((s) => s.stop);
+/** Esc stops a moving machine, Space pauses/resumes a carve. Active on every screen with the top bar. */
+function useStopShortcuts() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const typing = (e.target as HTMLElement)?.closest("input, textarea, [contenteditable=true]");
@@ -269,10 +273,26 @@ export function StopButton() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+}
+
+/** Stop: shown while the machine is carving, homing or waiting at a bit change. */
+export function StopButton() {
+  const stop = useMachine((s) => s.stop);
   return (
     <button className="stop-btn" onClick={stop} aria-keyshortcuts="Escape">
       <span style={{ width: 12, height: 12, borderRadius: 2, background: "var(--alarm)" }} />
       Stop <span className="kbd">Esc</span>
+    </button>
+  );
+}
+
+/** Disconnect: shown while a connected machine is idle (or in alarm, or done). */
+function DisconnectButton() {
+  const disconnect = useMachine((s) => s.disconnect);
+  return (
+    <button className="btn btn--outline btn--sm topbar__disconnect" onClick={disconnect} title="Close the connection to the machine">
+      <Unplug size={15} strokeWidth={1.75} />
+      Disconnect
     </button>
   );
 }

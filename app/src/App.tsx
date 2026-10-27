@@ -31,6 +31,7 @@ export default function App() {
           <Route path="/" element={<Home />} />
           <Route path="/workshop/onboarding" element={<Onboarding />} />
           <Route path="/workshop" element={<Workshop tab="first-cuts" />} />
+          <Route path="/workshop/projects" element={<Workshop tab="projects" />} />
           <Route path="/workshop/bits" element={<Workshop tab="bits" />} />
           <Route path="/workshop/settings" element={<Workshop tab="settings" />} />
           <Route path="/surfacing" element={<Surfacing />} />

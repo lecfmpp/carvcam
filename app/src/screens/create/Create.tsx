@@ -271,7 +271,7 @@ export default function Create() {
           tracingFromFile(img, useDesign.getState().design.spec).then(
             (t) => {
               useDesign.getState().patch({ tracing: t });
-              toast("Added as a tracing image. Draw over it, or use Convert to vector in the panel.");
+              toast("Added as a tracing image. Draw over it, or use Convert to vector in Upload design.");
             },
             () => toast("This image could not be opened."),
           );
