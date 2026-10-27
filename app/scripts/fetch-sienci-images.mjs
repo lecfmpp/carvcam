@@ -61,6 +61,14 @@ async function one(item, width) {
     if (!local) return { id: item.id, status: "no file in --from folder" };
     return save(out, await readFile(local), width, item.id);
   }
+  // Direct image file (sienci.com/wp-content/uploads/…): image files usually pass Cloudflare even
+  // when the product page shows a browser check.
+  if (item.photo) {
+    const img = await fetch(fix(item.photo), { headers: { "User-Agent": UA, Accept: "image/avif,image/webp,image/*,*/*;q=0.8", Referer: "https://sienci.com/" } });
+    const type = img.headers.get("content-type") ?? "";
+    if (img.ok && type.startsWith("image/")) return save(out, Buffer.from(await img.arrayBuffer()), width, item.id);
+    if (!/\/product\//.test(item.url)) return { id: item.id, status: `photo ${img.status} ${type}` };
+  }
   if (!/\/product\//.test(item.url)) return { id: item.id, status: "skipped (no product page)" };
   const page = await fetch(fix(item.url), { headers: { "User-Agent": UA } });
   const html = await page.text();
