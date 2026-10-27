@@ -5,6 +5,7 @@
 import { cp, mkdir, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { competitors, faq, features, howtos, machines, nav, site } from "./src/data.mjs";
+import { docSections, docs } from "./src/docs.mjs";
 
 const PREVIEW = process.argv.includes("--preview");
 const OUT = new URL("./dist/", import.meta.url).pathname;
@@ -83,7 +84,7 @@ function footer() {
   return `<footer class="ftr"><div class="wrap">
 <div class="ftr__top">
 <div class="ftr__brand"><a class="logo" href="${href("/")}"><img src="${asset("/assets/carvcam-icon.svg")}" alt="" width="28" height="28"><span class="wordmark">Carv<span>CAM</span></span></a><p>Design, prepare and carve on your LongMill or AltMill. One app, start to finished piece.</p></div>
-${col("Product", [["How it works", "/#how"], ["Features", "/features/"], ["Download", "/download/"], ["Best software for LongMill", "/best-cnc-software-for-longmill/"]])}
+${col("Product", [["How it works", "/#how"], ["Features", "/features/"], ["Download", "/download/"], ["Docs", "/docs/"], ["Quickstart", "/docs/quickstart/"], ["Best software for LongMill", "/best-cnc-software-for-longmill/"]])}
 ${col("Machines", machines.map((m) => [m.name, `/machines/${m.slug}/`]))}
 ${col("Compare", competitors.map((c) => [`CarvCAM vs ${c.name}`, `/compare/carvcam-vs-${c.slug}/`]))}
 ${col("Learn", howtos.slice(0, 4).map((h) => [h.short, `/learn/${h.slug}/`]))}
@@ -449,6 +450,175 @@ ${finalCta()}`,
   }
 }
 
+/* ---------------- Docs ---------------- */
+// Texto dos docs: escapa e depois aplica **negrito**, `código` e [link](/caminho/).
+const md = (t) =>
+  esc(t)
+    .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
+    .replace(/`(.+?)`/g, "<code>$1</code>")
+    .replace(/\[(.+?)\]\((.+?)\)/g, (_, a, u) => `<a href="${href(u)}">${a}</a>`);
+const slugify = (t) => t.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+const docOrder = docSections.flatMap((sec) => sec.pages.map((slug) => ({ slug, section: sec.name, ...docs[slug] })));
+const docUrl = (slug) => `/docs/${slug}/`;
+const plain = (t) => t.replace(/\*\*|`/g, "").replace(/\[(.+?)\]\(.+?\)/g, "$1");
+const CALLOUT_ICON = { tip: "✓", note: "i", warn: "!" };
+const CALLOUT_LABEL = { tip: "Tip", note: "Note", warn: "Warning" };
+
+function machineBlocks(m, d) {
+  return [
+    ["table", ["", m.name], [["Work area", m.work], ["Controller", m.controller], ["Connection", m.link], ["Spins the bit", m.head]]],
+    ["h2", "Wire it in this order"],
+    ["steps", m.wiring.map((w, i) => [d.wiringTitles[i], w, null])],
+    ["shot", ...d.shot],
+    ["h2", "Ready on day one"],
+    ["list", m.presets],
+    ["cards", [["Connect wizard", "Every step of the wizard, explained.", "/docs/connect/"], ["USB or Ethernet", "Which cable to use.", "/docs/usb-or-ethernet/"], [`${m.name} overview`, "Specs, presets and guides.", `/machines/${m.slug}/`]]],
+  ];
+}
+
+function docBlock(b, d) {
+  const [type, ...a] = b;
+  switch (type) {
+    case "p":
+      return `<p>${md(a[0])}</p>`;
+    case "h2":
+      return `<h2 id="${slugify(a[0])}">${esc(a[0])}</h2>`;
+    case "list":
+      return `<ul class="ticks">${a[0].map((x) => `<li>${md(x)}</li>`).join("")}</ul>`;
+    case "checklist":
+      return `<ul class="dchecks">${a[0].map((x) => `<li><label><input type="checkbox"> <span>${md(x)}</span></label></li>`).join("")}</ul>`;
+    case "steps":
+      return `<ol class="dsteps">${a[0].map(([t, x, img]) => `<li><h3 id="${slugify(t)}">${esc(t)}</h3><p>${md(x)}</p>${img ? shot(img, `${t} in CarvCAM`, { cls: "shot dshot" }) : ""}</li>`).join("")}</ol>`;
+    case "callout":
+      return `<div class="dcall dcall--${a[0]}" role="note"><span class="dcall__ic" aria-hidden="true">${CALLOUT_ICON[a[0]]}</span><div><b>${esc(a[1])}</b><p>${md(a[2])}</p></div></div>`;
+    case "table":
+      return `<div class="tablewrap"><table class="dtable"><thead><tr>${a[0].map((h) => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${a[1].map((r) => `<tr>${r.map((c) => `<td>${md(c)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+    case "shot":
+      return `<figure class="dfig">${shot(a[0], a[1], { cls: "shot dshot" })}<figcaption>${md(a[1])}</figcaption></figure>`;
+    case "clip": {
+      const name = a[0] === "hero" ? "hero-demo" : `feature-${a[0]}`;
+      return `<figure class="dfig"><div class="shot shot--video dshot"><video class="lazyclip" muted loop playsinline preload="none" width="1280" height="800" poster="${asset(`/assets/video/${name}-poster.webp`)}" data-src="${asset(`/assets/video/${name}.mp4`)}" aria-label="${esc(a[1])}"></video></div><figcaption>${md(a[1])}</figcaption></figure>`;
+    }
+    case "cards":
+      return `<div class="dcards">${a[0].map(([t, x, u]) => `<a class="dcard" href="${href(u)}"><b>${esc(t)}</b><span>${md(x).replace(/<\/?a[^>]*>/g, "")}</span></a>`).join("")}</div>`;
+    case "qa":
+      return `<section class="dqa"><h2 id="${slugify(a[0])}">${esc(a[0])}</h2><p>${md(a[1])}</p></section>`;
+    default:
+      throw new Error(`docs: unknown block ${type} in ${d.slug}`);
+  }
+}
+
+const LAZY_CLIPS = `<script>(() => {
+  const vids = document.querySelectorAll("video.lazyclip");
+  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const io = new IntersectionObserver((es) => es.forEach((e) => {
+    const v = e.target;
+    if (e.isIntersecting) { if (!v.src) v.src = v.dataset.src; if (!still) v.play().catch(() => {}); } else v.pause();
+  }), { rootMargin: "200px" });
+  vids.forEach((v) => io.observe(v));
+})();</script>`;
+
+// Busca dos docs: índice pequeno embutido em cada página (funciona sem servidor e offline).
+function docSearch(id) {
+  const idx = docOrder.map((d) => ({
+    t: d.title,
+    s: d.section,
+    u: href(docUrl(d.slug)),
+    x: [d.lead, ...d.blocks.filter((b) => ["h2", "qa", "steps"].includes(b[0])).map((b) => (b[0] === "steps" ? b[1].map((s) => s[0]).join(" ") : b[1]))].map(plain).join(" "),
+  }));
+  return `<div class="dsearch"><label class="vh" for="${id}">Search the docs</label><input id="${id}" type="search" placeholder="Search the docs" autocomplete="off"><kbd>/</kbd><ul class="dsearch__res" hidden></ul></div>
+<script>(() => {
+  const idx = ${JSON.stringify(idx)};
+  const input = document.getElementById(${JSON.stringify(id)}), res = input.parentNode.querySelector(".dsearch__res");
+  const run = () => {
+    const q = input.value.trim().toLowerCase();
+    if (!q) { res.hidden = true; return; }
+    const words = q.split(/\s+/);
+    const hits = idx.map((d) => { const t = d.t.toLowerCase(), x = d.x.toLowerCase(); let n = 0; for (const w of words) { if (t.includes(w)) n += 3; else if (x.includes(w)) n += 1; else return null; } return [n, d]; }).filter(Boolean).sort((a, b) => b[0] - a[0]).slice(0, 7);
+    res.innerHTML = hits.length ? hits.map(([, d]) => '<li><a href="' + d.u + '"><b>' + d.t + '</b><span>' + d.s + '</span></a></li>').join("") : '<li class="none">No results. Try "zero", "Ethernet" or "alarm".</li>';
+    res.hidden = false;
+  };
+  input.addEventListener("input", run);
+  input.addEventListener("keydown", (e) => { if (e.key === "Enter") { const a = res.querySelector("a"); if (a) location.href = a.href; } if (e.key === "Escape") { input.value = ""; run(); } });
+  document.addEventListener("keydown", (e) => { if (e.key === "/" && document.activeElement.tagName !== "INPUT") { e.preventDefault(); input.focus(); } });
+})();</script>`;
+}
+
+function docSidebar(current) {
+  return `<aside class="dside"><details class="dside__menu" open><summary>Docs menu</summary>
+${docSearch("dq")}
+<nav aria-label="Docs">${docSections.map((sec) => `<div class="dside__sec"><b>${esc(sec.name)}</b><ul>${sec.pages.map((slug) => `<li><a href="${href(docUrl(slug))}"${slug === current ? ' aria-current="page"' : ""}>${esc(docs[slug].nav)}</a></li>`).join("")}</ul></div>`).join("")}</nav>
+</details></aside>`;
+}
+
+function docPages() {
+  // Página inicial dos docs
+  layout({
+    path: at("/docs/"),
+    title: "CarvCAM Docs: Guides for LongMill and AltMill",
+    description: "CarvCAM documentation: install, set up your workshop, design, prepare, connect your LongMill or AltMill, set zero and carve. Short step-by-step pages with screenshots.",
+    crumbs: [["Home", "/"], ["Docs", "/docs/"]],
+    schema: [{ "@context": "https://schema.org", "@type": "CollectionPage", name: "CarvCAM Docs", description: "Step-by-step documentation for CarvCAM.", url: site.url + "/docs/" }],
+    body: `<section class="dhome"><div class="wrap">
+<span class="eyebrow">Docs</span>
+<h1>How can we help?</h1>
+<p class="lede">Short, step-by-step pages for every part of CarvCAM, from installing it to the last pass.</p>
+${docSearch("dqh")}
+<div class="dhome__quick">
+<a class="dquick dquick--main" href="${href(docUrl("quickstart"))}"><span class="eyebrow">Start here</span><b>Quickstart: carve your first sign</b><span>Five steps, about 15 minutes of setup.</span></a>
+<a class="dquick" href="${href(docUrl("connect"))}"><span class="eyebrow">Most read</span><b>Connect your machine</b><span>Cables, USB or Ethernet, and the real test.</span></a>
+<a class="dquick" href="${href(docUrl("troubleshooting"))}"><span class="eyebrow">Fix it</span><b>Troubleshooting</b><span>The most common problems, solved.</span></a>
+</div>
+</div></section>
+<section style="padding-top:16px"><div class="wrap"><div class="dhome__grid">${docSections
+      .map(
+        (sec) => `<div class="dsec"><h2>${esc(sec.name)}</h2><ul>${sec.pages.map((slug) => `<li><a href="${href(docUrl(slug))}"><b>${esc(docs[slug].title)}</b><span>${esc(docs[slug].lead.length > 110 ? docs[slug].lead.slice(0, docs[slug].lead.lastIndexOf(" ", 107)) + "…" : plain(docs[slug].lead))}</span></a></li>`).join("")}</ul></div>`,
+      )
+      .join("")}</div>
+<p class="note" style="margin-top:36px">Looking for project ideas instead? See the <a href="${href("/learn/")}">guides</a>.</p>
+</div></section>${finalCta()}`,
+  });
+
+  docOrder.forEach((d, i) => {
+    const m = d.machine ? machines.find((x) => x.slug === d.machine) : null;
+    const blocks = m ? [...machineBlocks(m, d).slice(0, 4), ...d.blocks, ...machineBlocks(m, d).slice(4)] : d.blocks;
+    const dd = { ...d, blocks };
+    const content = blocks.map((b) => docBlock(b, dd)).join("\n");
+    const toc = blocks.filter((b) => b[0] === "h2" || b[0] === "qa").map((b) => b[1]);
+    const steps = blocks.filter((b) => b[0] === "steps").flatMap((b) => b[1]);
+    const prev = docOrder[i - 1], next = docOrder[i + 1];
+    const path = docUrl(d.slug);
+    const schema = [{ "@context": "https://schema.org", "@type": "TechArticle", headline: d.title, description: d.description, dateModified: "2026-10-27", author: { "@type": "Organization", name: "CarvCAM" }, about: { "@type": "SoftwareApplication", name: "CarvCAM" } }];
+    if (d.howto) schema.push({ "@context": "https://schema.org", "@type": "HowTo", name: d.title, description: d.description, totalTime: d.time, step: steps.map(([n, t, img], k) => ({ "@type": "HowToStep", position: k + 1, name: n, text: plain(t), ...(img ? { image: `${site.url}/assets/screens/${img}.webp` } : {}) })) });
+    if (d.faq) schema.push(faqLd(blocks.filter((b) => b[0] === "qa").map((b) => [b[1], plain(b[2])])));
+    layout({
+      path: at(path),
+      title: `${d.title} | CarvCAM Docs`,
+      description: d.description,
+      crumbs: [["Home", "/"], ["Docs", "/docs/"], [d.section, docUrl(docSections.find((s) => s.name === d.section).pages[0])], [d.nav, path]],
+      schema,
+      body: `<div class="wrap docs">
+${docSidebar(d.slug)}
+<article class="dmain">
+<span class="eyebrow">${esc(d.section)}</span>
+<h1>${esc(d.title)}</h1>
+<p class="lede">${md(d.lead)}</p>
+${steps.length ? `<p class="dmeta">${steps.length} steps${d.time ? ` · about ${d.time.replace("PT", "").replace("M", " min")}` : ""}</p>` : ""}
+${content}
+<div class="dfoot">
+<div class="dhelp"><b>Was this page helpful?</b><span><button type="button" data-v="yes">Yes</button><button type="button" data-v="no">No</button></span><span class="dhelp__thanks" hidden>Thanks for the feedback.</span></div>
+<nav class="dpn" aria-label="Previous and next">${prev ? `<a class="dpn__prev" href="${href(docUrl(prev.slug))}"><span>Previous</span><b>${esc(prev.nav)}</b></a>` : "<span></span>"}${next ? `<a class="dpn__next" href="${href(docUrl(next.slug))}"><span>Next</span><b>${esc(next.nav)}</b></a>` : ""}</nav>
+</div>
+</article>
+${toc.length ? `<nav class="dtoc" aria-label="On this page"><b>On this page</b><ul>${toc.map((t) => `<li><a href="#${slugify(t)}">${esc(t)}</a></li>`).join("")}</ul></nav>` : '<div class="dtoc"></div>'}
+</div>
+${LAZY_CLIPS}
+<script>document.querySelectorAll(".dhelp button").forEach((b) => b.addEventListener("click", () => { const h = b.closest(".dhelp"); h.querySelector("span").hidden = true; h.querySelector(".dhelp__thanks").hidden = false; }));
+(() => { const links = [...document.querySelectorAll(".dtoc a")]; if (!links.length) return; const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) links.forEach((a) => a.classList.toggle("on", a.getAttribute("href") === "#" + e.target.id)); }), { rootMargin: "0px 0px -70% 0px" }); links.forEach((a) => { const t = document.getElementById(a.getAttribute("href").slice(1)); if (t) io.observe(t); }); if (matchMedia("(max-width: 1000px)").matches) document.querySelector(".dside__menu").open = false; })();</script>`,
+    });
+  });
+}
+
 function notFound() {
   layout({ path: at("/404.html"), title: "Page not found | CarvCAM", description: "This page does not exist.", body: `<section class="article"><div class="narrow"><h1>Page not found</h1><p class="lede">Try the <a href="${href("/")}">home page</a> or the <a href="${href("/learn/")}">guides</a>.</p></div></section>` });
 }
@@ -460,6 +630,7 @@ machinePages();
 featurePages();
 comparePages();
 learnPages();
+docPages();
 notFound();
 
 await rm(OUT, { recursive: true, force: true });

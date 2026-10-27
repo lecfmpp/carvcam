@@ -16,6 +16,7 @@ export const nav = [
   ["Machines", "/machines/"],
   ["Compare", "/compare/"],
   ["Learn", "/learn/"],
+  ["Docs", "/docs/"],
 ];
 
 /* ---------------- Machines ---------------- */
