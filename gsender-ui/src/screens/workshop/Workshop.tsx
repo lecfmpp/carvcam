@@ -16,6 +16,7 @@ import { useActiveMachine, useWorkshop } from "../../state/workshop";
 import { SimCanvas } from "../../stage/SimCanvas";
 import { IntentChips } from "./Onboarding";
 import { BitCardBody, cm } from "./parts";
+import { AccountSetting } from "../../account/AccountChip";
 import "./workshop.css";
 
 type Tab = "first-cuts" | "bits" | "settings";
@@ -396,6 +397,7 @@ function Settings() {
         </div>
       ) : null}
       <PanelSetting />
+      <AccountSetting />
       <div style={{ display: "flex", gap: 10 }}>
         <button className="ws-btn ws-btn--ghost" style={{ height: 48, background: "rgba(255,255,255,.06)", borderColor: "rgba(255,255,255,.18)" }} onClick={() => nav("/workshop/onboarding")}>
           Change machine

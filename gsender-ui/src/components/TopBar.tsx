@@ -1,3 +1,4 @@
+import { AccountChip } from "../account/AccountChip";
 import { Brand } from "./Brand";
 import { Check, ChevronDown, Maximize, Menu, Minimize, Monitor, Plus, Square } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -88,6 +89,7 @@ export function TopBar(props: { variant: "app" | "job" | "tool" | "onboarding"; 
       <FullscreenButton />
       {props.variant !== "onboarding" ? (
         <>
+          <AccountChip className={props.variant === "job" ? "acct-chip--job" : undefined} />
           <MachineChip />
           <StatusPill />
           {connected ? <StopButton /> : null}

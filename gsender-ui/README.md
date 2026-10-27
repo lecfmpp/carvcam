@@ -48,6 +48,14 @@ For the 15.6″ gControl touchscreen. Turns on by itself when the primary pointe
 - **Performance:** lighter simulation and 3D mesh for the N150 processor.
 - **Startup:** with a project open, the app starts straight in Position.
 
+## CarvCAM account and Pro
+Everything in this README works without an account and offline; free features are free forever. Signing in (top-bar chip, or Settings › CarvCAM account) unlocks Pro on this computer.
+- **Code:** `src/account/` — `pro.ts` (`useAccount()`, `usePro()`, `signIn`, `signOut`, `refreshAccount`, `SITE` links), `ProGate.tsx` (`ProBadge`, `SignInDialog`, `UpgradeDialog`, `useProGate(feature)`), pure rules in `logic.ts` (tested in `account.test.ts`).
+- **Gate a feature:** `const gate = useProGate("nesting");` then `if (!gate.allowed) return gate.ask();` and render `{gate.dialog}`.
+- **Backend:** Supabase (`profiles`, `entitlements`, row-level security). supabase-js is loaded on demand, keeps the session in localStorage and refreshes it. The plan is read on start, every 6 h and on window focus (at most every 10 min).
+- **Offline:** the last good plan is cached with the time of the check. Without internet, Pro keeps working for 30 days after the last successful check, then falls back to free with "Connect to the internet to confirm your Pro plan".
+- **Testing without an account:** build with `VITE_FORCE_PRO=1` (see `.env.example`), or run `localStorage.setItem("carvcam-force-pro", "1")` in the devtools console and reload. The plan then reads "Pro · test mode".
+
 ## Architecture
 - `src/lib/catalog.ts`: UI catalog derived from the engine's Sienci catalog (machines, routers/spindles, bits, projects).
 - `src/engine/`: the engine runs in a Web Worker (`generatePlate` + carve simulation).
