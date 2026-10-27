@@ -504,9 +504,6 @@ export function CarveStep({ ctx }: { ctx: JobCtx }) {
         {phase === "toolchange" ? (
           <>
             <div className="job-body">The first part is done. The machine moved to the front so you can reach the bit. {head.auto ? "The spindle stopped." : "The router must be off."}</div>
-            <div className="illus">
-              line illustration · two wrenches loosening the collet, {tcFrom} out, {tcTo} in
-            </div>
             <div className="substeps">
               {tcSteps.map(([l, sb], i) => (
                 <div key={i} className="substep">
@@ -615,7 +612,6 @@ export function CarveStep({ ctx }: { ctx: JobCtx }) {
             </div>
             <div className="finish">
               <div style={{ font: "600 16px var(--font)" }}>{ctx.hasProfile ? "Piece done: cut the tabs and sand the edges" : "Piece done: clean up and sand"}</div>
-              <div className="illus">line illustration · flush-cut saw through a tab, then sanding block along the edge</div>
               <ol className="finish__steps">
                 <li>Vacuum the dust, then lift the board off the bed.</li>
                 <li>{ctx.hasProfile && ctx.tabs ? `Cut the ${ctx.tabs} tab${ctx.tabs === 1 ? "" : "s"} (${design.tabs.width ?? 6} mm wide, the amber marks on the preview) with a flush-cut saw or a utility knife and pop the piece out.` : ctx.hasProfile ? "Peel the piece off the tape." : "Unclamp the board."}</li>

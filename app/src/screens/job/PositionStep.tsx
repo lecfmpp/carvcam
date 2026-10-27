@@ -301,7 +301,6 @@ export function PositionStep({ ctx }: { ctx: JobCtx }) {
         {sub === "home" ? (
           <div className="job-sec">
             <div className="job-body">The machine moves to the back-right corner, touches its sensors and stops. This is how it learns where it is. Takes about 30 seconds. Keep the bed clear.</div>
-            <div className="illus">line illustration · gantry travelling to the back-right sensors</div>
             {m.status === "homing" ? (
               <div role="status" className="mono job-live">
                 Moving to the sensors… Z ✓ · X · Y
@@ -464,11 +463,11 @@ export function PositionStep({ ctx }: { ctx: JobCtx }) {
             <div style={{ font: "600 15px var(--font)" }}>
               Measure height with the touch plate <span className="mono" style={{ font: "400 11px var(--mono)", color: "var(--text-4)" }}>probe Z</span>
             </div>
-            <div className="probe-grid">
-              <div className="illus illus--sm">1 · plate on the board, under the bit</div>
-              <div className="illus illus--sm">2 · magnet clip on the bit</div>
-              <div className="illus illus--sm">3 · touch, then lift</div>
-            </div>
+            <ol className="finish__steps">
+              <li>Put the plate on the board, under the bit.</li>
+              <li>Clip the magnet on the bit.</li>
+              <li>Press Measure height: the bit lowers until it touches the plate, then lifts.</li>
+            </ol>
             <div className="job-body">The bit will lower slowly until it touches the plate, then lift 5 mm.</div>
             {probing ? (
               <div role="status" className="mono job-live">
