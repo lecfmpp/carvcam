@@ -17,6 +17,12 @@ history, so the GitHub integration will not run them again.
 - `private.is_admin()` is the admin check used by the policies; it is not exposed through the API.
 - `public.custom_access_token_hook` adds a `user_role` claim to the login token.
 
+## Onboarding
+`public.onboarding_responses` stores the onboarding wizard answers (one row per account): what
+they carve, hobby or business, sales channels, machine, the software they use for each workflow
+step (design, toolpaths, machine control) and what they want from CarvCAM. Users read and write
+only their own row; admins read all of them.
+
 ## One-time dashboard steps
 1. **Authentication › Hooks › Customize Access Token (JWT) Claims**: enable it and choose
    `public.custom_access_token_hook`.
