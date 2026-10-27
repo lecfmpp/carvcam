@@ -61,7 +61,7 @@ ${ld.map((j) => `<script type="application/ld+json">${JSON.stringify(j)}</script
 <body>
 <a class="skip" href="#main">Skip to content</a>
 <header class="hdr"><div class="wrap">
-<a class="logo" href="${href("/")}" aria-label="CarvCAM home"><img src="${asset("/assets/carvcam-icon.svg")}" alt="" width="28" height="28">Carv<span>CAM</span></a>
+<a class="logo" href="${href("/")}" aria-label="CarvCAM home"><img src="${asset("/assets/carvcam-icon.svg")}" alt="" width="28" height="28"><span class="wordmark">Carv<span>CAM</span></span></a>
 <nav class="nav" aria-label="Main">${navHtml}</nav>
 <a class="btn btn--primary" href="${href(site.download)}">${ICON_WIN}Download</a>
 </div></header>
@@ -79,7 +79,7 @@ function footer() {
   const col = (t, items) => `<div><h4>${t}</h4><ul>${items.map(([n, u]) => `<li><a href="${href(u)}">${esc(n)}</a></li>`).join("")}</ul></div>`;
   return `<footer class="ftr"><div class="wrap">
 <div class="ftr__top">
-<div class="ftr__brand"><a class="logo" href="${href("/")}"><img src="${asset("/assets/carvcam-icon.svg")}" alt="" width="28" height="28">Carv<span>CAM</span></a><p>Design, prepare and carve on your LongMill or AltMill. One app, start to finished piece.</p></div>
+<div class="ftr__brand"><a class="logo" href="${href("/")}"><img src="${asset("/assets/carvcam-icon.svg")}" alt="" width="28" height="28"><span class="wordmark">Carv<span>CAM</span></span></a><p>Design, prepare and carve on your LongMill or AltMill. One app, start to finished piece.</p></div>
 ${col("Product", [["How it works", "/#how"], ["Features", "/features/"], ["Download", "/download/"], ["Best software for LongMill", "/best-cnc-software-for-longmill/"]])}
 ${col("Machines", machines.map((m) => [m.name, `/machines/${m.slug}/`]))}
 ${col("Compare", competitors.map((c) => [`CarvCAM vs ${c.name}`, `/compare/carvcam-vs-${c.slug}/`]))}
@@ -131,7 +131,8 @@ function home() {
 <h1>From blank board to finished sign. <span class="mark">One app.</span></h1>
 <p class="lede">You bought a CNC to make things, not to learn four programs. CarvCAM designs the sign, works out every feed and speed for your machine, walks you through the cables and carves it. All in one window.</p>
 ${downloadCta()}
-${shot("carving", "CarvCAM carving a sign on a LongMill: live preview, progress and speed controls", { eager: true })}
+<div class="shot shot--video"><video autoplay muted loop playsinline preload="auto" width="1280" height="800" poster="${asset("/assets/video/hero-demo-poster.webp")}" aria-label="CarvCAM in use: typing a sign, planning the cuts, connecting a LongMill and carving it"><source src="${asset("/assets/video/hero-demo.mp4")}" type="video/mp4"></video></div>
+<script>if (matchMedia("(prefers-reduced-motion: reduce)").matches) document.querySelectorAll(".shot--video video").forEach((v) => { v.removeAttribute("autoplay"); v.pause(); v.controls = true; });</script>
 </div></section>
 
 <div class="wrap"><div class="strip">

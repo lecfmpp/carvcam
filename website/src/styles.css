@@ -38,7 +38,8 @@ a { color: inherit; }
 .hdr .wrap { height: 100%; display: flex; align-items: center; gap: 28px; }
 .logo { display: inline-flex; align-items: center; gap: 9px; text-decoration: none; font-weight: 600; font-size: 18px; letter-spacing: -0.02em; }
 .logo img { width: 28px; height: 28px; }
-.logo span { font-family: var(--mono); font-weight: 500; }
+.wordmark { white-space: nowrap; }
+.wordmark span { font-family: var(--mono); font-weight: 500; }
 .nav { display: flex; gap: 22px; margin-left: auto; }
 .nav a { text-decoration: none; font-size: 15px; color: var(--ink-2); }
 .nav a:hover, .nav a[aria-current] { color: var(--ink); }
@@ -84,6 +85,7 @@ section { padding: 96px 0; }
 .cta .note { width: 100%; margin-top: 4px; }
 .shot { margin-top: 64px; border-radius: 16px; overflow: hidden; border: 1px solid #1f2024; box-shadow: 0 1px 0 rgba(17, 18, 20, 0.04), 0 30px 80px -20px rgba(17, 18, 20, 0.35); background: #111214; }
 .shot img { width: 100%; }
+.shot video { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; }
 .caption { margin-top: 12px; font-size: 14px; color: var(--ink-3); }
 
 /* Proof strip */
