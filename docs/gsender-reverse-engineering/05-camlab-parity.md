@@ -31,8 +31,8 @@ O CAMLab é o CAM 3D da Sienci, roda no navegador e é **baseado no Kiri:Moto** 
 ## Como chegar à paridade
 
 ### Fase 1: ajustes 2.5D (pequeno, dias)
-- **Modo Pro editável:** avanço, mergulho, passada, sobreposição e RPM (o motor já aceita `corte` como sobrescrita).
-- **Sentido do corte** (concordante/convencional; o motor já tem `direcao`) e **profundidade primeiro** (cada elemento até o fundo antes de ir para o próximo).
+- **Modo Pro editável:** avanço, mergulho, passada, sobreposição e RPM (o motor já aceita `cut` como sobrescrita).
+- **Sentido do corte** (concordante/convencional; o motor já tem `direction`) e **profundidade primeiro** (cada elemento até o fundo antes de ir para o próximo).
 - **Origem no centro** e offset de Z no topo (o pós-processador só desloca as coordenadas; o verificador acompanha).
 - **Bloco livre**, maior que a peça.
 - **Salvar/abrir projeto** (`.gsproj`, JSON da especificação) e exportar só o G-code.

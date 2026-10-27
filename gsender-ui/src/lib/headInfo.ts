@@ -4,7 +4,7 @@ import products from "./sienciProducts.json";
 /**
  * Ficha de cada router/spindle para os cards da tela "What spins the bit?" (texto em inglês).
  * Números das páginas de produto da Sienci Labs (out/2026). A rotação e as hastes que o motor
- * usa continuam em cam-engine/src/catalog/sienci/cabecotes.ts.
+ * usa continuam em cam-engine/src/catalog/sienci/heads.ts.
  */
 export interface HeadInfo {
   id: HeadId;

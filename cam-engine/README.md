@@ -28,33 +28,33 @@ Não depende de interface. Roda no Node (testes, CLI, servidor do gSender) e no 
 
 ### Avisos de fabricabilidade
 
-Cada aviso tem um `codigo` estável (para a UI e a IA reagirem), uma `mensagem` humana e uma `sugestao`. Exemplos:
+Cada aviso tem um `code` estável (para a UI e a IA reagirem), uma `message` humana e uma `suggestion`. Exemplos:
 
-- `TEXTO_NAO_CABE`: traz o tamanho sugerido em `dados.tamanhoSugerido`.
-- `ELEMENTO_NAO_USINAVEL`: os traços são mais finos que a fresa e nada seria cortado.
-- `DETALHE_MENOR_QUE_FRESA`: informa o % da área que não será cortado.
-- `PROFUNDIDADE_EXCEDE`, `FERRAMENTA_CURTA`, `FURO_MENOR_QUE_FRESA`, `FORA_DA_PECA`, `ILHAS_SOLTAS`, `PECA_MAIOR_QUE_MAQUINA`, `VBIT_SO_GRAVA`, `PECA_PEQUENA_SEM_ABA`.
+- `TEXT_DOES_NOT_FIT`: traz o tamanho sugerido em `data.suggestedSize`.
+- `ELEMENT_NOT_MACHINABLE`: os traços são mais finos que a fresa e nada seria cortado.
+- `DETAIL_SMALLER_THAN_BIT`: informa o % da área que não será cortado.
+- `DEPTH_EXCEEDS`, `TOOL_TOO_SHORT`, `HOLE_SMALLER_THAN_BIT`, `OUTSIDE_PART`, `LOOSE_ISLANDS`, `PART_LARGER_THAN_MACHINE`, `VBIT_ENGRAVE_ONLY`, `SMALL_PART_WITHOUT_TABS`.
 
-Com qualquer aviso de severidade `erro`, `generatePlate` não devolve G-code (`ok: false`, `gcode: ""`).
+Com qualquer aviso de severidade `error`, `generatePlate` não devolve G-code (`ok: false`, `gcode: ""`).
 
 ## Catálogo Sienci Labs (`src/catalog/sienci/`)
 
-A ferramenta é feita para as máquinas da Sienci. Com `sienci: { maquina, cabecote?, fresa, fresaRecorte?, velocidade? }`, o motor usa os dados reais em vez dos padrões genéricos:
+A ferramenta é feita para as máquinas da Sienci. Com `sienci: { machine, head?, bit, cutoutBit?, speed? }`, o motor usa os dados reais em vez dos padrões genéricos:
 
 | Arquivo | Conteúdo | Fonte |
 |---|---|---|
-| `maquinas.ts` | LongMill MK2 (12×30, 30×30, 48×30), MK3 (30×30, 48×30), AltMill (2×4, 4×4, 4×8): curso, velocidade máxima, cabeçotes possíveis e padrão | padrões de firmware do gSender ($110–$112, $130–$132) |
-| `cabecotes.ts` | Makita RT0701 (dial manual 1–6), AutoSpin T1 (ER11, rotação por G-code), spindles 1,5/2,2 kW ER20 | páginas de produto e resources.sienci.com |
-| `fresas.ts` | 15 fresas da loja (retas 1/16″, 1/8″, 1/4″, compressão, 1 canal, V-bits 30/60/90°, aplainar 22 mm, ball nose) com medidas e link; regra de compatibilidade haste × pinça | tabelas das páginas de produto em sienci.com |
-| `tabela.ts` | Tabela oficial de avanço e rotação (madeira macia/MDF, madeira dura, plásticos × reduzida/regular/máxima), convertida para mm | resources.sienci.com/view/cnc-feeds-speeds |
-| `projetos.ts` | 7 projetos de primeiros cortes, com `projetosParaMaquina()` dizendo o que cabe e que acessórios faltam | — |
+| `machines.ts` | LongMill MK2 (12×30, 30×30, 48×30), MK3 (30×30, 48×30), AltMill (2×4, 4×4, 4×8): curso, velocidade máxima, cabeçotes possíveis e padrão | padrões de firmware do gSender ($110–$112, $130–$132) |
+| `heads.ts` | Makita RT0701 (dial manual 1–6), AutoSpin T1 (ER11, rotação por G-code), spindles 1,5/2,2 kW ER20 | páginas de produto e resources.sienci.com |
+| `bits.ts` | 15 fresas da loja (retas 1/16″, 1/8″, 1/4″, compressão, 1 canal, V-bits 30/60/90°, aplainar 22 mm, ball nose) com medidas e link; regra de compatibilidade haste × pinça | tabelas das páginas de produto em sienci.com |
+| `table.ts` | Tabela oficial de avanço e rotação (madeira macia/MDF, madeira dura, plásticos × reduzida/regular/máxima), convertida para mm | resources.sienci.com/view/cnc-feeds-speeds |
+| `projects.ts` | 7 projetos de primeiros cortes, com `projectsForMachine()` dizendo o que cabe e que acessórios faltam | — |
 
 O que muda na geração:
 - **Limites e velocidades reais:** curso e velocidade máxima da máquina; faixa de rotação do cabeçote.
 - **Parâmetros oficiais:** vêm da tabela Sienci. A passada é a de canal (conservadora) e o mergulho fica limitado a 300 mm/min, como a Sienci recomenda fora de entalhe 3D, porque o motor ainda desce reto.
-- **Compatibilidade de fresa:** `FRESA_PRECISA_ACESSORIO` (ex.: 1/8″ no Makita), `FRESA_INCOMPATIVEL`, `FRESA_NAO_SUPORTADA` (aplainar e ball nose não servem para placas).
-- **Fresa de compressão:** a passada sobe para passar da parte upcut (`COMPRESSAO_PASSADA`).
-- **Makita:** `ajustesManuais` traz a posição do dial ("gire o dial para 3"), que também vai no cabeçalho do G-code.
+- **Compatibilidade de fresa:** `BIT_NEEDS_ACCESSORY` (ex.: 1/8″ no Makita), `BIT_INCOMPATIBLE`, `BIT_NOT_SUPPORTED` (aplainar e ball nose não servem para placas).
+- **Fresa de compressão:** a passada sobe para passar da parte upcut (`COMPRESSION_STEPDOWN`).
+- **Makita:** `manualAdjustments` traz a posição do dial ("gire o dial para 3"), que também vai no cabeçalho do G-code.
 
 Os 7 projetos geram G-code aprovado em todas as máquinas em que cabem. A placa de endereço de 90 cm só entra nas 48×30 e nas AltMill.
 
@@ -62,9 +62,9 @@ Dados do catálogo consultados em out/2026. Preços ficam de fora porque mudam.
 
 ## Simulações dos exemplos
 
-| `casa-da-ana.json` | `letreiro-pacifico.json` | `placa-gravada-icones.json` |
+| `anas-house.json` | `pacifico-lettering.json` | `engraved-icons-plate.json` |
 |---|---|---|
-| ![Placa Casa da Ana](docs/sim-casa-da-ana.png) | ![Letreiro Bem-vindos](docs/sim-letreiro-pacifico.png) | ![Placa LUNA](docs/sim-placa-gravada.png) |
+| ![Placa Casa da Ana](docs/sim-anas-house.png) | ![Letreiro Bem-vindos](docs/sim-pacifico-lettering.png) | ![Placa LUNA](docs/sim-engraved-plate.png) |
 | Relevo de 3 mm, moldura, 2 furos, recorte com 4 abas | Cursiva ligada recortada, com miolos e abas | Gravação com 1/16", rasgo e recorte com 1/8", cantos chanfrados |
 
 Cores: bege = face intacta; marrom = rebaixado; preto = atravessou.
@@ -74,31 +74,31 @@ Cores: bege = face intacta; marrom = rebaixado; preto = atravessou.
 ```bash
 npm install
 npm test                      # 53 testes, incluindo o critério de aceite da v1 e os projetos Sienci
-npm run generate -- examples/casa-da-ana.json saida.nc
-npm run render -- saida.nc saida.png 220 120 15 examples/casa-da-ana.json
+npm run generate -- examples/anas-house.json saida.nc
+npm run render -- saida.nc saida.png 220 120 15 examples/anas-house.json
 ```
 
 ```ts
 import { generatePlate, loadFonts } from "@gsender-next/cam-engine";
 
-const fontes = await loadFonts((arquivo) => fetch(`/fonts/${arquivo}`).then((r) => r.arrayBuffer()));
+const fonts = await loadFonts((file) => fetch(`/fonts/${file}`).then((r) => r.arrayBuffer()));
 const res = generatePlate(
   {
-    largura: 200, altura: 100, espessura: 15, material: "mdf",
-    texto: [{ conteudo: "Casa da Ana", tamanho: 16, modo: "relevo", profundidade: 3 }],
-    borda: { tipo: "arredondada", raio: 10 },
-    furos: [{ x: 15, y: 85, diametro: 5 }, { x: 185, y: 85, diametro: 5 }],
+    width: 200, height: 100, thickness: 15, material: "mdf",
+    texts: [{ content: "Casa da Ana", size: 16, mode: "relief", depth: 3 }],
+    edge: { type: "rounded", radius: 10 },
+    holes: [{ x: 15, y: 85, diameter: 5 }, { x: 185, y: 85, diameter: 5 }],
   },
-  { fontes, ferramenta: { diametro: 3.175, comprimentoCorte: 22 } },
+  { fonts, tool: { diameter: 3.175, cutLength: 22 } },
 );
 
-res.avisos;       // mostrar na UI
+res.warnings;     // mostrar na UI
 res.layout;       // geometria para a prévia
-res.verificacao;  // tempo estimado, extensão, problemas
+res.verification; // tempo estimado, extensão, problemas
 if (res.ok) await fetch("/api/gcode", { method: "POST", body: res.gcode }); // envio pelo servidor do gSender
 ```
 
-**Origem do trabalho:** X0 Y0 no canto inferior esquerdo do bloco e Z0 na face de cima. Quando há recorte externo, o bloco é a placa mais `margem` (10 mm) de cada lado.
+**Origem do trabalho:** X0 Y0 no canto inferior esquerdo do bloco e Z0 na face de cima. Quando há recorte externo, o bloco é a placa mais `margin` (10 mm) de cada lado.
 
 ## Decisões e limites conhecidos
 
@@ -107,7 +107,7 @@ if (res.ok) await fetch("/api/gcode", { method: "POST", body: res.gcode }); // e
 - **Mergulho reto:** a fresa desce em avanço de mergulho, sem rampa ou hélice. Isso exige fresa de topo que corta no centro. Rampa fica para a v1.1.
 - **V-bit:** só grava seguindo o contorno. V-carve de verdade (profundidade variável) fica para depois.
 - **Presets de material:** são valores conservadores de partida. A UI deve permitir ajuste e lembrar o ajuste por material.
-- **Limites da máquina:** o padrão é genérico (300 × 300 mm). Na integração, preencha `maquina` com os parâmetros do firmware lidos pelo gSender ($110–$112 velocidades, $130–$132 curso).
+- **Limites da máquina:** o padrão é genérico (300 × 300 mm). Na integração, preencha `machine` com os parâmetros do firmware lidos pelo gSender ($110–$112 velocidades, $130–$132 curso).
 - **Ainda não testado numa máquina real.** A validação até aqui é o verificador mais a simulação.
 
 ## O que veio do rudra496/cnc

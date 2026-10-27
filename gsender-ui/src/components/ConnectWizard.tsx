@@ -419,7 +419,7 @@ function ConnectStep(props: { c: ControllerInfo; link: Link; known: boolean; onB
         {props.link === "usb" && ports && !ports.length && !hasWebSerial ? <div className="cw__note">No USB controller found yet. Check the cable and that the controller is on.</div> : null}
         {noWay ? (
           <div className="cw__note">
-            To talk to the machine, start CarvCAM with <b>testar-carvcam</b> (it starts the CarvCAM bridge), or open it in Chrome or Edge.
+            To talk to the machine, start CarvCAM with <b>try-carvcam</b> (it starts the CarvCAM bridge), or open it in Chrome or Edge.
           </div>
         ) : null}
         <div className={`cw__port cw__port--sim ${pick?.kind === "sim" ? "is-on" : ""}`} role="radio" aria-checked={pick?.kind === "sim"} tabIndex={0} onClick={() => setPick({ kind: "sim" })}>

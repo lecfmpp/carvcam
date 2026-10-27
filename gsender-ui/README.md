@@ -5,12 +5,12 @@ Implementação do handoff do Claude Design ("Calm Precision") em React + TypeSc
 ## Testar no seu computador
 Precisa só do [Node.js](https://nodejs.org) 18 ou mais novo (versão LTS). Na raiz do repositório:
 
-- **Windows:** clique duas vezes em `testar-carvcam.cmd`.
-- **Mac / Linux:** `./testar-carvcam.sh`
+- **Windows:** clique duas vezes em `try-carvcam.cmd`.
+- **Mac / Linux:** `./try-carvcam.sh`
 
 Na primeira vez o script instala as dependências (precisa de internet só nesse momento). Depois gera a versão final e abre o CarvCAM em **http://localhost:4173**. Depois de aberto uma vez, o app também inicia **sem internet** nesse endereço: um service worker guarda todos os arquivos, e o motor de CAM, as fontes e a simulação rodam no próprio computador.
 
-Para desenvolver (recarrega ao editar o código): `./testar-carvcam.sh --dev` (http://localhost:5173).
+Para desenvolver (recarrega ao editar o código): `./try-carvcam.sh --dev` (http://localhost:5173).
 
 ```bash
 # o mesmo, à mão
@@ -60,7 +60,7 @@ Para a tela touch de 15,6″ do gControl. Liga sozinho quando o dispositivo prin
 ## Conectar na máquina
 O CarvCAM fala direto com a controladora (LongBoard, SuperLongBoard, SLB-EXT, SLB-LITE), sem o gSender aberto. Feche o gSender antes: só um programa pode usar a conexão.
 
-- **USB:** `npm run local` (ou `testar-carvcam`) inicia o app e o **carvcam-bridge** juntos. No assistente **Connect**, a placa aparece sozinha na lista. No Chrome/Edge também funciona sem o bridge (o navegador pede para escolher a porta).
+- **USB:** `npm run local` (ou `try-carvcam`) inicia o app e o **carvcam-bridge** juntos. No assistente **Connect**, a placa aparece sozinha na lista. No Chrome/Edge também funciona sem o bridge (o navegador pede para escolher a porta).
 - **Ethernet (SLB/SLB-EXT):** escolha Ethernet no assistente e informe o IP da placa (padrão `192.168.5.1`, porta 23). Precisa do bridge.
 - O bridge só aceita conexões do próprio computador e de páginas servidas por ele (`localhost`), para nenhum site da internet conseguir mandar na máquina.
 - **Sem máquina:** escolha **Simulator** no assistente.

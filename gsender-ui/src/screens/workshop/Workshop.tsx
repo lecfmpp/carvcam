@@ -43,7 +43,7 @@ function projectDesign(p: Project): Design {
     bit2: p.bits[1],
     useBit2: p.bits.length > 1,
     preset: p.speed,
-    tabs: { count: 4, height: Math.min(3, Math.round(p.spec.espessura * 0.35 * 10) / 10) },
+    tabs: { count: 4, height: Math.min(3, Math.round(p.spec.thickness * 0.35 * 10) / 10) },
   };
 }
 
@@ -74,15 +74,15 @@ function loadPreview(p: Project, m: Machine, head: HeadId): Promise<Preview> {
   const tHead = fits ? head : target.defaultHead;
   const d = projectDesign(p);
   const job = queue.then(async () => {
-    const w = p.spec.largura;
-    const h = p.spec.altura;
+    const w = p.spec.width;
+    const h = p.spec.height;
     const r = await runEngine(d.spec, engineOptions(d, target.id, tHead, d.preset ?? target.preset), true, Math.max(0.5, Math.max(w, h) / 260));
-    const b = r.result?.layout.bloco;
+    const b = r.result?.layout.stock;
     const out: Preview = {
       sim: r.sim,
-      minutes: fits && r.result?.ok ? Math.max(1, Math.round((r.result.verificacao?.estatisticas.tempoEstimadoSeg ?? 0) / 60)) : null,
-      board: b ? { width: b.largura, height: b.altura, thickness: b.espessura } : null,
-      piece: r.result?.layout.peca ?? null,
+      minutes: fits && r.result?.ok ? Math.max(1, Math.round((r.result.verification?.stats.estimatedTimeSec ?? 0) / 60)) : null,
+      board: b ? { width: b.width, height: b.height, thickness: b.thickness } : null,
+      piece: r.result?.layout.part ?? null,
     };
     cache.set(key, out);
     return out;
@@ -215,7 +215,7 @@ function ProjectCard({ project: p, onMake }: { project: Project; onMake(): void 
             );
           })()
         ) : (
-          <div className="ws-skel" style={{ width: Math.min(box.w, (p.spec.largura / p.spec.altura) * box.h), height: Math.min(box.h, (p.spec.altura / p.spec.largura) * box.w) }} aria-label="Preparing preview" />
+          <div className="ws-skel" style={{ width: Math.min(box.w, (p.spec.width / p.spec.height) * box.h), height: Math.min(box.h, (p.spec.height / p.spec.width) * box.w) }} aria-label="Preparing preview" />
         )}
         {!ok ? <span className="ws-needs">{fitNames(p)}</span> : null}
       </div>

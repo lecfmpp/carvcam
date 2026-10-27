@@ -18,7 +18,7 @@ import "./surfacing.css";
 
 type Step = "area" | "bit" | "preview" | "check";
 const STEPS: Step[] = ["area", "bit", "preview", "check"];
-const BIT_ID = "aplainar-22mm";
+const BIT_ID = "surfacing-22mm";
 const JOB_NAME = "Surface the bed";
 const PRESETS: [Preset, string, string][] = [
   ["detailed", "Detailed", "Reduced"],
@@ -60,11 +60,11 @@ export default function Surfacing() {
 
   const jobs = useMemo(() => {
     const out = {} as Record<Preset, SurfacingResult>;
-    for (const [k] of PRESETS) out[k] = generateSurfacing({ largura: w, altura: h, profundidade: depth, sienci: { maquina: machine.id, cabecote: headId, velocidade: PRESET_TO_SPEED[k] } });
+    for (const [k] of PRESETS) out[k] = generateSurfacing({ width: w, height: h, depth: depth, sienci: { machine: machine.id, head: headId, speed: PRESET_TO_SPEED[k] } });
     return out;
   }, [w, h, depth, machine.id, headId]);
   const job = jobs[preset];
-  const mins = (k: Preset) => Math.max(1, Math.round(jobs[k].verificacao.estatisticas.tempoEstimadoSeg / 60));
+  const mins = (k: Preset) => Math.max(1, Math.round(jobs[k].verification.stats.estimatedTimeSec / 60));
   const segs = useSegments(job.gcode);
 
   // Fase derivada da máquina simulada.
@@ -103,7 +103,7 @@ export default function Surfacing() {
 
   const connected = m.status !== "disconnected" && m.status !== "connecting";
   const dl = job.dial;
-  const rpm = job.parametros.rpm;
+  const rpm = job.params.rpm;
   const checks: Check[] = [
     connected
       ? { ok: true, label: `Connected · ${machine.family} ${machine.size}`, sub: `USB · ${m.port ?? "COM3"}` }
@@ -142,8 +142,8 @@ export default function Surfacing() {
     head.auto
       ? { ok: true, label: "Automatic speed ✓", sub: `${head.name} will run at ${rpm.toLocaleString("en-US")} RPM` }
       : routerOn
-        ? { ok: true, label: `Dial on ${dl?.posicao} · router on`, sub: `${dl?.rpm.toLocaleString("en-US")} RPM on the Makita`, dial: dl?.posicao }
-        : { ok: false, label: `Turn the dial to ${dl?.posicao} · ${dl?.rpm.toLocaleString("en-US")} RPM`, sub: "Then switch the Makita on. Its speed is set by hand.", dial: dl?.posicao, fixLabel: "Done", fix: () => setRouterOn(true) },
+        ? { ok: true, label: `Dial on ${dl?.position} · router on`, sub: `${dl?.rpm.toLocaleString("en-US")} RPM on the Makita`, dial: dl?.position }
+        : { ok: false, label: `Turn the dial to ${dl?.position} · ${dl?.rpm.toLocaleString("en-US")} RPM`, sub: "Then switch the Makita on. Its speed is set by hand.", dial: dl?.position, fixLabel: "Done", fix: () => setRouterOn(true) },
     clear
       ? { ok: true, label: "Bed clear, dust collector on", sub: "Clamps and screws removed from the area" }
       : { ok: false, label: "Clear the bed and start dust collection", sub: "Remove clamps and screws inside the dashed area", fixLabel: "Done", fix: () => setClear(true) },
@@ -151,7 +151,7 @@ export default function Surfacing() {
   const allOk = checks.every((c) => c.ok);
 
   const start = () => {
-    m.loadJob({ name: JOB_NAME, gcode: job.gcode, tools: [ToolSchema.parse(job.ferramenta)], board: { width: w, height: h, thickness: depth } });
+    m.loadJob({ name: JOB_NAME, gcode: job.gcode, tools: [ToolSchema.parse(job.tool)], board: { width: w, height: h, thickness: depth } });
     useMachine.setState({ speedup: 60 });
     setStarted(true);
     useMachine.getState().start();
@@ -159,8 +159,8 @@ export default function Surfacing() {
 
   // Geometria no palco.
   const si = STEPS.indexOf(step);
-  const so = job.parametros.sobreposicao;
-  const rows = job.linhas;
+  const so = job.params.stepover;
+  const rows = job.lines;
   const bitPos = (() => {
     if (phase === "done") return null;
     if (phase !== "setup") {
@@ -422,7 +422,7 @@ export default function Surfacing() {
                     <span style={{ font: "400 11px var(--font)", color: "var(--text-3)" }}>Sienci table: {t}</span>
                     {pro ? (
                       <span className="mono" style={{ font: "400 11px/1.3 var(--mono)", color: "var(--text-3)" }}>
-                        {jobs[k].parametros.rpm.toLocaleString("en-US")} RPM · {jobs[k].parametros.avanco} mm/min
+                        {jobs[k].params.rpm.toLocaleString("en-US")} RPM · {jobs[k].params.feed} mm/min
                       </span>
                     ) : null}
                   </button>
@@ -455,9 +455,9 @@ export default function Surfacing() {
               {[
                 ["Area", `${w} × ${h} mm`],
                 ["Rows", `${rows} · ${Math.round(100 - (so / 22) * 100)}% overlap`],
-                ["Depth", `${depth.toFixed(1)} mm in ${job.passadas} pass${job.passadas > 1 ? "es" : ""}`],
-                ["Feed", `${job.parametros.avanco} mm/min`],
-                ["Bit speed", head.auto ? `${rpm.toLocaleString("en-US")} RPM` : `Dial ${dl?.posicao} · ${dl?.rpm.toLocaleString("en-US")} RPM`],
+                ["Depth", `${depth.toFixed(1)} mm in ${job.passes} pass${job.passes > 1 ? "es" : ""}`],
+                ["Feed", `${job.params.feed} mm/min`],
+                ["Bit speed", head.auto ? `${rpm.toLocaleString("en-US")} RPM` : `Dial ${dl?.position} · ${dl?.rpm.toLocaleString("en-US")} RPM`],
                 ["G-code", job.ok ? "Verified ✓" : "Check failed"],
               ].map(([k, v]) => (
                 <div key={k} className="sf-row">

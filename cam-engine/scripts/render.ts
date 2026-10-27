@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { deflateSync } from "node:zlib";
+import { migrateLegacySpec } from "../src/migrate.js";
 import { ToolSchema, type ToolInput } from "../src/schema.js";
 import { simulate } from "../src/sim/heightmap.js";
 
@@ -13,8 +14,8 @@ if (!gfile || !out || !W || !H || !T) {
   console.error("Uso: npm run render -- <arquivo.nc> <saida.png> <largura> <altura> <espessura> [exemplo.json]");
   process.exit(2);
 }
-const ex = exampleFile ? JSON.parse(readFileSync(exampleFile, "utf8")) : {};
-const tools = [ex.ferramenta, ex.ferramentaRecorte].filter(Boolean).map((t: ToolInput) => ToolSchema.parse(t));
+const ex = exampleFile ? migrateLegacySpec<any>(JSON.parse(readFileSync(exampleFile, "utf8"))) : {};
+const tools = [ex.tool, ex.cutoutTool].filter(Boolean).map((t: ToolInput) => ToolSchema.parse(t));
 const hm = simulate(readFileSync(gfile, "utf8"), tools.length ? tools : ToolSchema.parse({}), { x0: -5, y0: -5, width: Number(W) + 10, height: Number(H) + 10 }, 0.2);
 const thick = Number(T);
 

@@ -1,147 +1,147 @@
-import { fmt, type Aviso } from "../../avisos.js";
+import { fmt, type Warning } from "../../warnings.js";
 import type { CutParams } from "../../materials.js";
 import type { MachineInput, MaterialId, ToolInput } from "../../schema.js";
-import { CABECOTES, dialPara, type CabecoteId } from "./cabecotes.js";
-import { compatibilidade, FRESA_POR_ID, paraFerramenta, type FresaSienci } from "./fresas.js";
-import { limitesDaMaquina, MAQUINAS, type MaquinaId } from "./maquinas.js";
-import { parametrosSienci, type Velocidade } from "./tabela.js";
+import { HEADS, nearestDial, type HeadId } from "./heads.js";
+import { compatibility, BIT_BY_ID, toTool, type SienciBit } from "./bits.js";
+import { machineLimits, MACHINES, type MachineId } from "./machines.js";
+import { sienciParams, type Speed } from "./table.js";
 
 /** Mergulho máximo para descida reta (resources.sienci.com, "Feeds & Speeds - LongMill"). */
-export const MERGULHO_RETO_MAX = 300;
+export const MAX_STRAIGHT_PLUNGE = 300;
 
 /** O que o usuário escolhe na interface: máquina, router/spindle, fresas e velocidade. */
-export interface ConfigSienci {
-  maquina: MaquinaId;
+export interface SienciConfig {
+  machine: MachineId;
   /** Padrão: o cabeçote padrão da máquina. */
-  cabecote?: CabecoteId;
+  head?: HeadId;
   /** Fresa principal (gravação e relevo), id do catálogo. */
-  fresa: string;
+  bit: string;
   /** Fresa para recortes e furos. Padrão: a principal. */
-  fresaRecorte?: string;
+  cutoutBit?: string;
   /** Padrão: a velocidade sugerida para a máquina. */
-  velocidade?: Velocidade;
+  speed?: Speed;
 }
 
-export interface AjusteManual {
-  ferramenta: number;
+export interface ManualAdjustment {
+  tool: number;
   rpm: number;
   dial: number;
-  mensagem: string;
+  message: string;
 }
 
-export interface ConfigResolvida {
-  maquina: MachineInput;
-  ferramenta: ToolInput;
-  ferramentaRecorte?: ToolInput;
-  corte?: Partial<CutParams>;
-  corteRecorte?: Partial<CutParams>;
-  avisos: Aviso[];
+export interface ResolvedConfig {
+  machine: MachineInput;
+  tool: ToolInput;
+  cutoutTool?: ToolInput;
+  cut?: Partial<CutParams>;
+  cutoutCut?: Partial<CutParams>;
+  warnings: Warning[];
   /** Quando o router não é controlado pelo G-code (Makita), o usuário precisa girar o dial. */
-  ajustesManuais: AjusteManual[];
-  fonte: string;
+  manualAdjustments: ManualAdjustment[];
+  source: string;
 }
 
 /** Traduz a escolha do usuário em limites, ferramentas e parâmetros de corte para o motor. */
-export function resolverSienci(cfg: ConfigSienci, material: MaterialId): ConfigResolvida {
-  const maq = MAQUINAS[cfg.maquina];
-  const cabId = cfg.cabecote ?? maq.cabecotePadrao;
-  const cab = CABECOTES[cabId];
-  const velocidade = cfg.velocidade ?? maq.velocidadePadrao;
-  const avisos: Aviso[] = [];
-  const ajustesManuais: AjusteManual[] = [];
+export function resolveSienci(cfg: SienciConfig, material: MaterialId): ResolvedConfig {
+  const machine = MACHINES[cfg.machine];
+  const headId = cfg.head ?? machine.defaultHead;
+  const head = HEADS[headId];
+  const speed = cfg.speed ?? machine.defaultSpeed;
+  const warnings: Warning[] = [];
+  const manualAdjustments: ManualAdjustment[] = [];
 
-  if (!maq.cabecotes.includes(cabId)) {
-    avisos.push({ codigo: "FRESA_INCOMPATIVEL", severidade: "erro", mensagem: `O ${cab.nome} não é uma opção para a ${maq.nome}.` });
+  if (!machine.heads.includes(headId)) {
+    warnings.push({ code: "BIT_INCOMPATIBLE", severity: "error", message: `O ${head.name} não é uma opção para a ${machine.name}.` });
   }
 
-  const fresas: { f: FresaSienci; numero: number; papel: string }[] = [];
-  const principal = buscar(cfg.fresa, avisos);
-  if (principal) fresas.push({ f: principal, numero: 1, papel: "principal" });
-  const recorte = cfg.fresaRecorte && cfg.fresaRecorte !== cfg.fresa ? buscar(cfg.fresaRecorte, avisos) : undefined;
-  if (recorte) fresas.push({ f: recorte, numero: 2, papel: "de recorte" });
+  const bits: { f: SienciBit; toolNumber: number; role: string }[] = [];
+  const main = findBit(cfg.bit, warnings);
+  if (main) bits.push({ f: main, toolNumber: 1, role: "principal" });
+  const cutout = cfg.cutoutBit && cfg.cutoutBit !== cfg.bit ? findBit(cfg.cutoutBit, warnings) : undefined;
+  if (cutout) bits.push({ f: cutout, toolNumber: 2, role: "de recorte" });
 
   const params: Partial<CutParams>[] = [];
-  for (const { f, numero, papel } of fresas) {
-    if (!f.usoNaV1) {
-      avisos.push({
-        codigo: "FRESA_NAO_SUPORTADA",
-        severidade: "erro",
-        mensagem: `A fresa ${papel} (${f.nome}) não serve para placas e letreiros.`,
-        sugestao: f.indicacao,
+  for (const { f, toolNumber, role } of bits) {
+    if (!f.supportedInV1) {
+      warnings.push({
+        code: "BIT_NOT_SUPPORTED",
+        severity: "error",
+        message: `A fresa ${role} (${f.name}) não serve para placas e letreiros.`,
+        suggestion: f.bestFor,
       });
     }
-    const c = compatibilidade(f, cabId);
-    if (c.status === "incompativel") avisos.push({ codigo: "FRESA_INCOMPATIVEL", severidade: "erro", mensagem: c.motivo });
-    if (c.status === "com-acessorio") {
-      avisos.push({
-        codigo: "FRESA_PRECISA_ACESSORIO",
-        severidade: "aviso",
-        mensagem: `Para usar a ${f.nome} no ${cab.nome} você precisa de: ${c.acessorio.nome}.`,
-        dados: { url: c.acessorio.url },
+    const c = compatibility(f, headId);
+    if (c.status === "incompatible") warnings.push({ code: "BIT_INCOMPATIBLE", severity: "error", message: c.reason });
+    if (c.status === "with-accessory") {
+      warnings.push({
+        code: "BIT_NEEDS_ACCESSORY",
+        severity: "warning",
+        message: `Para usar a ${f.name} no ${head.name} você precisa de: ${c.accessory.name}.`,
+        data: { url: c.accessory.url },
       });
     }
 
-    const t = f.linha ? parametrosSienci(f.linha, material, velocidade) : undefined;
+    const t = f.tableRow ? sienciParams(f.tableRow, material, speed) : undefined;
     if (!t) {
-      avisos.push({
-        codigo: "SEM_TABELA_SIENCI",
-        severidade: "aviso",
-        mensagem: `A Sienci não publica parâmetros da ${f.nome} para este material; usando valores conservadores calculados.`,
+      warnings.push({
+        code: "NO_SIENCI_TABLE",
+        severity: "warning",
+        message: `A Sienci não publica parâmetros da ${f.name} para este material; usando valores conservadores calculados.`,
       });
       params.push({});
       continue;
     }
-    let passada = t.passadaCanal;
-    if (f.compressaoUpcut && passada <= f.compressaoUpcut) {
-      const minima = f.compressaoUpcut + 0.5;
-      if (minima <= t.passadaPocket) {
-        passada = minima;
-        avisos.push({
-          codigo: "COMPRESSAO_PASSADA",
-          severidade: "aviso",
-          mensagem: `Passada aumentada para ${fmt(minima)} mm: numa fresa de compressão a primeira passada precisa passar dos ${fmt(f.compressaoUpcut)} mm de corte para cima.`,
+    let stepdown = t.slotStepdown;
+    if (f.compressionUpcut && stepdown <= f.compressionUpcut) {
+      const minimum = f.compressionUpcut + 0.5;
+      if (minimum <= t.pocketStepdown) {
+        stepdown = minimum;
+        warnings.push({
+          code: "COMPRESSION_STEPDOWN",
+          severity: "warning",
+          message: `Passada aumentada para ${fmt(minimum)} mm: numa fresa de compressão a primeira passada precisa passar dos ${fmt(f.compressionUpcut)} mm de corte para cima.`,
         });
       } else {
-        avisos.push({
-          codigo: "COMPRESSAO_PASSADA",
-          severidade: "aviso",
-          mensagem: `Com este material e velocidade a passada fica abaixo de ${fmt(f.compressaoUpcut)} mm, e a fresa de compressão vai lascar a face de cima.`,
-          sugestao: "Use uma fresa downcut ou suba a velocidade da tabela.",
+        warnings.push({
+          code: "COMPRESSION_STEPDOWN",
+          severity: "warning",
+          message: `Com este material e velocidade a passada fica abaixo de ${fmt(f.compressionUpcut)} mm, e a fresa de compressão vai lascar a face de cima.`,
+          suggestion: "Use uma fresa downcut ou suba a velocidade da tabela.",
         });
       }
     }
     // O motor ainda desce reto (sem rampa). Fora de entalhe 3D, a Sienci recomenda
     // mergulho de 100–300 mm/min, bem abaixo do valor da tabela.
-    const mergulho = Math.min(t.mergulho, MERGULHO_RETO_MAX);
-    params.push({ rpm: t.rpm, avanco: t.avanco, mergulho, passada, sobreposicao: t.sobreposicao });
+    const plunge = Math.min(t.plunge, MAX_STRAIGHT_PLUNGE);
+    params.push({ rpm: t.rpm, feed: t.feed, plunge, stepdown, stepover: t.stepover });
 
-    if (cab.controleRpm === "manual") {
-      const d = dialPara(cab, t.rpm);
+    if (head.rpmControl === "manual") {
+      const d = nearestDial(head, t.rpm);
       if (d) {
-        ajustesManuais.push({
-          ferramenta: numero,
+        manualAdjustments.push({
+          tool: toolNumber,
           rpm: t.rpm,
-          dial: d.posicao,
-          mensagem: `Antes de cortar com a ${f.nome}, gire o dial do ${cab.nome} para ${d.posicao} (${d.rpm.toLocaleString("pt-BR")} RPM).`,
+          dial: d.position,
+          message: `Antes de cortar com a ${f.name}, gire o dial do ${head.name} para ${d.position} (${d.rpm.toLocaleString("pt-BR")} RPM).`,
         });
       }
     }
   }
 
   return {
-    maquina: limitesDaMaquina(cfg.maquina, cabId),
-    ferramenta: principal ? paraFerramenta(principal, 1) : {},
-    ferramentaRecorte: recorte ? paraFerramenta(recorte, 2) : undefined,
-    corte: params[0],
-    corteRecorte: recorte ? params[1] : undefined,
-    avisos,
-    ajustesManuais,
-    fonte: `Tabela Sienci Labs, velocidade ${velocidade}`,
+    machine: machineLimits(cfg.machine, headId),
+    tool: main ? toTool(main, 1) : {},
+    cutoutTool: cutout ? toTool(cutout, 2) : undefined,
+    cut: params[0],
+    cutoutCut: cutout ? params[1] : undefined,
+    warnings,
+    manualAdjustments,
+    source: `Tabela Sienci Labs, velocidade ${speed}`,
   };
 }
 
-function buscar(id: string, avisos: Aviso[]): FresaSienci | undefined {
-  const f = FRESA_POR_ID.get(id);
-  if (!f) avisos.push({ codigo: "FRESA_INCOMPATIVEL", severidade: "erro", mensagem: `Fresa "${id}" não está no catálogo Sienci.` });
+function findBit(id: string, warnings: Warning[]): SienciBit | undefined {
+  const f = BIT_BY_ID.get(id);
+  if (!f) warnings.push({ code: "BIT_INCOMPATIBLE", severity: "error", message: `Fresa "${id}" não está no catálogo Sienci.` });
   return f;
 }

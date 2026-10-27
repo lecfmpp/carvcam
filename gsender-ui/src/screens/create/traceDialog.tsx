@@ -29,10 +29,10 @@ function regionBounds(r: Region) {
 export function TraceDialog({ tracing, onClose, onAdded }: { tracing: TracingImage; onClose(): void; onAdded(id: ElementId): void }) {
   const patchSpec = useDesign((s) => s.patchSpec);
   const [px, setPx] = useState<ImageData | null>(null);
-  const [limiar, setLimiar] = useState(128);
-  const [inverter, setInverter] = useState(false);
-  const [suavizar, setSuavizar] = useState(2);
-  const [manchas, setManchas] = useState(2); // mm²
+  const [threshold, setThreshold] = useState(128);
+  const [invert, setInvert] = useState(false);
+  const [smooth, setSmooth] = useState(2);
+  const [blobs, setBlobs] = useState(2); // mm²
   const [region, setRegion] = useState<Region | null>(null);
 
   useEffect(() => {
@@ -43,11 +43,11 @@ export function TraceDialog({ tracing, onClose, onAdded }: { tracing: TracingIma
   useEffect(() => {
     if (!px) return;
     const t = setTimeout(() => {
-      const mask = maskFromRgba(px.data, px.width, px.height, limiar, inverter);
-      setRegion(traceMask(mask, px.width, px.height, { suavizar, manchaMin: manchas / (k * k), detalhe: 0.6 }) as Region);
+      const mask = maskFromRgba(px.data, px.width, px.height, threshold, invert);
+      setRegion(traceMask(mask, px.width, px.height, { smooth, minBlob: blobs / (k * k), detail: 0.6 }) as Region);
     }, 90);
     return () => clearTimeout(t);
-  }, [px, limiar, inverter, suavizar, manchas, k]);
+  }, [px, threshold, invert, smooth, blobs, k]);
 
   const d = useMemo(() => (region ? region.map((p) => "M" + p.map((q) => `${q.x.toFixed(1)} ${q.y.toFixed(1)}`).join("L") + "Z").join("") : ""), [region]);
   const empty = region !== null && region.length === 0;
@@ -63,7 +63,7 @@ export function TraceDialog({ tracing, onClose, onAdded }: { tracing: TracingIma
     const out = addSvg(spec, svg, tracing.name.replace(/\.[a-z0-9]+$/i, "") + " (traced)", cx, cy);
     if ("error" in out) return toast(out.error);
     const [next, id] = out;
-    next.svgs![next.svgs!.length - 1].largura = width;
+    next.svgs![next.svgs!.length - 1].width = width;
     patchSpec(() => next);
     onAdded(id);
     onClose();
@@ -93,16 +93,16 @@ export function TraceDialog({ tracing, onClose, onAdded }: { tracing: TracingIma
           <div className="create-trace__controls">
             <label className="create-trace__row">
               <span>
-                Threshold <span className="mono tiny muted">{limiar}</span>
+                Threshold <span className="mono tiny muted">{threshold}</span>
               </span>
-              <input className="create-range" type="range" min={10} max={245} value={limiar} onChange={(e) => setLimiar(Number(e.target.value))} />
+              <input className="create-range" type="range" min={10} max={245} value={threshold} onChange={(e) => setThreshold(Number(e.target.value))} />
             </label>
             <div className="create-trace__row">
               <span>Carve the</span>
               <Seg<"dark" | "light">
                 label="Carve the"
-                value={inverter ? "light" : "dark"}
-                onChange={(v) => setInverter(v === "light")}
+                value={invert ? "light" : "dark"}
+                onChange={(v) => setInvert(v === "light")}
                 options={[
                   ["dark", "Dark parts"],
                   ["light", "Light parts"],
@@ -111,15 +111,15 @@ export function TraceDialog({ tracing, onClose, onAdded }: { tracing: TracingIma
             </div>
             <label className="create-trace__row">
               <span>
-                Smoothing <span className="mono tiny muted">{suavizar}</span>
+                Smoothing <span className="mono tiny muted">{smooth}</span>
               </span>
-              <input className="create-range" type="range" min={0} max={4} value={suavizar} onChange={(e) => setSuavizar(Number(e.target.value))} />
+              <input className="create-range" type="range" min={0} max={4} value={smooth} onChange={(e) => setSmooth(Number(e.target.value))} />
             </label>
             <label className="create-trace__row">
               <span>
-                Ignore specks under <span className="mono tiny muted">{manchas} mm²</span>
+                Ignore specks under <span className="mono tiny muted">{blobs} mm²</span>
               </span>
-              <input className="create-range" type="range" min={0} max={40} step={0.5} value={manchas} onChange={(e) => setManchas(Number(e.target.value))} />
+              <input className="create-range" type="range" min={0} max={40} step={0.5} value={blobs} onChange={(e) => setBlobs(Number(e.target.value))} />
             </label>
             <div className="tiny muted">
               {empty ? "Nothing is dark enough at this threshold. Move the slider or switch to light parts." : region ? `${region.length} outline${region.length === 1 ? "" : "s"} · lands exactly over the image on the board` : "Tracing…"}

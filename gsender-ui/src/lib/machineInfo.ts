@@ -4,7 +4,7 @@ import products from "./sienciProducts.json";
 /**
  * Ficha de cada máquina para os cards (texto da interface em inglês). Números das páginas de
  * produto da Sienci Labs (out/2026); a geometria que o motor usa para checar se o projeto cabe
- * continua no catálogo do motor (cam-engine/src/catalog/sienci/maquinas.ts).
+ * continua no catálogo do motor (cam-engine/src/catalog/sienci/machines.ts).
  */
 export interface MachineInfo {
   id: MachineId;

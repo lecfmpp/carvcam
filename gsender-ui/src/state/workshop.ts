@@ -1,3 +1,4 @@
+import { migrateLegacyBitId, migrateLegacyProjectId } from "@gsender-next/cam-engine";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { HEADS, KIT, machineById, type HeadId, type MachineId } from "../lib/catalog";
@@ -73,7 +74,19 @@ export const useWorkshop = create<WorkshopState>()(
       },
       setLink: (machine, v) => set({ link: { ...get().link, [machine]: v } }),
     }),
-    { name: "gsender-workshop", version: 1 },
+    {
+      name: "gsender-workshop",
+      version: 2,
+      // v1 (0.1.0) stored Portuguese bit and project ids.
+      migrate: (persisted, version) => {
+        const st = persisted as Partial<WorkshopState>;
+        if (version < 2) {
+          if (st.bits) st.bits = st.bits.map(migrateLegacyBitId);
+          if (st.trackDone) st.trackDone = st.trackDone.map(migrateLegacyProjectId);
+        }
+        return st as WorkshopState;
+      },
+    },
   ),
 );
 

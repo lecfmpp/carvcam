@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # CarvCAM: instala (só na primeira vez), gera a versão final e abre no navegador.
-# Uso: ./testar-carvcam.sh        (Mac ou Linux; precisa do Node.js 18 ou mais novo)
-#      ./testar-carvcam.sh --dev  (modo desenvolvimento, recarrega ao editar o código)
+# Uso: ./try-carvcam.sh        (Mac ou Linux; precisa do Node.js 18 ou mais novo)
+#      ./try-carvcam.sh --dev  (modo desenvolvimento, recarrega ao editar o código)
 set -euo pipefail
 cd "$(dirname "$0")"
 

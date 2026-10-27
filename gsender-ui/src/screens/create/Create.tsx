@@ -193,12 +193,12 @@ export default function Create() {
   });
 
   const m = margin(spec);
-  const block = result?.layout.bloco ?? { largura: spec.largura + 2 * m, altura: spec.altura + 2 * m, espessura: spec.espessura };
-  const sameBlock = result && Math.abs(result.layout.bloco.largura - (spec.largura + 2 * m)) < 0.01 && Math.abs(result.layout.bloco.altura - (spec.altura + 2 * m)) < 0.01;
+  const block = result?.layout.stock ?? { width: spec.width + 2 * m, height: spec.height + 2 * m, thickness: spec.thickness };
+  const sameBlock = result && Math.abs(result.layout.stock.width - (spec.width + 2 * m)) < 0.01 && Math.abs(result.layout.stock.height - (spec.height + 2 * m)) < 0.01;
   const caption =
     tool === "pen"
       ? "Click to add points, drag to curve · click the first point to close · Enter for an open line"
-      : tool !== "select" ? `Click on the ${spec.tipo === "letreiro" ? "board" : "sign"} to add a ${TOOL_NAME[tool]}` : eng.busy ? "Re-checking…" : `Simulated cut · ${bit?.name ?? "bit"}`;
+      : tool !== "select" ? `Click on the ${spec.type === "lettering" ? "board" : "sign"} to add a ${TOOL_NAME[tool]}` : eng.busy ? "Re-checking…" : `Simulated cut · ${bit?.name ?? "bit"}`;
 
   return (
     <div
@@ -237,30 +237,30 @@ export default function Create() {
         overlay={
           <>
             <ToolRail tool={tool} setTool={setTool} onImport={() => void pickSvgFile().then(importSvg)} />
-            {dropping ? <div className="create-drop">Drop an SVG or DXF to carve it, or a picture to trace over, on the {spec.tipo === "letreiro" ? "board" : "sign"}</div> : null}
+            {dropping ? <div className="create-drop">Drop an SVG or DXF to carve it, or a picture to trace over, on the {spec.type === "lettering" ? "board" : "sign"}</div> : null}
             <Legend spec={spec} result={result} material={material} pro={mode === "pro"} bitD={bit?.d} flagged={issues.length} />
           </>
         }
-        bottomLeft={<AssistantBar inputRef={assistantInput} issues={issues} bitName={bit?.name ?? "bit"} materialName={`${spec.espessura} mm ${material.id}`} machineName={machineName(machine)} />}
+        bottomLeft={<AssistantBar inputRef={assistantInput} issues={issues} bitName={bit?.name ?? "bit"} materialName={`${spec.thickness} mm ${material.id}`} machineName={machineName(machine)} />}
         render={(api) => {
           if (api.view === "3d") {
             return eng.sim ? (
-              <ThreeView sim={eng.sim} thickness={block.espessura} material={material} board={{ width: block.largura, height: block.altura }} zoom={api.zoom} spin={api.spin} size={api.size} />
+              <ThreeView sim={eng.sim} thickness={block.thickness} material={material} board={{ width: block.width, height: block.height }} zoom={api.zoom} spin={api.spin} size={api.size} />
             ) : (
               <div className="muted">Simulating the cut…</div>
             );
           }
-          const s = fitScale(api.size, block.largura, block.altura, { x: 260, y: 280 });
+          const s = fitScale(api.size, block.width, block.height, { x: 260, y: 280 });
           return (
-            <Board width={block.largura} height={block.altura} scale={s} zoom={api.zoom} showOrigin={false}>
+            <Board width={block.width} height={block.height} scale={s} zoom={api.zoom} showOrigin={false}>
               <div className="create-piece" style={pieceMask(result, bit?.d ?? 3.175)}>
                 {eng.sim ? (
-                  <SimCanvas sim={eng.sim} thickness={block.espessura} material={material} scale={s} board={{ width: block.largura, height: block.altura }} />
+                  <SimCanvas sim={eng.sim} thickness={block.thickness} material={material} scale={s} board={{ width: block.width, height: block.height }} />
                 ) : null}
                 {(!eng.sim || eng.busy || !sameBlock) && result ? <VectorPreview result={result} material={material} faded={!!eng.sim} lineWidth={bit?.profile === "v" ? 0.6 : (bit?.d ?? 3.175)} /> : null}
                 {!result ? <div style={{ position: "absolute", inset: m * s, background: material.face, borderRadius: 4 }} /> : null}
               </div>
-              <TracingLayer margin={m} scale={s} boardH={block.altura} />
+              <TracingLayer margin={m} scale={s} boardH={block.height} />
               <Overlay
                 spec={spec}
                 block={block}
@@ -284,7 +284,7 @@ export default function Create() {
                   choose(id);
                   setTool("select");
                 }}
-                onCurveNodes={(id, nodes) => patchSpec((sp) => patchElement(sp, id, { pontos: nodes }))}
+                onCurveNodes={(id, nodes) => patchSpec((sp) => patchElement(sp, id, { nodes: nodes }))}
                 onAdd={(x, y) => {
                   if (tool === "select" || tool === "pen") return;
                   const [next, id] = addElement(spec, tool, x, y);
@@ -296,7 +296,7 @@ export default function Create() {
                 onMove={(id, cx, cy) => patchSpec((sp) => moveElement(sp, id, cx, cy, boxes.get(id)))}
                 onText={(id, text) => {
                   const { index } = parseId(id);
-                  patchSpec((sp) => ({ ...sp, texto: sp.texto?.map((t, i) => (i === index ? { ...t, conteudo: text || t.conteudo } : t)) }));
+                  patchSpec((sp) => ({ ...sp, texts: sp.texts?.map((t, i) => (i === index ? { ...t, content: text || t.content } : t)) }));
                 }}
                 onDuplicate={duplicate}
                 onDelete={remove}
@@ -342,9 +342,9 @@ function ToolRail({ tool, setTool, onImport }: { tool: Tool; setTool(t: Tool): v
 }
 
 function Legend({ spec, result, material, pro, bitD, flagged }: { spec: PlateSpecInput; result: GenerateResult | null; material: Material; pro: boolean; bitD?: number; flagged: number }) {
-  const depths = [result?.layout.relevo?.profundidade ?? 0, ...(result?.layout.gravados.map((g) => g.profundidade) ?? [])].filter((d) => d > 0 && d < spec.espessura);
+  const depths = [result?.layout.relief?.depth ?? 0, ...(result?.layout.engraved.map((g) => g.depth) ?? [])].filter((d) => d > 0 && d < spec.thickness);
   const lowered = depths.length ? Math.max(...depths) : 0;
-  const sign = spec.tipo !== "letreiro";
+  const sign = spec.type !== "lettering";
   const rows: [string, React.CSSProperties][] = [
     ["Face, not cut", { background: material.face }],
     ...(sign ? ([[lowered ? `Lowered · ${fmt(lowered)} mm` : "Lowered", { background: material.recess }]] as [string, React.CSSProperties][]) : []),
@@ -384,32 +384,32 @@ const pathOf = (reg: Region) => reg.map((p) => `M${p.map((q) => `${q.x.toFixed(2
  */
 function VectorPreview({ result, material, faded, lineWidth }: { result: GenerateResult; material: Material; faded: boolean; lineWidth: number }) {
   const L = result.layout;
-  const { largura: W, altura: H } = L.bloco;
+  const { width: W, height: H } = L.stock;
   return (
     <svg className="create-vector" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ opacity: faded ? 0.9 : 1 }} aria-hidden>
       <g transform={`translate(0 ${H}) scale(1 -1)`} fillRule="evenodd">
-        <path d={pathOf(L.peca as Region)} fill={material.face} />
-        {L.relevo ? <path d={pathOf(L.relevo.regiao as Region)} fill={material.recess} /> : null}
-        {L.gravados.map((g, i) => {
-          const color = g.profundidade >= L.bloco.espessura ? THROUGH_COLOR : material.recess;
-          if (!g.hachura) return <path key={`g${i}`} d={pathOf(g.regiao as Region)} fill={color} />;
+        <path d={pathOf(L.part as Region)} fill={material.face} />
+        {L.relief ? <path d={pathOf(L.relief.region as Region)} fill={material.recess} /> : null}
+        {L.engraved.map((g, i) => {
+          const color = g.depth >= L.stock.thickness ? THROUGH_COLOR : material.recess;
+          if (!g.hatch) return <path key={`g${i}`} d={pathOf(g.region as Region)} fill={color} />;
           // Hachura: contorno mais linhas paralelas, na largura do corte da fresa. O padrão fica no
           // mesmo sistema (Y para cima) que o motor usa para o ângulo.
-          const { espacamento: e, angulo } = g.hachura;
+          const { spacing: e, angle } = g.hatch;
           const pid = `hatch-${i}`;
           return (
             <g key={`g${i}`}>
               <defs>
-                <pattern id={pid} patternUnits="userSpaceOnUse" width={e} height={e} patternTransform={`rotate(${angulo})`}>
+                <pattern id={pid} patternUnits="userSpaceOnUse" width={e} height={e} patternTransform={`rotate(${angle})`}>
                   <rect x={0} y={e / 2 - lineWidth / 2} width={e} height={lineWidth} fill={color} />
                 </pattern>
               </defs>
-              <path d={pathOf(g.regiao as Region)} fill={`url(#${pid})`} stroke={color} strokeWidth={lineWidth} />
+              <path d={pathOf(g.region as Region)} fill={`url(#${pid})`} stroke={color} strokeWidth={lineWidth} />
             </g>
           );
         })}
-        {[...L.vazados, ...L.furos].map((v, i) => (
-          <path key={`v${i}`} d={pathOf(v.regiao as Region)} fill={THROUGH_COLOR} />
+        {[...L.cutouts, ...L.holes].map((v, i) => (
+          <path key={`v${i}`} d={pathOf(v.region as Region)} fill={THROUGH_COLOR} />
         ))}
       </g>
     </svg>
@@ -422,9 +422,9 @@ function VectorPreview({ result, material, faded, lineWidth }: { result: Generat
  */
 function pieceMask(result: GenerateResult | null, d: number): React.CSSProperties | undefined {
   const L = result?.layout;
-  if (!L?.perfil) return undefined;
-  const { largura: W, altura: H } = L.bloco;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><g transform="translate(0 ${H}) scale(1 -1)"><path d="${pathOf(L.peca as Region)}" fill="#fff" stroke="#fff" stroke-width="${2 * d + 0.6}" stroke-linejoin="round"/></g></svg>`;
+  if (!L?.profile) return undefined;
+  const { width: W, height: H } = L.stock;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><g transform="translate(0 ${H}) scale(1 -1)"><path d="${pathOf(L.part as Region)}" fill="#fff" stroke="#fff" stroke-width="${2 * d + 0.6}" stroke-linejoin="round"/></g></svg>`;
   const url = `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
   return { maskImage: url, WebkitMaskImage: url, maskSize: "100% 100%", WebkitMaskSize: "100% 100%", maskRepeat: "no-repeat", WebkitMaskRepeat: "no-repeat" };
 }
@@ -433,7 +433,7 @@ function pieceMask(result: GenerateResult | null, d: number): React.CSSPropertie
 
 interface OverlayProps {
   spec: PlateSpecInput;
-  block: { largura: number; altura: number };
+  block: { width: number; height: number };
   scale: number;
   zoom: number;
   boxes: Map<ElementId, Box>;
@@ -463,22 +463,22 @@ function Overlay(p: OverlayProps) {
   const [drag, setDrag] = useState<{ id: ElementId; x0: number; y0: number; dx: number; dy: number } | null>(null);
   const m = margin(p.spec);
   const s = p.scale;
-  const H = p.block.altura;
+  const H = p.block.height;
   // mm da peça → px dentro do quadro
   const px = (b: Box) => ({ left: (b.cx - b.w / 2 + m) * s, top: (H - (b.cy + b.h / 2 + m)) * s, width: b.w * s, height: b.h * s });
   /** Converte pixels da tela para mm (o quadro pode estar com zoom). */
   const mmPerPx = () => {
     const r = ref.current!.getBoundingClientRect();
-    return p.block.largura / r.width;
+    return p.block.width / r.width;
   };
   const toMm = (e: { clientX: number; clientY: number }) => {
     const r = ref.current!.getBoundingClientRect();
-    return { x: ((e.clientX - r.left) / r.width) * p.block.largura - m, y: (1 - (e.clientY - r.top) / r.height) * p.block.altura - m };
+    return { x: ((e.clientX - r.left) / r.width) * p.block.width - m, y: (1 - (e.clientY - r.top) / r.height) * p.block.height - m };
   };
 
   const geom: Geom = { toPx: (x, y) => ({ x: (x + m) * s, y: (H - (y + m)) * s }), toMm, mmPerPx };
   const selCurve = p.sel && p.tool === "select" && !drag ? elementOf(p.spec, p.sel) : null;
-  const curveEl = selCurve && "tipo" in selCurve && selCurve.tipo === "curva" ? selCurve : null;
+  const curveEl = selCurve && "type" in selCurve && selCurve.type === "curve" ? selCurve : null;
 
   const errorTargets = new Set(p.issues.filter((i) => i.level === "error" && i.target).map((i) => i.target!));
   const focused = p.issues.find((i) => i.key === p.focusKey)?.target ?? null;
@@ -516,7 +516,7 @@ function Overlay(p: OverlayProps) {
     setDrag(null);
   };
 
-  const piece = { left: m * s, top: m * s, width: p.spec.largura * s, height: p.spec.altura * s };
+  const piece = { left: m * s, top: m * s, width: p.spec.width * s, height: p.spec.height * s };
 
   return (
     <div
@@ -526,7 +526,7 @@ function Overlay(p: OverlayProps) {
         if (e.button !== 0) return;
         if (p.tool !== "select") {
           const { x, y } = toMm(e);
-          p.onAdd(Math.max(0, Math.min(p.spec.largura, x)), Math.max(0, Math.min(p.spec.altura, y)));
+          p.onAdd(Math.max(0, Math.min(p.spec.width, x)), Math.max(0, Math.min(p.spec.height, y)));
         } else {
           p.setSel(null);
           p.setEditing(null);
@@ -537,10 +537,10 @@ function Overlay(p: OverlayProps) {
     >
       {/* Medidas da peça */}
       <div className="create-dim create-dim--w mono" style={{ left: piece.left, width: piece.width, top: piece.top - 30 }}>
-        {fmt(p.spec.largura)} mm
+        {fmt(p.spec.width)} mm
       </div>
       <div className="create-dim create-dim--h mono" style={{ top: piece.top, height: piece.height, left: piece.left - 30 }}>
-        <span>{fmt(p.spec.altura)} mm</span>
+        <span>{fmt(p.spec.height)} mm</span>
       </div>
 
       {[...p.boxes].map(([id, b]) => {
@@ -548,9 +548,9 @@ function Overlay(p: OverlayProps) {
         const r = px({ ...b, cx: b.cx + (d?.dx ?? 0), cy: b.cy + (d?.dy ?? 0) });
         const isSel = p.selected.includes(id);
         const err = errorTargets.has(id);
-        const op = elementOf(p.spec, id)?.operacao ?? "normal";
+        const op = elementOf(p.spec, id)?.operation ?? "normal";
         const cls = ["create-el", isSel ? "is-sel" : "", err ? "is-error" : "", focused === id ? "is-focus" : "", d ? "is-drag" : "", op !== "normal" ? "is-ghost" : ""].join(" ");
-        const text = id.startsWith("t:") ? p.spec.texto?.[parseId(id).index] : undefined;
+        const text = id.startsWith("t:") ? p.spec.texts?.[parseId(id).index] : undefined;
         return (
           <div
             key={id}
@@ -565,8 +565,8 @@ function Overlay(p: OverlayProps) {
           >
             {p.editing === id && text ? (
               <InlineText
-                value={text.conteudo}
-                font={fontOf(text.fonte).css}
+                value={text.content}
+                font={fontOf(text.font).css}
                 size={Math.max(12, Math.min(r.height * 0.8, 120))}
                 onDone={(v) => {
                   p.onText(id, v);
@@ -579,9 +579,9 @@ function Overlay(p: OverlayProps) {
       })}
 
       {p.sel && p.boxes.has(p.sel) && !drag && p.editing !== p.sel ? (
-        <div className="create-seltools" style={selToolsPos(px(p.boxes.get(p.sel)!), !!curveEl, p.block.altura * s)} onPointerDown={(e) => e.stopPropagation()}>
+        <div className="create-seltools" style={selToolsPos(px(p.boxes.get(p.sel)!), !!curveEl, p.block.height * s)} onPointerDown={(e) => e.stopPropagation()}>
           {ALIGNS.filter(([how]) => (how === "hdist" || how === "vdist" ? p.selected.length >= 3 : true)).map(([how, label, Icon]) => {
-            const t = p.selected.length > 1 ? `${label} (selection)` : `${label} on the ${p.spec.tipo === "letreiro" ? "board" : "sign"}`;
+            const t = p.selected.length > 1 ? `${label} (selection)` : `${label} on the ${p.spec.type === "lettering" ? "board" : "sign"}`;
             return (
               <button key={how} aria-label={t} title={t} onClick={() => p.onAlign(how)}>
                 <Icon size={14} strokeWidth={1.75} />
@@ -601,7 +601,7 @@ function Overlay(p: OverlayProps) {
       ) : null}
 
       {curveEl && p.sel ? (
-        <CurveEditor geom={geom} ox={curveEl.x} oy={curveEl.y} nodes={curveEl.pontos} closed={curveEl.fechada ?? true} onChange={(n) => p.onCurveNodes(p.sel!, n)} />
+        <CurveEditor geom={geom} ox={curveEl.x} oy={curveEl.y} nodes={curveEl.nodes} closed={curveEl.closed ?? true} onChange={(n) => p.onCurveNodes(p.sel!, n)} />
       ) : null}
       {p.tool === "pen" ? <PenLayer geom={geom} onCommit={p.onCurve} /> : null}
 

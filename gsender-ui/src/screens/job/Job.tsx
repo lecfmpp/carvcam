@@ -25,7 +25,7 @@ export interface JobCtx {
   groups: OpGroup[];
   /** Tabs actually used (0 when the piece has no outer cut). */
   hasProfile: boolean;
-  letreiro: boolean;
+  lettering: boolean;
 }
 
 // O último resultado sobrevive à troca de etapa (cada rota monta o Job de novo).
@@ -56,10 +56,10 @@ export default function Job({ step }: { step: JobStep }) {
     lastRev.current = rev;
   }, [rev]);
 
-  const letreiro = design.spec.tipo === "letreiro";
-  const hasProfile = !!result?.operacoes.some((o) => o.tipo === "perfil");
-  const groups = useMemo(() => (result?.gcode ? groupOps(result, design.tabs.count, letreiro) : []), [result, design.tabs.count, letreiro]);
-  const ctx: JobCtx = { design, result, sim, busy: eng.busy && !result, machine, head, headId, preset, groups, hasProfile, letreiro };
+  const lettering = design.spec.type === "lettering";
+  const hasProfile = !!result?.operations.some((o) => o.type === "profile");
+  const groups = useMemo(() => (result?.gcode ? groupOps(result, design.tabs.count, lettering) : []), [result, design.tabs.count, lettering]);
+  const ctx: JobCtx = { design, result, sim, busy: eng.busy && !result, machine, head, headId, preset, groups, hasProfile, lettering };
 
   const zeroSet = useFlow((s) => s.zeroSet);
   const reachable: JobStep[] = ["create", "prepare"];

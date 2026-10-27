@@ -10,31 +10,31 @@ import { bounds, difference, simplify, translate, union, type Pt, type Region } 
  * Formas com preenchimento branco são subtraídas do que veio antes (como o olho vê o desenho).
  */
 
-export interface SvgDesenho {
+export interface SvgDrawing {
   /** Região em mm, centrada em (0, 0). */
-  regiao: Region;
+  region: Region;
   /** Tamanho natural em mm (pelas unidades do arquivo; px = 1/96 in). */
-  largura: number;
-  altura: number;
+  width: number;
+  height: number;
 }
 
-export class SvgInvalido extends Error {}
+export class InvalidSvg extends Error {}
 
-const cache = new Map<string, SvgDesenho>();
+const cache = new Map<string, SvgDrawing>();
 
-export function parseSvg(texto: string): SvgDesenho {
-  const hit = cache.get(texto);
+export function parseSvg(text: string): SvgDrawing {
+  const hit = cache.get(text);
   if (hit) return hit;
-  const d = parse(texto);
+  const d = parse(text);
   if (cache.size > 16) cache.delete(cache.keys().next().value!);
-  cache.set(texto, d);
+  cache.set(text, d);
   return d;
 }
 
 /** Desenho redimensionado para a largura dada (mantém a proporção) e centrado em (x, y). */
-export function placeSvg(d: SvgDesenho, x: number, y: number, largura: number): Region {
-  const s = largura / d.largura;
-  return d.regiao.map((p) => p.map((q) => ({ x: q.x * s + x, y: q.y * s + y })));
+export function placeSvg(d: SvgDrawing, x: number, y: number, width: number): Region {
+  const s = width / d.width;
+  return d.region.map((p) => p.map((q) => ({ x: q.x * s + x, y: q.y * s + y })));
 }
 
 // ---------------------------------------------------------------- XML
@@ -258,7 +258,7 @@ function tracePath(pen: Pen, d: string) {
   const isCmd = (t: string | undefined) => t !== undefined && /^[a-zA-Z]$/.test(t);
   const n = () => {
     const t = toks[i++];
-    if (t === undefined || isCmd(t)) throw new SvgInvalido("Caminho (path) malformado.");
+    if (t === undefined || isCmd(t)) throw new InvalidSvg("Caminho (path) malformado.");
     return Number(t);
   };
   // Flags do arco podem vir grudadas ("a10 10 0 01 5 5"); o regex já separa "01" em "01",
@@ -273,7 +273,7 @@ function tracePath(pen: Pen, d: string) {
   };
   while (i < toks.length) {
     if (isCmd(toks[i])) cmd = toks[i++];
-    else if (!cmd) throw new SvgInvalido("Caminho (path) malformado.");
+    else if (!cmd) throw new InvalidSvg("Caminho (path) malformado.");
     const rel = cmd === cmd.toLowerCase();
     const C = cmd.toUpperCase();
     const ox = rel ? x : 0, oy = rel ? y : 0;
@@ -340,7 +340,7 @@ function tracePath(pen: Pen, d: string) {
         x = sx; y = sy;
         break;
       default:
-        throw new SvgInvalido(`Comando de caminho "${cmd}" não suportado.`);
+        throw new InvalidSvg(`Comando de caminho "${cmd}" não suportado.`);
     }
     prev = C;
   }
@@ -484,11 +484,11 @@ function lengthMm(v: string | undefined): number | null {
 
 const SKIP = new Set(["defs", "clipPath", "mask", "symbol", "marker", "pattern", "title", "desc", "metadata", "style", "text", "image", "foreignObject", "linearGradient", "radialGradient", "filter"]);
 
-function parse(texto: string): SvgDesenho {
-  if (!/<svg[\s>]/i.test(texto)) throw new SvgInvalido("O arquivo não parece ser um SVG.");
-  const doc = parseXml(texto);
+function parse(text: string): SvgDrawing {
+  if (!/<svg[\s>]/i.test(text)) throw new InvalidSvg("O arquivo não parece ser um SVG.");
+  const doc = parseXml(text);
   const svg = findSvg(doc);
-  if (!svg) throw new SvgInvalido("O arquivo não parece ser um SVG.");
+  if (!svg) throw new InvalidSvg("O arquivo não parece ser um SVG.");
 
   const classes = new Map<string, Record<string, string>>();
   collectStyles(svg, classes);
@@ -545,18 +545,18 @@ function parse(texto: string): SvgDesenho {
   };
   for (const c of svg.children) walk(c, root, inherit(base, ownStyle(svg, classes)));
 
-  if (!any) throw new SvgInvalido("O SVG não tem nenhuma forma que dê para cortar (caminhos, retângulos, círculos...). Textos precisam ser convertidos em curvas.");
-  if (!acc.length) throw new SvgInvalido("O desenho ficou vazio depois de aplicar os preenchimentos.");
+  if (!any) throw new InvalidSvg("O SVG não tem nenhuma forma que dê para cortar (caminhos, retângulos, círculos...). Textos precisam ser convertidos em curvas.");
+  if (!acc.length) throw new InvalidSvg("O desenho ficou vazio depois de aplicar os preenchimentos.");
 
   // Y do SVG cresce para baixo; o da máquina, para cima.
   let reg: Region = acc.map((p) => p.map((q) => ({ x: q.x, y: -q.y })).reverse());
   reg = simplify(reg, 0.005);
   const b = bounds(reg);
-  const largura = b.maxX - b.minX;
-  const altura = b.maxY - b.minY;
-  if (!(largura > 0.01 && altura > 0.01)) throw new SvgInvalido("O desenho do SVG é pequeno demais.");
+  const width = b.maxX - b.minX;
+  const height = b.maxY - b.minY;
+  if (!(width > 0.01 && height > 0.01)) throw new InvalidSvg("O desenho do SVG é pequeno demais.");
   reg = translate(reg, -(b.minX + b.maxX) / 2, -(b.minY + b.maxY) / 2);
-  return { regiao: reg, largura, altura };
+  return { region: reg, width, height };
 }
 
 function findSvg(n: Node): Node | null {

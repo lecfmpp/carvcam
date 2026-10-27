@@ -14,7 +14,7 @@ function disk(w: number, h: number, cx: number, cy: number, r: number, hole = 0)
 }
 
 describe("traceMask", () => {
-  it("um disco vira um contorno com a área certa", () => {
+  it("a disc becomes an outline with the right area", () => {
     const r = traceMask(disk(100, 100, 50, 50, 30), 100, 100);
     expect(r).toHaveLength(1);
     expect(Math.abs(area(r))).toBeCloseTo(Math.PI * 900, -2);
@@ -22,33 +22,33 @@ describe("traceMask", () => {
     expect(b.maxX - b.minX).toBeGreaterThan(58);
   });
 
-  it("anel vira contorno com furo", () => {
+  it("a ring becomes an outline with a hole", () => {
     const r = traceMask(disk(100, 100, 50, 50, 40, 20), 100, 100);
     expect(r).toHaveLength(2);
     expect(pointInRegion(r, { x: 50, y: 50 })).toBe(false);
     expect(pointInRegion(r, { x: 50, y: 20 })).toBe(true);
   });
 
-  it("descarta manchas pequenas e sobrevive a pixels só pela diagonal", () => {
+  it("drops small blobs and survives diagonal-only pixels", () => {
     const m = disk(60, 60, 30, 30, 15);
     m[2 * 60 + 2] = 1; // mancha de 1 px
     m[50 * 60 + 50] = 1;
     m[51 * 60 + 51] = 1; // dois pixels encostados pela diagonal
-    const r = traceMask(m, 60, 60, { manchaMin: 6 });
+    const r = traceMask(m, 60, 60, { minBlob: 6 });
     expect(r).toHaveLength(1);
   });
 
-  it("limiar e inversão a partir de RGBA", () => {
+  it("threshold and inversion from RGBA", () => {
     const rgba = new Uint8Array([0, 0, 0, 255, 255, 255, 255, 255, 120, 120, 120, 255, 0, 0, 0, 0]);
     expect([...maskFromRgba(rgba, 4, 1)]).toEqual([1, 0, 1, 0]);
     expect([...maskFromRgba(rgba, 4, 1, 100)]).toEqual([1, 0, 0, 0]);
     expect([...maskFromRgba(rgba, 4, 1, 128, true)]).toEqual([0, 1, 0, 1]);
   });
 
-  it("vira um SVG que o importador lê", () => {
+  it("becomes an SVG the importer can read", () => {
     const r = traceMask(disk(96, 96, 48, 48, 40, 15), 96, 96);
     const d = parseSvg(regionToSvg(r, 96, 96));
-    expect(d.largura).toBeCloseTo((80 * 25.4) / 96, 0);
-    expect(pointInRegion(d.regiao, { x: 0, y: 0 })).toBe(false);
+    expect(d.width).toBeCloseTo((80 * 25.4) / 96, 0);
+    expect(pointInRegion(d.region, { x: 0, y: 0 })).toBe(false);
   });
 });

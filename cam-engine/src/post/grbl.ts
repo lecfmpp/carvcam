@@ -2,18 +2,18 @@ import type { Move } from "../cam/builder.js";
 import type { Tool } from "../schema.js";
 
 export interface PostOperation {
-  nome: string;
-  ferramenta: Tool;
+  name: string;
+  tool: Tool;
   rpm: number;
   moves: Move[];
 }
 
 export interface PostHeader {
-  titulo: string;
-  bloco: { largura: number; altura: number; espessura: number };
-  alturaSegura: number;
+  title: string;
+  stock: { width: number; height: number; thickness: number };
+  safeHeight: number;
   /** Linhas extras de comentário no cabeçalho. */
-  notas?: string[];
+  notes?: string[];
 }
 
 /**
@@ -24,33 +24,33 @@ export interface PostHeader {
  */
 export function postGrbl(header: PostHeader, ops: PostOperation[]): string {
   const out: string[] = [];
-  const tools = [...new Map(ops.map((o) => [o.ferramenta.id, o.ferramenta])).values()];
-  out.push(`; ${header.titulo}`);
+  const tools = [...new Map(ops.map((o) => [o.tool.id, o.tool])).values()];
+  out.push(`; ${header.title}`);
   out.push(`; Gerado por CarvCAM (cam-engine)`);
-  out.push(`; Bloco: ${n(header.bloco.largura)} x ${n(header.bloco.altura)} x ${n(header.bloco.espessura)} mm`);
+  out.push(`; Bloco: ${n(header.stock.width)} x ${n(header.stock.height)} x ${n(header.stock.thickness)} mm`);
   out.push(`; Origem: X0 Y0 no canto inferior esquerdo do bloco, Z0 na face de cima`);
-  for (const t of tools) out.push(`; T${t.id}: ${t.nome} (diametro ${n(t.diametro)} mm)`);
-  for (const nota of header.notas ?? []) out.push(`; ${nota.replace(/[()]/g, "")}`);
+  for (const t of tools) out.push(`; T${t.id}: ${t.name} (diametro ${n(t.diameter)} mm)`);
+  for (const note of header.notes ?? []) out.push(`; ${note.replace(/[()]/g, "")}`);
   out.push("G21 G90 G17 G94");
-  out.push(`G0 Z${n(header.alturaSegura)}`);
+  out.push(`G0 Z${n(header.safeHeight)}`);
 
   let x = NaN;
   let y = NaN;
-  let z = header.alturaSegura;
+  let z = header.safeHeight;
   let f = NaN;
   let g = -1;
   let currentTool = -1;
   let currentRpm = -1;
 
   for (const op of ops) {
-    out.push(`; --- ${op.nome} ---`);
-    if (op.ferramenta.id !== currentTool) {
+    out.push(`; --- ${op.name} ---`);
+    if (op.tool.id !== currentTool) {
       if (currentTool !== -1) {
-        out.push(`G0 Z${n(header.alturaSegura)}`, "M5");
-        z = header.alturaSegura;
+        out.push(`G0 Z${n(header.safeHeight)}`, "M5");
+        z = header.safeHeight;
       }
-      if (tools.length > 1) out.push(`T${op.ferramenta.id} M6`);
-      currentTool = op.ferramenta.id;
+      if (tools.length > 1) out.push(`T${op.tool.id} M6`);
+      currentTool = op.tool.id;
       currentRpm = -1;
     }
     if (op.rpm !== currentRpm) {
@@ -75,7 +75,7 @@ export function postGrbl(header: PostHeader, ops: PostOperation[]): string {
       z = m.z;
     }
   }
-  out.push(`G0 Z${n(header.alturaSegura)}`, "M5", "G0 X0 Y0", "M30");
+  out.push(`G0 Z${n(header.safeHeight)}`, "M5", "G0 X0 Y0", "M30");
   return out.join("\n") + "\n";
 }
 

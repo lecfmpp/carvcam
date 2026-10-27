@@ -3,7 +3,7 @@ import type { GenerateOptions, GenerateResult, PlateSpecInput } from "@gsender-n
 export interface EngineRequest {
   id: number;
   spec: PlateSpecInput;
-  options: Omit<GenerateOptions, "fontes">;
+  options: Omit<GenerateOptions, "fonts">;
   /** Também simula o corte e devolve o mapa de alturas. */
   simulate: boolean;
   simRes?: number;

@@ -7,10 +7,10 @@ const FLATTEN_TOL = 0.05; // mm de erro máximo ao transformar curvas em segment
  * Converte um texto em região 2D (mm, Y para cima) com a altura das maiúsculas = capHeight.
  * A região vem com a linha de base em y = 0 e começa em x = 0.
  */
-export function textToRegion(font: opentype.Font, text: string, capHeight: number, arco?: number): Region {
+export function textToRegion(font: opentype.Font, text: string, capHeight: number, arc?: number): Region {
   const unitScale = capHeight / capHeightUnits(font);
   const fontSize = font.unitsPerEm * unitScale;
-  if (arco) return textOnArc(font, text, fontSize, arco);
+  if (arc) return textOnArc(font, text, fontSize, arc);
   const path = font.getPath(text, 0, 0, fontSize, { kerning: true });
   const contours = flatten(path.commands, FLATTEN_TOL);
   // getPath usa Y para baixo; invertemos para o sistema da máquina (Y para cima).
@@ -24,7 +24,7 @@ export function textToRegion(font: opentype.Font, text: string, capHeight: numbe
  * de base. Positivo curva para cima (letras por fora do círculo); negativo curva para baixo
  * (letras por dentro, lendo normalmente). O meio do texto fica em x = 0, y = 0.
  */
-function textOnArc(font: opentype.Font, text: string, fontSize: number, arco: number): Region {
+function textOnArc(font: opentype.Font, text: string, fontSize: number, arc: number): Region {
   const scale = fontSize / font.unitsPerEm;
   const glyphs = font.stringToGlyphs(text);
   const xs: number[] = [];
@@ -35,7 +35,7 @@ function textOnArc(font: opentype.Font, text: string, fontSize: number, arco: nu
     if (i + 1 < glyphs.length) x += font.getKerningValue(g, glyphs[i + 1]) * scale;
   });
   const total = x;
-  const k = 1 / arco;
+  const k = 1 / arc;
   const out: Pt[][] = [];
   glyphs.forEach((g, i) => {
     const adv = (g.advanceWidth ?? 0) * scale;

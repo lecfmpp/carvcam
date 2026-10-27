@@ -33,10 +33,10 @@ export class Heightmap {
   /** Carimba a fresa com a ponta em (x, y, z). */
   stamp(x: number, y: number, z: number, tool: Tool) {
     if (z >= 0) return;
-    const r = tool.diametro / 2;
-    const vTan = tool.tipo === "vbit" ? Math.tan(((tool.angulo ?? 60) * Math.PI) / 360) : 0;
+    const r = tool.diameter / 2;
+    const vTan = tool.type === "vbit" ? Math.tan(((tool.angle ?? 60) * Math.PI) / 360) : 0;
     // Uma V-bit só corta até o raio em que o cone sai do material.
-    const reach = tool.tipo === "vbit" ? Math.min(r, -z * vTan) : r;
+    const reach = tool.type === "vbit" ? Math.min(r, -z * vTan) : r;
     const i0 = Math.max(0, Math.floor((x - reach - this.x0) / this.res));
     const i1 = Math.min(this.cols - 1, Math.ceil((x + reach - this.x0) / this.res));
     const j0 = Math.max(0, Math.floor((y - reach - this.y0) / this.res));
@@ -48,7 +48,7 @@ export class Heightmap {
         const cx = this.x0 + i * this.res - x;
         const d2 = cx * cx + cy * cy;
         if (d2 > r2) continue;
-        const surf = tool.tipo === "vbit" ? z + Math.sqrt(d2) / vTan : z;
+        const surf = tool.type === "vbit" ? z + Math.sqrt(d2) / vTan : z;
         const k = j * this.cols + i;
         if (surf < this.h[k]) this.h[k] = surf;
       }

@@ -1,7 +1,7 @@
 @echo off
 rem CarvCAM: instala (so na primeira vez), gera a versao final e abre no navegador.
 rem Uso: clique duas vezes neste arquivo (precisa do Node.js 18 ou mais novo).
-rem      testar-carvcam.cmd --dev   (modo desenvolvimento)
+rem      try-carvcam.cmd --dev   (modo desenvolvimento)
 setlocal
 cd /d "%~dp0"
 

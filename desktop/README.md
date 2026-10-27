@@ -39,4 +39,4 @@ com cópias de nome fixo (`CarvCAM-Windows-64Bit.exe`, `CarvCAM-Linux-x86_64.App
 links do site em `releases/latest/download/`.
 
 ## Assinatura
-Ver [docs/assinatura-de-codigo.md](../docs/assinatura-de-codigo.md).
+Ver [docs/code-signing.md](../docs/code-signing.md).

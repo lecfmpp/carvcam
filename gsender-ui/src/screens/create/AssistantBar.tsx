@@ -62,7 +62,7 @@ export function AssistantBar(props: { inputRef: RefObject<HTMLInputElement>; iss
     }
   };
 
-  const chips = design.spec.tipo !== "letreiro" ? ["Thicker letters", "Add a heart", "Make it cut-out lettering"] : ["Make it a sign", "Thicker letters"];
+  const chips = design.spec.type !== "lettering" ? ["Thicker letters", "Add a heart", "Make it cut-out lettering"] : ["Make it a sign", "Thicker letters"];
 
   return (
     <div className={`create-ai ${open ? "is-open" : ""}`}>

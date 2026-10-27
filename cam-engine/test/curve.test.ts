@@ -11,30 +11,30 @@ const circleNodes = (r: number) => [
   { x: 0, y: -r, ix: -r * K, iy: 0, ox: r * K, oy: 0 },
 ];
 
-describe("curva livre", () => {
-  it("nós sem alças formam um polígono", () => {
+describe("freeform curve", () => {
+  it("nodes without handles form a polygon", () => {
     const r = curve(10, 10, [{ x: 0, y: 0 }, { x: 20, y: 0 }, { x: 20, y: 10 }, { x: 0, y: 10 }], true, 3);
     expect(area(r)).toBeCloseTo(200, 6);
     expect(bounds(r).minX).toBeCloseTo(10, 6);
   });
 
-  it("quatro Béziers com alças aproximam um círculo", () => {
+  it("four Béziers with handles approximate a circle", () => {
     const r = curve(0, 0, circleNodes(20), true, 3);
     expect(area(r)).toBeCloseTo(Math.PI * 400, -1);
     expect(bounds(r).maxY).toBeCloseTo(20, 2);
   });
 
-  it("aberta vira traço com a espessura pedida", () => {
+  it("an open curve becomes a stroke with the requested thickness", () => {
     const r = curve(0, 0, [{ x: 0, y: 0 }, { x: 30, y: 0 }], false, 4);
     expect(area(r)).toBeCloseTo(30 * 4 + Math.PI * 4, 0);
   });
 
-  it("gera G-code numa placa", () => {
+  it("generates G-code on a plate", () => {
     const r = generatePlate(
-      { largura: 120, altura: 80, espessura: 12, recorteExterno: false, formas: [{ tipo: "curva", x: 60, y: 40, pontos: circleNodes(15), fechada: true, modo: "gravado", profundidade: 2 }] },
-      { fontes: {}, ferramenta: { comprimentoCorte: 22 } },
+      { width: 120, height: 80, thickness: 12, outerCutout: false, shapes: [{ type: "curve", x: 60, y: 40, nodes: circleNodes(15), closed: true, mode: "engrave", depth: 2 }] },
+      { fonts: {}, tool: { cutLength: 22 } },
     );
     expect(r.ok).toBe(true);
-    expect(r.layout.gravados[0].ref).toEqual({ tipo: "forma", indice: 0 });
+    expect(r.layout.engraved[0].ref).toEqual({ type: "shape", index: 0 });
   });
 });

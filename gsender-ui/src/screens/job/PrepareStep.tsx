@@ -29,9 +29,9 @@ function usePresetTimes(ctx: JobCtx) {
     setOther({});
     for (const p of PRESETS) {
       runEngine(design.spec, engineOptions(design, machine.id, headId, p), false).then((r) => {
-        if (!alive || !r.result?.verificacao) return;
-        const v = r.result.verificacao;
-        setOther((o) => ({ ...o, [p]: { sec: v.estatisticas.tempoEstimadoSeg, params: r.result!.parametros.principal } }));
+        if (!alive || !r.result?.verification) return;
+        const v = r.result.verification;
+        setOther((o) => ({ ...o, [p]: { sec: v.stats.estimatedTimeSec, params: r.result!.params.main } }));
       });
     }
     return () => {
@@ -39,7 +39,7 @@ function usePresetTimes(ctx: JobCtx) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
-  const cur = result?.verificacao ? { sec: result.verificacao.estatisticas.tempoEstimadoSeg, params: result.parametros.principal } : undefined;
+  const cur = result?.verification ? { sec: result.verification.stats.estimatedTimeSec, params: result.params.main } : undefined;
   return { ...other, ...(cur ? { [preset]: cur } : {}) } as Partial<Record<Preset, { sec: number; params: CutParams }>>;
 }
 
@@ -73,7 +73,7 @@ export function PrepareStep({ ctx }: { ctx: JobCtx }) {
   const second = useMemo(() => {
     const main = bitById(design.bit);
     if (!main) return null;
-    const hasDetail = [...(design.spec.texto ?? []), ...(design.spec.icones ?? []), ...(design.spec.formas ?? [])].some((e) => (e.modo ?? "relevo") !== "recorte");
+    const hasDetail = [...(design.spec.texts ?? []), ...(design.spec.icons ?? []), ...(design.spec.shapes ?? [])].some((e) => (e.mode ?? "relief") !== "cutout");
     if (design.bit2 && bitById(design.bit2)) {
       const b2 = bitById(design.bit2)!;
       const [fine, coarse] = main.d <= b2.d ? [main, b2] : [b2, main];
@@ -90,14 +90,14 @@ export function PrepareStep({ ctx }: { ctx: JobCtx }) {
     else patch({ bit: second.fine.id, bit2: second.coarse.id, useBit2: true });
   };
 
-  const b = result?.layout.bloco;
-  const errors = result?.avisos.filter((a) => a.severidade === "erro") ?? [];
-  const verified = !!result?.verificacao?.ok && errors.length === 0;
-  const compression = result?.avisos.find((a) => a.codigo === "COMPRESSAO_PASSADA");
-  const totalSec = result?.verificacao?.estatisticas.tempoEstimadoSeg ?? 0;
-  const p = result?.parametros.principal;
+  const b = result?.layout.stock;
+  const errors = result?.warnings.filter((a) => a.severity === "error") ?? [];
+  const verified = !!result?.verification?.ok && errors.length === 0;
+  const compression = result?.warnings.find((a) => a.code === "COMPRESSION_STEPDOWN");
+  const totalSec = result?.verification?.stats.estimatedTimeSec ?? 0;
+  const p = result?.params.main;
   const tools = new Set(groups.map((g) => g.tool));
-  const maxTabH = Math.max(0.5, Math.min(5, (design.spec.espessura ?? 6) - 1));
+  const maxTabH = Math.max(0.5, Math.min(5, (design.spec.thickness ?? 6) - 1));
 
   return (
     <>
@@ -117,13 +117,13 @@ export function PrepareStep({ ctx }: { ctx: JobCtx }) {
         }
         render={(api) => {
           if (!b) return <div className="muted">Preparing the toolpath…</div>;
-          const s = fitScale(api.size, b.largura, b.altura);
+          const s = fitScale(api.size, b.width, b.height);
           const mat = materialById(design.material);
-          if (api.view === "3d" && sim) return <ThreeView sim={sim} thickness={b.espessura} material={mat} board={{ width: b.largura, height: b.altura }} zoom={api.zoom} spin={api.spin} size={api.size} />;
+          if (api.view === "3d" && sim) return <ThreeView sim={sim} thickness={b.thickness} material={mat} board={{ width: b.width, height: b.height }} zoom={api.zoom} spin={api.spin} size={api.size} />;
           return (
-            <Board width={b.largura} height={b.altura} scale={s} zoom={api.zoom} label={`Board ${fmtN(b.largura)} × ${fmtN(b.altura)} mm`}>
+            <Board width={b.width} height={b.height} scale={s} zoom={api.zoom} label={`Board ${fmtN(b.width)} × ${fmtN(b.height)} mm`}>
               <div className={`job-face ${mat.grain ? "job-face--grain" : ""}`} style={{ background: mat.face }} />
-              <ToolpathOverlay segments={segs} width={b.largura} height={b.altura} scale={s} played={played} opacity={0.75} />
+              <ToolpathOverlay segments={segs} width={b.width} height={b.height} scale={s} played={played} opacity={0.75} />
             </Board>
           );
         }}
@@ -145,7 +145,7 @@ export function PrepareStep({ ctx }: { ctx: JobCtx }) {
         }
       >
         {errors.map((a, i) => (
-          <Issue key={i} kind="error" eyebrow="Error · blocks continue" title={a.mensagem} body={a.sugestao} actions={<button className="btn btn--light btn--sm" onClick={() => nav("/create")}>Back to Create</button>} />
+          <Issue key={i} kind="error" eyebrow="Error · blocks continue" title={a.message} body={a.suggestion} actions={<button className="btn btn--light btn--sm" onClick={() => nav("/create")}>Back to Create</button>} />
         ))}
 
         <section className="job-sec">
@@ -160,7 +160,7 @@ export function PrepareStep({ ctx }: { ctx: JobCtx }) {
                   <span className="preset__sub">Sienci table: {PRESET_LABEL[k].table}</span>
                   {mode === "pro" && t ? (
                     <span className="preset__pro">
-                      {rpmText(t.params.rpm)} · {t.params.avanco} mm/min · plunge {t.params.mergulho} · pass {t.params.passada} mm
+                      {rpmText(t.params.rpm)} · {t.params.feed} mm/min · plunge {t.params.plunge} · pass {t.params.stepdown} mm
                     </span>
                   ) : null}
                 </button>
@@ -173,7 +173,7 @@ export function PrepareStep({ ctx }: { ctx: JobCtx }) {
           </div>
           {compression ? (
             <div role="status" className="job-info">
-              <span className="job-info__tag">Info</span>Compression bit: pass depth raised to {p?.passada} mm so both edges come out clean.
+              <span className="job-info__tag">Info</span>Compression bit: pass depth raised to {p?.stepdown} mm so both edges come out clean.
             </div>
           ) : null}
         </section>
@@ -250,9 +250,9 @@ export function PrepareStep({ ctx }: { ctx: JobCtx }) {
             ))}
             {tools.size > 1 ? <div className="job-op job-op--note">The carve pauses once for the bit change.</div> : null}
           </div>
-          {ctx.result?.ajustesManuais.map((a) => (
-            <div key={a.ferramenta} className="job-row">
-              <span>Makita dial for {bitNameFor(design, a.ferramenta)}</span>
+          {ctx.result?.manualAdjustments.map((a) => (
+            <div key={a.tool} className="job-row">
+              <span>Makita dial for {bitNameFor(design, a.tool)}</span>
               <span className="mono">
                 {a.dial} · {rpmText(a.rpm)}
               </span>
@@ -262,18 +262,18 @@ export function PrepareStep({ ctx }: { ctx: JobCtx }) {
             <div className="job-row">
               <span>Board needed</span>
               <span className="mono" style={{ color: "var(--text)" }}>
-                {fmtN(b.largura)} × {fmtN(b.altura)} × {fmtN(b.espessura)} mm
+                {fmtN(b.width)} × {fmtN(b.height)} × {fmtN(b.thickness)} mm
               </span>
             </div>
           ) : null}
           {mode === "pro" && p ? (
             <div className="job-fine mono">
-              {rpmText(p.rpm)} · feed {p.avanco} mm/min · plunge {p.mergulho} mm/min · pass {p.passada} mm · stepover {p.sobreposicao} mm
+              {rpmText(p.rpm)} · feed {p.feed} mm/min · plunge {p.plunge} mm/min · pass {p.stepdown} mm · stepover {p.stepover} mm
             </div>
           ) : null}
-          {result?.verificacao ? (
+          {result?.verification ? (
             <div className="job-fine mono">
-              {result.verificacao.estatisticas.linhas.toLocaleString("en-US")} lines · inside travel · no rapid moves into stock
+              {result.verification.stats.lines.toLocaleString("en-US")} lines · inside travel · no rapid moves into stock
             </div>
           ) : null}
         </section>

@@ -1,4 +1,4 @@
-import type { Aviso, GenerateResult, PlateSpecInput } from "@gsender-next/cam-engine";
+import type { Warning, GenerateResult, PlateSpecInput } from "@gsender-next/cam-engine";
 import { BITS, type Bit } from "../../lib/catalog";
 import { applyCorrection, elementName, idOf, type ElementId } from "./elements";
 
@@ -39,45 +39,45 @@ const finerInStore = (ctx: Ctx) => BITS.find((b) => b.profile === "flat" && b.d 
 /** Converte os avisos do motor (pt-BR, com código estável) nos cartões em inglês da tela Create. */
 export function buildIssues(result: GenerateResult | null, ctx: Ctx): UiIssue[] {
   if (!result) return [];
-  const out = result.avisos.map((a, k) => toIssue(a, k, ctx));
-  for (const p of result.verificacao?.problemas ?? []) {
-    if (p.severidade !== "erro") continue;
-    out.push({ key: `v${p.linha}`, level: "error", title: "The carving program failed a safety check", detail: p.mensagem, alts: [], target: null });
+  const out = result.warnings.map((a, k) => toIssue(a, k, ctx));
+  for (const p of result.verification?.problems ?? []) {
+    if (p.severity !== "error") continue;
+    out.push({ key: `v${p.line}`, level: "error", title: "The carving program failed a safety check", detail: p.message, alts: [], target: null });
   }
   return out.sort((a, b) => rank(a.level) - rank(b.level));
 }
 const rank = (l: UiIssue["level"]) => (l === "error" ? 0 : l === "warning" ? 1 : 2);
 
-function toIssue(a: Aviso, k: number, ctx: Ctx): UiIssue {
+function toIssue(a: Warning, k: number, ctx: Ctx): UiIssue {
   const { spec } = ctx;
-  const target = idOf(a.elemento);
+  const target = idOf(a.element);
   const name = elementName(spec, target);
   const q = `"${name}"`;
   const bitName = ctx.bit?.name ?? "bit";
-  const level: UiIssue["level"] = a.severidade === "erro" ? "error" : a.codigo === "PROFUNDIDADES_DIFERENTES" || a.codigo === "COMPRESSAO_PASSADA" ? "info" : "warning";
-  const base: UiIssue = { key: `${a.codigo}-${k}`, level, title: a.mensagem, detail: a.sugestao ?? "", alts: [], target };
-  const fix = a.correcao && a.elemento ? applyCorrection(spec, a.correcao.elemento, a.correcao.campo, a.correcao.valor) : null;
+  const level: UiIssue["level"] = a.severity === "error" ? "error" : a.code === "DIFFERENT_DEPTHS" || a.code === "COMPRESSION_STEPDOWN" ? "info" : "warning";
+  const base: UiIssue = { key: `${a.code}-${k}`, level, title: a.message, detail: a.suggestion ?? "", alts: [], target };
+  const fix = a.fix && a.element ? applyCorrection(spec, a.fix.element, a.fix.field, a.fix.value) : null;
 
-  switch (a.codigo) {
-    case "TEXTO_NAO_CABE": {
-      const v = a.correcao?.valor ?? Number(a.dados?.tamanhoSugerido ?? 0);
-      const t = target?.startsWith("t:") ? spec.texto?.[Number(target.slice(2))] : undefined;
-      const ratio = t && v ? t.tamanho / v : 1.2;
-      const wider = Math.ceil((spec.largura * ratio) / 5) * 5;
+  switch (a.code) {
+    case "TEXT_DOES_NOT_FIT": {
+      const v = a.fix?.value ?? Number(a.data?.suggestedSize ?? 0);
+      const t = target?.startsWith("t:") ? spec.texts?.[Number(target.slice(2))] : undefined;
+      const ratio = t && v ? t.size / v : 1.2;
+      const wider = Math.ceil((spec.width * ratio) / 5) * 5;
       return {
         ...base,
-        title: target ? `${q} doesn't fit on the ${spec.tipo === "letreiro" ? "board" : "sign"}` : "The lettering doesn't fit on the board",
-        detail: `It runs past the margins of the ${spec.largura} × ${spec.altura} mm ${spec.tipo === "letreiro" ? "board" : "sign"}.`,
+        title: target ? `${q} doesn't fit on the ${spec.type === "lettering" ? "board" : "sign"}` : "The lettering doesn't fit on the board",
+        detail: `It runs past the margins of the ${spec.width} × ${spec.height} mm ${spec.type === "lettering" ? "board" : "sign"}.`,
         suggestion: target?.startsWith("s:") ? (v ? `Make the drawing ${v} mm wide` : "Make the drawing smaller") : v ? `Reduce the letters to ${v} mm` : "Make the letters smaller",
         apply: fix ? { label: "Apply suggestion", kind: "spec", spec: fix } : undefined,
-        alts: [{ label: `Widen ${spec.tipo === "letreiro" ? "board" : "sign"} to ${wider} mm`, kind: "spec", spec: { ...spec, largura: wider } }],
+        alts: [{ label: `Widen ${spec.type === "lettering" ? "board" : "sign"} to ${wider} mm`, kind: "spec", spec: { ...spec, width: wider } }],
       };
     }
-    case "ELEMENTO_NAO_USINAVEL": {
+    case "ELEMENT_NOT_MACHINABLE": {
       const finer = finerOwned(ctx);
-      const t = target?.startsWith("t:") ? spec.texto?.[Number(target.slice(2))] : undefined;
-      const bigger = t ? Math.ceil(t.tamanho * 1.6) : 0;
-      const grow = t && target ? { ...spec, texto: spec.texto!.map((x, i) => (i === Number(target.slice(2)) ? { ...x, tamanho: bigger } : x)) } : null;
+      const t = target?.startsWith("t:") ? spec.texts?.[Number(target.slice(2))] : undefined;
+      const bigger = t ? Math.ceil(t.size * 1.6) : 0;
+      const grow = t && target ? { ...spec, texts: spec.texts!.map((x, i) => (i === Number(target.slice(2)) ? { ...x, size: bigger } : x)) } : null;
       const alts: IssueAction[] = [];
       if (finer) alts.push({ label: `Use ${finer.inch} bit`, kind: "bit", bit: finer.id });
       else {
@@ -93,8 +93,8 @@ function toIssue(a: Aviso, k: number, ctx: Ctx): UiIssue {
         alts,
       };
     }
-    case "DETALHE_MENOR_QUE_FRESA": {
-      const pct = Number(a.dados?.percentual ?? 0);
+    case "DETAIL_SMALLER_THAN_BIT": {
+      const pct = Number(a.data?.percent ?? 0);
       const finer = finerOwned(ctx);
       const store = finer ? undefined : finerInStore(ctx);
       return {
@@ -105,75 +105,75 @@ function toIssue(a: Aviso, k: number, ctx: Ctx): UiIssue {
         alts: finer ? [{ label: `Use ${finer.inch} bit`, kind: "bit", bit: finer.id }] : store ? [{ label: "See in store", kind: "store", url: store.storeUrl }] : [],
       };
     }
-    case "PROFUNDIDADE_EXCEDE":
+    case "DEPTH_EXCEEDS":
       return {
         ...base,
         title: `${q} would cut all the way through`,
-        detail: `It is deeper than the ${spec.espessura} mm board.`,
-        suggestion: a.correcao ? `Use ${a.correcao.valor} mm deep` : "Make it shallower",
+        detail: `It is deeper than the ${spec.thickness} mm board.`,
+        suggestion: a.fix ? `Use ${a.fix.value} mm deep` : "Make it shallower",
         apply: fix ? { label: "Apply suggestion", kind: "spec", spec: fix } : undefined,
         alts: [],
       };
-    case "FERRAMENTA_CURTA":
+    case "TOOL_TOO_SHORT":
       return { ...base, title: `The ${bitName} is too short for this`, detail: `It cuts ${fmt(ctx.bit?.cut ?? 0)} mm deep at most. Use a thinner board or a longer bit.`, alts: [] };
-    case "FURO_MENOR_QUE_FRESA":
-    case "RASGO_MENOR_QUE_FRESA":
+    case "HOLE_SMALLER_THAN_BIT":
+    case "SLOT_SMALLER_THAN_BIT":
       return {
         ...base,
-        title: a.codigo === "FURO_MENOR_QUE_FRESA" ? "The holes are smaller than the bit" : "The hanging slot is narrower than the bit",
+        title: a.code === "HOLE_SMALLER_THAN_BIT" ? "The holes are smaller than the bit" : "The hanging slot is narrower than the bit",
         detail: `The ${bitName} is ${fmt(ctx.bit?.d ?? 3.17)} mm wide.`,
-        suggestion: a.correcao ? `Make it ${a.correcao.valor} mm` : undefined,
+        suggestion: a.fix ? `Make it ${a.fix.value} mm` : undefined,
         apply: fix ? { label: "Apply suggestion", kind: "spec", spec: fix } : undefined,
         alts: [],
       };
-    case "FORA_DA_PECA":
+    case "OUTSIDE_PART":
       return { ...base, title: `${q} goes past the edge of the sign`, detail: "Move it inside, or make the sign bigger.", alts: [] };
-    case "ILHAS_SOLTAS":
+    case "LOOSE_ISLANDS":
       return { ...base, title: `The middles of letters in ${q} will fall out`, detail: "Letters like O and A have centres that come loose when cut through. Raise or engrave them instead, or keep the loose pieces.", alts: [] };
-    case "PECA_MAIOR_QUE_MAQUINA":
+    case "PART_LARGER_THAN_MACHINE":
       return { ...base, title: `The board is bigger than your ${ctx.machineName}`, detail: "Make the sign smaller or switch to a bigger machine.", alts: [] };
-    case "PROFUNDIDADES_DIFERENTES":
+    case "DIFFERENT_DEPTHS":
       return { ...base, title: "Raised elements share one background depth", detail: "The deepest raised depth is used for the whole background.", alts: [] };
-    case "PECA_PEQUENA_SEM_ABA":
+    case "SMALL_PART_WITHOUT_TABS":
       return { ...base, title: "Some pieces are too small for holding tabs", detail: "They will come loose at the end. Hold them with double-sided tape.", alts: [] };
-    case "VBIT_SO_GRAVA":
+    case "VBIT_ENGRAVE_ONLY":
       return { ...base, title: "A V-bit can only engrave", detail: `${q} is raised or cut through. Use a flat bit, or switch it to engraved.`, alts: [] };
-    case "FRESA_PRECISA_ACESSORIO":
+    case "BIT_NEEDS_ACCESSORY":
       return {
         ...base,
         level: "warning",
         title: `The ${bitName} needs the 1/8″ collet`,
         detail: "Your router holds 1/4″ shanks out of the box.",
-        alts: typeof a.dados?.url === "string" ? [{ label: "See in store", kind: "store", url: a.dados.url as string }] : [],
+        alts: typeof a.data?.url === "string" ? [{ label: "See in store", kind: "store", url: a.data.url as string }] : [],
       };
-    case "FRESA_NAO_SUPORTADA":
-    case "FRESA_INCOMPATIVEL":
+    case "BIT_NOT_SUPPORTED":
+    case "BIT_INCOMPATIBLE":
       return { ...base, title: `The ${bitName} can't be used for this`, detail: "Pick another bit in the Bit menu above.", alts: [] };
-    case "COMPRESSAO_PASSADA":
+    case "COMPRESSION_STEPDOWN":
       return { ...base, title: "Deeper first pass for the compression bit", detail: "The first pass goes past the up-cut part of the bit so both faces stay clean.", alts: [] };
-    case "SEM_TABELA_SIENCI":
+    case "NO_SIENCI_TABLE":
       return { ...base, level: "info", title: "No official speeds for this combination", detail: "We use conservative calculated values instead.", alts: [] };
-    case "NADA_A_CORTAR":
+    case "NOTHING_TO_CUT":
       return { ...base, title: "Nothing to carve yet", detail: "Add text, a shape, an icon or an SVG file.", alts: [] };
-    case "GRAVADO_NO_FUNDO":
+    case "ENGRAVED_IN_FLOOR":
       return {
         ...base,
         title: `${q} won't show`,
         detail: `It sits on the lowered background, which is already deeper than its engraving.`,
-        suggestion: a.correcao ? `Engrave it ${fmt(a.correcao.valor)} mm deep` : "Make it raised, or move it onto a raised element",
+        suggestion: a.fix ? `Engrave it ${fmt(a.fix.value)} mm deep` : "Make it raised, or move it onto a raised element",
         apply: fix ? { label: "Apply suggestion", kind: "spec", spec: fix } : undefined,
         alts: [],
       };
-    case "HACHURA_FECHADA":
+    case "HATCH_TOO_DENSE":
       return {
         ...base,
         title: `The lines in ${q} merge together`,
         detail: `They're closer than the ${bitName} cuts, so the whole area comes out lowered.`,
-        suggestion: a.correcao ? `Space the lines ${fmt(a.correcao.valor)} mm apart` : "Space the lines further apart",
+        suggestion: a.fix ? `Space the lines ${fmt(a.fix.value)} mm apart` : "Space the lines further apart",
         apply: fix ? { label: "Apply suggestion", kind: "spec", spec: fix } : undefined,
         alts: [],
       };
-    case "VCARVE_FUNDO_PLANO":
+    case "VCARVE_FLAT_BOTTOM":
       return {
         ...base,
         title: `${q} gets a flat bottom`,
@@ -181,7 +181,7 @@ function toIssue(a: Aviso, k: number, ctx: Ctx): UiIssue {
         suggestion: "Raise the max depth, or make the design thinner",
         alts: [],
       };
-    case "SVG_INVALIDO":
+    case "INVALID_SVG":
       return { ...base, title: `${q} can't be read`, detail: "Export it again as a plain SVG with text converted to outlines, or delete it.", alts: [] };
     default:
       return base;

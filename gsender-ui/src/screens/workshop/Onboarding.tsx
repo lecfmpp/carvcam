@@ -243,11 +243,11 @@ export default function Onboarding() {
                 <div className="ws-kicker">First step</div>
                 <div style={{ font: "600 22px/1.25 var(--font)" }}>Surface the bed</div>
                 <div style={{ font: "400 15px/1.5 var(--font)", color: "var(--text-2)" }}>Flattens the spoilboard so every carve has the same depth everywhere on the bed. Uses the 22 mm surfacing bit.</div>
-                {!bits.includes("aplainar-22mm") ? (
+                {!bits.includes("surfacing-22mm") ? (
                   <div className="ws-warn">
                     <AlertTriangle size={16} color="var(--paused)" strokeWidth={1.75} />
                     <span style={{ flex: 1 }}>You haven't marked the 22 mm surfacing bit.</span>
-                    <a href={sienciLink("https://sienci.com/product/22mm-surfacing-bit/", "onboarding", "aplainar-22mm")} target="_blank" rel="noreferrer">
+                    <a href={sienciLink("https://sienci.com/product/22mm-surfacing-bit/", "onboarding", "surfacing-22mm")} target="_blank" rel="noreferrer">
                       <button>See in store</button>
                     </a>
                   </div>

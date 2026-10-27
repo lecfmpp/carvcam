@@ -9,10 +9,10 @@ export interface Move {
 }
 
 export interface Feeds {
-  avanco: number;
-  mergulho: number;
-  alturaRecuo: number;
-  alturaSegura: number;
+  feed: number;
+  plunge: number;
+  retractHeight: number;
+  safeHeight: number;
 }
 
 /**
@@ -26,7 +26,7 @@ export class PathBuilder {
   z: number;
 
   constructor(readonly feeds: Feeds) {
-    this.z = feeds.alturaSegura;
+    this.z = feeds.safeHeight;
   }
 
   private push(m: Move) {
@@ -44,11 +44,11 @@ export class PathBuilder {
 
   /** Sobe até a altura de recuo (dentro da operação). */
   retract() {
-    if (this.z < this.feeds.alturaRecuo) this.rapidZ(this.feeds.alturaRecuo);
+    if (this.z < this.feeds.retractHeight) this.rapidZ(this.feeds.retractHeight);
   }
 
   safe() {
-    if (this.z < this.feeds.alturaSegura) this.rapidZ(this.feeds.alturaSegura);
+    if (this.z < this.feeds.safeHeight) this.rapidZ(this.feeds.safeHeight);
   }
 
   /** Vai até (x, y) pelo alto. */
@@ -63,16 +63,16 @@ export class PathBuilder {
    */
   plunge(z: number) {
     if (this.z > 0.5) this.rapidZ(0.5);
-    if (z < this.z) this.push({ g: 1, x: this.x, y: this.y, z, f: this.feeds.mergulho });
+    if (z < this.z) this.push({ g: 1, x: this.x, y: this.y, z, f: this.feeds.plunge });
   }
 
   feed(p: Pt, z = this.z) {
-    const f = z < this.z ? this.feeds.mergulho : this.feeds.avanco;
+    const f = z < this.z ? this.feeds.plunge : this.feeds.feed;
     this.push({ g: 1, x: p.x, y: p.y, z, f });
   }
 
   feedZ(z: number) {
-    this.push({ g: 1, x: this.x, y: this.y, z, f: this.feeds.mergulho });
+    this.push({ g: 1, x: this.x, y: this.y, z, f: this.feeds.plunge });
   }
 }
 

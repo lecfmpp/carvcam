@@ -39,11 +39,11 @@ export async function loadImageFile(file: File): Promise<{ src: string; w: numbe
 }
 
 /** Nova imagem de decalque, cabendo na peça e centrada. */
-export async function tracingFromFile(file: File, plate: { largura: number; altura: number }): Promise<TracingImage> {
+export async function tracingFromFile(file: File, plate: { width: number; height: number }): Promise<TracingImage> {
   const { src, w, h } = await loadImageFile(file);
   const aspect = h / w;
-  const width = Math.round(Math.min(plate.largura, plate.altura / aspect) * 10) / 10;
-  return { src, name: file.name, x: plate.largura / 2, y: plate.altura / 2, width, aspect, opacity: 0.5, visible: true };
+  const width = Math.round(Math.min(plate.width, plate.height / aspect) * 10) / 10;
+  return { src, name: file.name, x: plate.width / 2, y: plate.height / 2, width, aspect, opacity: 0.5, visible: true };
 }
 
 /** Pixels (rgba) da imagem de decalque, reduzida a `maxSide`, para a vetorização. */

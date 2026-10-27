@@ -31,7 +31,7 @@ export async function importSvgFile(file: File, spec: PlateSpecInput): Promise<[
     toast("This file is too large (over 3 MB). Simplify it before importing.");
     return null;
   }
-  const out = addSvg(spec, await file.text(), file.name, spec.largura / 2, spec.altura / 2);
+  const out = addSvg(spec, await file.text(), file.name, spec.width / 2, spec.height / 2);
   if ("error" in out) {
     toast(out.error);
     return null;

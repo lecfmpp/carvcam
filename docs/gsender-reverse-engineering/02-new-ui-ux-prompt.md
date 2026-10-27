@@ -1,6 +1,6 @@
 # Prompt — Nova UI/UX para o gSender com assistente de IA 3D
 
-> Copie tudo abaixo da linha e cole no seu agente (Claude Code, Lovable, v0, Cursor…). O prompt é autocontido e se apoia no [relatório de engenharia reversa](./01-relatorio-engenharia-reversa.md).
+> Copie tudo abaixo da linha e cole no seu agente (Claude Code, Lovable, v0, Cursor…). O prompt é autocontido e se apoia no [relatório de engenharia reversa](./01-reverse-engineering-report.md).
 
 ---
 
@@ -72,7 +72,7 @@ Organize por **intenção**, não por parâmetro: "Minha máquina", "Ferramentas
 
 Implemente primeiro só este escopo. Ele cobre a maior parte do que um iniciante corta numa CNC de 3 eixos e evita o CAM 3D completo.
 
-> **O motor de CAM desta v1 já existe:** a pasta `cam-engine/` (TypeScript, 35 testes passando) gera G-code GRBL verificado a partir do JSON abaixo. **Use esse pacote; não reescreva o CAM.** O trabalho da UI é chamar `generatePlate(spec, opções)`, mostrar `avisos`, desenhar a prévia a partir de `layout` e da simulação, e enviar o `gcode` quando `ok` for verdadeiro. Detalhes em `cam-engine/README.md`.
+> **O motor de CAM desta v1 já existe:** a pasta `cam-engine/` (TypeScript, 35 testes passando) gera G-code GRBL verificado a partir do JSON abaixo. **Use esse pacote; não reescreva o CAM.** O trabalho da UI é chamar `generatePlate(spec, opções)`, mostrar `warnings`, desenhar a prévia a partir de `layout` e da simulação, e enviar o `gcode` quando `ok` for verdadeiro. Detalhes em `cam-engine/README.md`.
 
 - **Tipos de peça:** placa com texto em relevo, gravado ou vazado; letreiro recortado (letras soltas ou palavra contínua); placa com borda (reta, arredondada, chanfrada) e ícones simples (coração, estrela, casa, folha); furos de fixação e rasgo para pendurar.
 - **Bibliotecas (todas no navegador, sem servidor):**
@@ -82,11 +82,11 @@ Implemente primeiro só este escopo. Ele cobre a maior parte do que um iniciante
   - **Three.js / React Three Fiber**: prévia 3D, alimentada pelo mapa de alturas da simulação do `cam-engine`.
   - Não usamos kernel CAD 3D (Replicad/OpenCascade/manifold) na v1.
 - **Aproveitado do rudra496/cnc (MIT):** só ideias, nenhum arquivo copiado. A simulação de remoção de material por mapa de alturas (reescrita em `cam-engine/src/sim/heightmap.ts`, sem Three.js e com resolução de 0,25 mm) e a fórmula de avanço da calculadora (avanço por dente × canais × RPM, em `cam-engine/src/materials.ts`). Os presets de material dele (metais) não servem; usamos MDF, compensado, madeira macia/dura e acrílico.
-- **Schema da IA:** a IA preenche um JSON fechado, sem código livre: `PlateSpecSchema` em `cam-engine/src/schema.ts` (`tipo`, `largura`, `altura`, `espessura`, `material`, `texto[]` com `conteudo/fonte/tamanho/modo/profundidade/x/y`, `borda`, `moldura`, `icones[]`, `furos[]`, `rasgos[]`, `recorteExterno`, `margem`). Use o próprio schema Zod como definição da ferramenta (tool use) da Claude API.
+- **Schema da IA:** a IA preenche um JSON fechado, sem código livre: `PlateSpecSchema` em `cam-engine/src/schema.ts` (`type`, `width`, `height`, `thickness`, `material`, `texts[]` com `content/font/size/mode/depth/x/y`, `edge`, `frame`, `icons[]`, `holes[]`, `slots[]`, `outerCutout`, `margin`). Use o próprio schema Zod como definição da ferramenta (tool use) da Claude API.
 - **Operações de CAM (prontas):** gravação e relevo por pocket de anéis concêntricos, vazado (estêncil), furos (bicada ou pocket), rasgos, recorte externo com abas e troca entre duas fresas (`T# M6`). Fresas: reta e V-bit (a V-bit só grava seguindo o contorno). V-carve de profundidade variável e entrada em rampa ficam para a v1.1.
 - **Saída e segurança:** G-code GRBL com cabeçalho (G21 G90 G17 G94), altura segura e passadas por material e fresa. O verificador relê o texto final e bloqueia `$`, G20/G91, G0 dentro do material, corte com spindle desligado, avanço acima do máximo e saída da área. Ele também deve rodar sobre G-code importado.
-- **Avisos de fabricabilidade:** já saem com código estável e texto em pt-BR (`TEXTO_NAO_CABE` com tamanho sugerido, `DETALHE_MENOR_QUE_FRESA` com % não cortado, `ELEMENTO_NAO_USINAVEL`, `ILHAS_SOLTAS`…). A IA deve ler esses códigos e propor a correção ("vou reduzir o texto para 16 mm. Ok?").
-- **Máquinas Sienci Labs:** o produto é feito para as máquinas da Sienci. Use o catálogo `cam-engine/src/catalog/sienci/` (máquinas LongMill MK2/MK3 e AltMill, cabeçotes Makita/AutoSpin/spindle, 15 fresas da loja com regra de compatibilidade, tabela oficial de avanço e rotação, 7 projetos de primeiros cortes). Passe `sienci: { maquina, cabecote, fresa, fresaRecorte, velocidade }` para `generatePlate`. Pré-selecione a máquina a partir do perfil já escolhido no gSender e mostre `ajustesManuais` (dial do Makita) no checklist antes de cortar.
+- **Avisos de fabricabilidade:** já saem com código estável e texto em pt-BR (`TEXT_DOES_NOT_FIT` com tamanho sugerido, `DETAIL_SMALLER_THAN_BIT` com % não cortado, `ELEMENT_NOT_MACHINABLE`, `LOOSE_ISLANDS`…). A IA deve ler esses códigos e propor a correção ("vou reduzir o texto para 16 mm. Ok?").
+- **Máquinas Sienci Labs:** o produto é feito para as máquinas da Sienci. Use o catálogo `cam-engine/src/catalog/sienci/` (máquinas LongMill MK2/MK3 e AltMill, cabeçotes Makita/AutoSpin/spindle, 15 fresas da loja com regra de compatibilidade, tabela oficial de avanço e rotação, 7 projetos de primeiros cortes). Passe `sienci: { machine, head, bit, cutoutBit, speed }` para `generatePlate`. Pré-selecione a máquina a partir do perfil já escolhido no gSender e mostre `manualAdjustments` (dial do Makita) no checklist antes de cortar.
 - **Integração com o gSender:** confira os limites do catálogo com os parâmetros reais do firmware ($110–$112, $130–$132), porque o usuário pode ter alterado, e mande o G-code por `POST /api/gcode`.
 - **Fora do escopo da v1:** relevo artístico (heightmap), malhas STL convertidas em toolpath 3D, caixas com encaixe, 4º eixo. Pedidos assim recebem resposta amigável com uma alternativa dentro do escopo (ex.: silhueta gravada). Importar G-code pronto continua funcionando.
 - **Pronto quando:** "placa 20×10 cm, MDF 15 mm, 'Casa da Ana' em relevo de 3 mm, borda arredondada, 2 furos" gera um G-code que passa no verificador e é simulado corretamente no visualizador.

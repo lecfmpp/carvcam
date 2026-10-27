@@ -11,25 +11,25 @@ import type { Pt, Region } from "./geometry/clip.js";
 
 export interface TraceOpts {
   /** 0–255: luminância abaixo disso conta como "dentro". */
-  limiar?: number;
+  threshold?: number;
   /** Inverte: claro vira dentro. */
-  inverter?: boolean;
+  invert?: boolean;
   /** Ignora contornos com área menor que isto (px²). */
-  manchaMin?: number;
+  minBlob?: number;
   /** Tolerância da simplificação, em px. */
-  detalhe?: number;
+  detail?: number;
   /** Passes de suavização (0–4). */
-  suavizar?: number;
+  smooth?: number;
 }
 
 /** Máscara binária a partir de RGBA (transparente conta como claro). */
-export function maskFromRgba(data: Uint8ClampedArray | Uint8Array, w: number, h: number, limiar = 128, inverter = false): Uint8Array {
+export function maskFromRgba(data: Uint8ClampedArray | Uint8Array, w: number, h: number, threshold = 128, invert = false): Uint8Array {
   const m = new Uint8Array(w * h);
   for (let i = 0; i < w * h; i++) {
     const a = data[i * 4 + 3] / 255;
     const lum = (0.2126 * data[i * 4] + 0.7152 * data[i * 4 + 1] + 0.0722 * data[i * 4 + 2]) * a + 255 * (1 - a);
-    const dark = lum < limiar;
-    m[i] = dark !== inverter ? 1 : 0;
+    const dark = lum < threshold;
+    m[i] = dark !== invert ? 1 : 0;
   }
   return m;
 }
@@ -105,11 +105,11 @@ export function traceMask(mask: Uint8Array, w: number, h: number, o: TraceOpts =
     }
   }
 
-  const manchaMin = o.manchaMin ?? 4;
-  let r: PathD[] = loops.filter((p) => Math.abs(areaD(p)) >= manchaMin);
-  const passes = Math.max(0, Math.min(4, Math.round(o.suavizar ?? 2)));
+  const minBlob = o.minBlob ?? 4;
+  let r: PathD[] = loops.filter((p) => Math.abs(areaD(p)) >= minBlob);
+  const passes = Math.max(0, Math.min(4, Math.round(o.smooth ?? 2)));
   for (let i = 0; i < passes; i++) r = r.map(chaikin);
-  r = simplifyPathsD(r, o.detalhe ?? 0.6, true).filter((p) => p.length >= 3);
+  r = simplifyPathsD(r, o.detail ?? 0.6, true).filter((p) => p.length >= 3);
   // Par-ímpar resolve furos e ilhas independentemente da orientação de cada contorno.
   return r.length ? unionD(r, FillRule.EvenOdd) : [];
 }

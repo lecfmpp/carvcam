@@ -67,8 +67,8 @@ Legenda: ✅ temos · 🟡 parcial · ❌ não temos.
 
 Hoje o catálogo está no namespace `sienci`. A proposta é:
 
-- Criar `catalog/carbide3d/` com a mesma forma de dados (máquinas, cabeçotes, fresas, tabela e projetos), atrás de um registro comum `catalog/index.ts` (`marcas: sienci | carbide3d | generica`).
-- `ConfigSienci` vira `ConfigMaquina { marca, maquina, cabecote, fresa, ... }`. O nome antigo continua como apelido para não quebrar nada.
+- Criar `catalog/carbide3d/` com a mesma forma de dados (máquinas, cabeçotes, fresas, tabela e projetos), atrás de um registro comum `catalog/index.ts` (`brands: sienci | carbide3d | generic`).
+- `SienciConfig` vira `MachineConfig { brand, machine, head, bit, ... }`. O nome antigo continua como apelido para não quebrar nada.
 - Na interface, o seletor de máquina ganha a marca no topo: **Sienci Labs** (primeiro, porque é o foco), **Carbide 3D** e **Outra máquina GRBL**. A última pede curso X/Y/Z e o tipo de cabeçote.
 
 ### Máquinas (cursos oficiais da Carbide 3D)
@@ -95,11 +95,11 @@ Antes de publicar, é preciso confirmar as velocidades máximas ($110–112) com
 
 ### Fresas Carbide 3D
 
-Fresas como #201 (1/4″ reta, que vem com a máquina), #102 (1/8″), #112 (1/16″), #301 (V de 90°) e #302 (V de 60°) seguem a mesma regra de compatibilidade por haste e pinça. Os números e diâmetros precisam ser conferidos na loja antes de entrar no catálogo; não copiamos a tabela de avanços da Carbide. Para Shapeoko usamos valores calculados por carga de cavaco e rigidez da máquina (correia vs fuso de esferas), marcados como "valores calculados" (o aviso `SEM_TABELA_SIENCI` já cobre isso).
+Fresas como #201 (1/4″ reta, que vem com a máquina), #102 (1/8″), #112 (1/16″), #301 (V de 90°) e #302 (V de 60°) seguem a mesma regra de compatibilidade por haste e pinça. Os números e diâmetros precisam ser conferidos na loja antes de entrar no catálogo; não copiamos a tabela de avanços da Carbide. Para Shapeoko usamos valores calculados por carga de cavaco e rigidez da máquina (correia vs fuso de esferas), marcados como "valores calculados" (o aviso `NO_SIENCI_TABLE` já cobre isso).
 
 ### Projetos iniciais
 
-Os 7 projetos atuais já se ajustam ao curso da máquina (`projetosParaMaquina`), então valem para Shapeoko sem mudança. Só muda o texto de "primeiro corte", que deve citar o BitSetter quando a máquina tiver.
+Os 7 projetos atuais já se ajustam ao curso da máquina (`projectsForMachine`), então valem para Shapeoko sem mudança. Só muda o texto de "primeiro corte", que deve citar o BitSetter quando a máquina tiver.
 
 ### Cuidados
 
@@ -116,7 +116,7 @@ Feito:
 - **Booleanas:** união automática entre elementos que se tocam. "Subtract" tira a forma do elemento dos outros (por exemplo, uma lua). "Mask" faz os outros ficarem só com a parte de dentro.
 - **Alinhar e distribuir:** Shift+clique seleciona vários. Dá para alinhar à seleção, ou à placa quando há um só elemento, e distribuir quando há 3 ou mais. Arrastar move o grupo.
 - **Importar DXF:** junto com o SVG, pelo mesmo botão e por arrastar o arquivo. Lê linhas, polilinhas com arco, círculos, arcos, elipses e splines, com unidades.
-- **V-carve de verdade:** a profundidade acompanha a largura do traço. O valor de profundidade vira o limite. Onde o traço passaria do limite, o fundo fica plano e aparece o aviso `VCARVE_FUNDO_PLANO`.
+- **V-carve de verdade:** a profundidade acompanha a largura do traço. O valor de profundidade vira o limite. Onde o traço passaria do limite, o fundo fica plano e aparece o aviso `VCARVE_FLAT_BOTTOM`.
 - **Hachura** (recurso do Pro): "Outline + lines" em vez de esvaziar a área gravada, com espaçamento e ângulo.
 
 Ainda falta para igualar o Core: ferramenta de curvas Bézier livre, imagem de fundo para decalcar, vetorização automática de imagem e uma biblioteca maior de elementos. O "Subtract" vale para todos os elementos que a forma cobre, não para um só.

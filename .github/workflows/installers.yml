@@ -64,7 +64,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           WIN_PUBLISHER_NAME: ${{ secrets.WIN_PUBLISHER_NAME }}
-          # Escolha um serviço de assinatura (veja docs/assinatura-de-codigo.md).
+          # Escolha um serviço de assinatura (veja docs/code-signing.md).
           WIN_SIGN_PROVIDER: ${{ env.RELEASE_TAG != '' && secrets.WIN_SIGN_PROVIDER || '' }}
           # Azure Artifact Signing
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}

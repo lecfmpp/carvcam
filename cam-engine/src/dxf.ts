@@ -1,6 +1,6 @@
 import { EndType, FillRule, inflatePathsD, JoinType, unionD, type PathD } from "clipper2-ts";
 import { bounds, simplify, translate, union, type Pt, type Region } from "./geometry/clip.js";
-import { SvgInvalido, type SvgDesenho } from "./svg.js";
+import { InvalidSvg, type SvgDrawing } from "./svg.js";
 
 /**
  * Importador de DXF (ASCII): LINE, LWPOLYLINE e POLYLINE (com bulge), CIRCLE, ARC, ELLIPSE e
@@ -11,7 +11,7 @@ import { SvgInvalido, type SvgDesenho } from "./svg.js";
  * Unidades pelo $INSUNITS do cabeçalho (sem unidade = mm). DXF já tem Y para cima.
  */
 
-const ABERTO_LARGURA = 1; // mm
+const OPEN_PATH_WIDTH = 1; // mm
 const STEP = 0.25; // mm entre pontos em arcos e curvas
 /** Passo em unidades do desenho (STEP convertido pela unidade do arquivo); definido em parseDxf. */
 let step = STEP;
@@ -20,12 +20,12 @@ const INSUNITS_MM: Record<number, number> = { 0: 1, 1: 25.4, 2: 304.8, 4: 1, 5: 
 
 type Pair = [number, string];
 
-function pairs(texto: string): Pair[] {
-  const lines = texto.split(/\r?\n/);
+function pairs(text: string): Pair[] {
+  const lines = text.split(/\r?\n/);
   const out: Pair[] = [];
   for (let i = 0; i + 1 < lines.length; i += 2) {
     const code = parseInt(lines[i].trim(), 10);
-    if (Number.isNaN(code)) throw new SvgInvalido("O arquivo DXF está corrompido ou não é ASCII (DXF binário não é suportado).");
+    if (Number.isNaN(code)) throw new InvalidSvg("O arquivo DXF está corrompido ou não é ASCII (DXF binário não é suportado).");
     out.push([code, lines[i + 1].trim()]);
   }
   return out;
@@ -157,9 +157,9 @@ function nurbs(deg: number, knots: number[], ctrl: Pt[], w: number[]): Pt[] {
   return out;
 }
 
-function pieces(ents: Ent[]): { pieces: Piece[]; ignorados: Set<string> } {
+function pieces(ents: Ent[]): { pieces: Piece[]; ignored: Set<string> } {
   const out: Piece[] = [];
-  const ignorados = new Set<string>();
+  const ignored = new Set<string>();
   for (let i = 0; i < ents.length; i++) {
     const e = ents[i];
     // Direção de extrusão (0,0,-1) espelha X no sistema do objeto (comum em arcos do AutoCAD).
@@ -240,10 +240,10 @@ function pieces(ents: Ent[]): { pieces: Piece[]; ignorados: Set<string> } {
       case "SEQEND":
         break;
       default:
-        ignorados.add(e.type);
+        ignored.add(e.type);
     }
   }
-  return { pieces: out, ignorados };
+  return { pieces: out, ignored };
 }
 
 const dist = (a: Pt, b: Pt) => Math.hypot(b.x - a.x, b.y - a.y);
@@ -279,14 +279,14 @@ function chain(open: Pt[][], tol: number): { closed: Pt[][]; open: Pt[][] } {
   return { closed, open: left };
 }
 
-export function parseDxf(texto: string): SvgDesenho & { abertos: number } {
-  const { ents, insunits } = readEntities(pairs(texto));
+export function parseDxf(text: string): SvgDrawing & { openPaths: number } {
+  const { ents, insunits } = readEntities(pairs(text));
   const u = INSUNITS_MM[insunits] ?? 1;
   step = STEP / u;
-  const { pieces: ps, ignorados } = pieces(ents);
+  const { pieces: ps, ignored } = pieces(ents);
   if (!ps.length) {
-    const extra = ignorados.size ? ` Encontrei só: ${[...ignorados].join(", ")}.` : "";
-    throw new SvgInvalido(`O DXF não tem linhas, arcos, círculos, polilinhas nem splines.${extra} Explode blocos e textos antes de exportar.`);
+    const extra = ignored.size ? ` Encontrei só: ${[...ignored].join(", ")}.` : "";
+    throw new InvalidSvg(`O DXF não tem linhas, arcos, círculos, polilinhas nem splines.${extra} Explode blocos e textos antes de exportar.`);
   }
   const scaled = ps.map((p) => ({ closed: p.closed, pts: p.pts.map((q) => ({ x: q.x * u, y: q.y * u })) }));
   const { closed: chained, open } = chain(
@@ -296,15 +296,15 @@ export function parseDxf(texto: string): SvgDesenho & { abertos: number } {
   const loops = [...scaled.filter((p) => p.closed).map((p) => p.pts), ...chained].filter((p) => p.length >= 3);
   let reg: Region = loops.length ? unionD(loops as PathD[], FillRule.EvenOdd) : [];
   if (open.length) {
-    const strokes = inflatePathsD(open as PathD[], ABERTO_LARGURA / 2, JoinType.Round, EndType.Round, 2, 4, 0.02);
+    const strokes = inflatePathsD(open as PathD[], OPEN_PATH_WIDTH / 2, JoinType.Round, EndType.Round, 2, 4, 0.02);
     reg = union(reg, strokes);
   }
   reg = simplify(reg, 0.005);
-  if (!reg.length) throw new SvgInvalido("O desenho do DXF ficou vazio.");
+  if (!reg.length) throw new InvalidSvg("O desenho do DXF ficou vazio.");
   const b = bounds(reg);
-  const largura = b.maxX - b.minX;
-  const altura = b.maxY - b.minY;
-  if (!(largura > 0.01 && altura > 0.01)) throw new SvgInvalido("O desenho do DXF é pequeno demais.");
+  const width = b.maxX - b.minX;
+  const height = b.maxY - b.minY;
+  if (!(width > 0.01 && height > 0.01)) throw new InvalidSvg("O desenho do DXF é pequeno demais.");
   reg = translate(reg, -(b.minX + b.maxX) / 2, -(b.minY + b.maxY) / 2);
-  return { regiao: reg, largura, altura, abertos: open.length };
+  return { region: reg, width, height, openPaths: open.length };
 }

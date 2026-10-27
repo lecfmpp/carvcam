@@ -19,10 +19,10 @@ export function circle(cx: number, cy: number, r: number): Region {
 }
 
 /** Contorno da placa: retângulo com cantos retos, arredondados ou chanfrados. */
-export function plateOutline(x: number, y: number, w: number, h: number, tipo: "reta" | "arredondada" | "chanfrada", raio: number): Region {
-  const r = Math.min(raio, w / 2, h / 2);
-  if (tipo === "reta" || r <= 0) return rect(x, y, w, h);
-  if (tipo === "chanfrada") {
+export function plateOutline(x: number, y: number, w: number, h: number, type: "straight" | "rounded" | "chamfered", radius: number): Region {
+  const r = Math.min(radius, w / 2, h / 2);
+  if (type === "straight" || r <= 0) return rect(x, y, w, h);
+  if (type === "chamfered") {
     return [[
       { x: x + r, y }, { x: x + w - r, y }, { x: x + w, y: y + r }, { x: x + w, y: y + h - r },
       { x: x + w - r, y: y + h }, { x: x + r, y: y + h }, { x, y: y + h - r }, { x, y: y + r },
@@ -49,9 +49,9 @@ export function plateOutline(x: number, y: number, w: number, h: number, tipo: "
  * Polígono regular inscrito no círculo de raio r. Com rotação 0 o lado de baixo fica
  * horizontal (é o que se espera de um hexágono ou triângulo numa placa).
  */
-export function polygon(cx: number, cy: number, r: number, lados: number, rotacaoDeg = 0): Region {
-  const n = Math.max(3, Math.round(lados));
-  const a0 = -Math.PI / 2 + Math.PI / n + (rotacaoDeg * Math.PI) / 180;
+export function polygon(cx: number, cy: number, r: number, sides: number, rotationDeg = 0): Region {
+  const n = Math.max(3, Math.round(sides));
+  const a0 = -Math.PI / 2 + Math.PI / n + (rotationDeg * Math.PI) / 180;
   const p: Pt[] = [];
   for (let i = 0; i < n; i++) {
     const a = a0 + (2 * Math.PI * i) / n;
@@ -60,51 +60,51 @@ export function polygon(cx: number, cy: number, r: number, lados: number, rotaca
   return [p];
 }
 
-/** Estrela com `pontas` pontas; `interno` é o raio interno como fração do externo. */
-export function star(cx: number, cy: number, r: number, pontas: number, interno: number, rotacaoDeg = 0): Region {
-  const n = Math.max(3, Math.round(pontas));
-  const a0 = Math.PI / 2 + (rotacaoDeg * Math.PI) / 180;
+/** Estrela com `points` pontas; `inner` é o raio interno como fração do externo. */
+export function star(cx: number, cy: number, r: number, points: number, inner: number, rotationDeg = 0): Region {
+  const n = Math.max(3, Math.round(points));
+  const a0 = Math.PI / 2 + (rotationDeg * Math.PI) / 180;
   const p: Pt[] = [];
   for (let i = 0; i < 2 * n; i++) {
     const a = a0 + (Math.PI * i) / n;
-    const rr = i % 2 === 0 ? r : r * interno;
+    const rr = i % 2 === 0 ? r : r * inner;
     p.push({ x: cx + rr * Math.cos(a), y: cy + rr * Math.sin(a) });
   }
   return [p];
 }
 
 /**
- * Curva livre (Bézier cúbica por partes). Fechada: área (NonZero). Aberta: traço de `espessura`
+ * Curva livre (Bézier cúbica por partes). Fechada: área (NonZero). Aberta: traço de `thickness`
  * com pontas redondas.
  */
 export function curve(
   ox: number,
   oy: number,
-  pontos: { x: number; y: number; ix?: number; iy?: number; ox?: number; oy?: number }[],
-  fechada: boolean,
-  espessura: number,
+  nodes: { x: number; y: number; ix?: number; iy?: number; ox?: number; oy?: number }[],
+  closed: boolean,
+  thickness: number,
 ): Region {
-  const line = curvePolyline(ox, oy, pontos, fechada);
+  const line = curvePolyline(ox, oy, nodes, closed);
   if (line.length < 2) return [];
-  if (fechada) return line.length >= 3 ? union([line]) : [];
-  return inflatePathsD([line], espessura / 2, JoinType.Round, EndType.Round, 2, 4, 0.02);
+  if (closed) return line.length >= 3 ? union([line]) : [];
+  return inflatePathsD([line], thickness / 2, JoinType.Round, EndType.Round, 2, 4, 0.02);
 }
 
 /** Pontos da curva achatada (mm absolutos), com passo de ~0,25 mm nas partes curvas. */
 export function curvePolyline(
   ox: number,
   oy: number,
-  pontos: { x: number; y: number; ix?: number; iy?: number; ox?: number; oy?: number }[],
-  fechada: boolean,
+  nodes: { x: number; y: number; ix?: number; iy?: number; ox?: number; oy?: number }[],
+  closed: boolean,
 ): Pt[] {
-  const n = pontos.length;
+  const n = nodes.length;
   if (!n) return [];
-  const abs = pontos.map((p) => ({ x: ox + p.x, y: oy + p.y }));
+  const abs = nodes.map((p) => ({ x: ox + p.x, y: oy + p.y }));
   const out: Pt[] = [{ ...abs[0] }];
-  const segs = fechada ? n : n - 1;
+  const segs = closed ? n : n - 1;
   for (let i = 0; i < segs; i++) {
-    const a = pontos[i];
-    const b = pontos[(i + 1) % n];
+    const a = nodes[i];
+    const b = nodes[(i + 1) % n];
     const p0 = abs[i];
     const p3 = abs[(i + 1) % n];
     const straight = !a.ox && !a.oy && !b.ix && !b.iy;
@@ -126,7 +126,7 @@ export function curvePolyline(
     }
   }
   // Fechada: o último ponto repete o primeiro; tira para o polígono não ter vértice duplicado.
-  if (fechada && out.length > 1) out.pop();
+  if (closed && out.length > 1) out.pop();
   return out;
 }
 
@@ -166,7 +166,7 @@ export function icon(id: IconId, cx: number, cy: number, size: number): Region {
 }
 
 const ICONS: Record<IconId, () => Region> = {
-  coracao: () => {
+  heart: () => {
     const p: Pt[] = [];
     for (let i = 0; i < 200; i++) {
       const t = (i / 200) * 2 * Math.PI;
@@ -177,7 +177,7 @@ const ICONS: Record<IconId, () => Region> = {
     }
     return union([p]);
   },
-  estrela: () => {
+  star: () => {
     const p: Pt[] = [];
     for (let i = 0; i < 10; i++) {
       const r = i % 2 === 0 ? 1 : 0.42;
@@ -186,12 +186,12 @@ const ICONS: Record<IconId, () => Region> = {
     }
     return union([p]);
   },
-  casa: () =>
+  house: () =>
     union([[
       { x: -0.8, y: -1 }, { x: 0.8, y: -1 }, { x: 0.8, y: 0.2 }, { x: 1, y: 0.2 },
       { x: 0, y: 1 }, { x: -1, y: 0.2 }, { x: -0.8, y: 0.2 },
     ]]),
-  folha: () => {
+  leaf: () => {
     // Lente formada por dois arcos, inclinada 45°, com um pequeno cabo.
     const p: Pt[] = [];
     const R = 1;

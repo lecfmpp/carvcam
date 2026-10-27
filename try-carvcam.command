@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Mac: dois cliques neste arquivo abrem o Terminal e rodam o CarvCAM (mesmo que testar-carvcam.sh).
+# Mac: dois cliques neste arquivo abrem o Terminal e rodam o CarvCAM (mesmo que try-carvcam.sh).
 cd "$(dirname "$0")"
-bash ./testar-carvcam.sh "$@"
+bash ./try-carvcam.sh "$@"
 status=$?
 if [ $status -ne 0 ]; then
   echo

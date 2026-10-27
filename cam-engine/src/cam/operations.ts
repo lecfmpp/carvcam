@@ -1,14 +1,14 @@
 import { area, intersection, offset, pathArea, perimeter, pointInRegion, segmentInside, simplify, type Pt, type Region } from "../geometry/clip.js";
 import { depthLevels, dist, PathBuilder, rotateToNearest } from "./builder.js";
 
-export type Direcao = "convencional" | "concordante";
+export type Direction = "conventional" | "climb";
 
 export interface PocketOpts {
-  raio: number;
-  sobreposicao: number;
-  profundidade: number;
-  passada: number;
-  direcao: Direcao;
+  radius: number;
+  stepover: number;
+  depth: number;
+  stepdown: number;
+  direction: Direction;
 }
 
 /**
@@ -18,22 +18,22 @@ export interface PocketOpts {
  * Retorna false se a fresa não cabe em nenhum ponto da região.
  */
 export function pocket(b: PathBuilder, region: Region, o: PocketOpts): boolean {
-  const t0 = offset(region, -o.raio);
+  const t0 = offset(region, -o.radius);
   if (area(t0) <= 0) return false;
 
   for (const comp of components(t0)) {
     // Cada anel sai direto da região original (erosão por r + k·passo). Encadear offsets
     // sobre o anel anterior multiplica os vértices dos arcos e deixa o cálculo lentíssimo.
-    const source = intersection(region, offset(comp, o.raio + 0.01));
+    const source = intersection(region, offset(comp, o.radius + 0.01));
     const rings: { k: number; path: Pt[] }[] = [];
     for (let k = 0; k < 5000; k++) {
-      const cur = k === 0 ? comp : simplify(intersection(offset(source, -(o.raio + k * o.sobreposicao)), comp));
+      const cur = k === 0 ? comp : simplify(intersection(offset(source, -(o.radius + k * o.stepover)), comp));
       if (area(cur) <= 0) break;
-      for (const p of simplify(cur)) rings.push({ k, path: orient(p, o.direcao, "pocket") });
+      for (const p of simplify(cur)) rings.push({ k, path: orient(p, o.direction, "pocket") });
     }
     rings.sort((a, c) => c.k - a.k);
 
-    for (const z of depthLevels(o.profundidade, o.passada)) {
+    for (const z of depthLevels(o.depth, o.stepdown)) {
       const pending = [...rings];
       let first = true;
       while (pending.length) {
@@ -53,7 +53,7 @@ export function pocket(b: PathBuilder, region: Region, o: PocketOpts): boolean {
         const path = rotateToNearest(ring.path, b);
         const start = path[0];
         const atLevel = !first && Math.abs(b.z - z) < 1e-6;
-        if (atLevel && dist(b, start) <= o.sobreposicao * 1.6 && segmentInside(comp, b, start)) {
+        if (atLevel && dist(b, start) <= o.stepover * 1.6 && segmentInside(comp, b, start)) {
           b.feed(start, z);
         } else {
           b.travel(start);
@@ -70,17 +70,17 @@ export function pocket(b: PathBuilder, region: Region, o: PocketOpts): boolean {
 }
 
 export interface ProfileOpts {
-  raio: number;
-  profundidade: number;
-  passada: number;
-  direcao: Direcao;
+  radius: number;
+  depth: number;
+  stepdown: number;
+  direction: Direction;
   /** Lado da fresa em relação à região: por fora (peça fica) ou por dentro (região sai). */
-  lado: "fora" | "dentro";
-  abas?: { quantidade: number; largura: number; altura: number; espessura: number };
+  side: "outside" | "inside";
+  tabs?: { count: number; width: number; height: number; thickness: number };
 }
 
 export interface ProfileResult {
-  contornosSemAba: number;
+  outlinesWithoutTabs: number;
 }
 
 /**
@@ -88,18 +88,18 @@ export interface ProfileResult {
  * externo com abas de fixação nas passadas finais, para a peça não se soltar.
  */
 export function profile(b: PathBuilder, region: Region, o: ProfileOpts): ProfileResult {
-  const paths = simplify(offset(region, o.lado === "fora" ? o.raio : -o.raio));
-  let contornosSemAba = 0;
-  const levels = depthLevels(o.profundidade, o.passada);
+  const paths = simplify(offset(region, o.side === "outside" ? o.radius : -o.radius));
+  let outlinesWithoutTabs = 0;
+  const levels = depthLevels(o.depth, o.stepdown);
 
   const ordered = nearestOrder(paths, b, (p) => (pathArea(p) < 0 ? 0 : 1));
   for (const raw of ordered) {
     const isOuter = pathArea(raw) > 0;
-    const path = rotateToNearest(orient(raw, o.direcao, o.lado === "fora" ? "perfil" : "pocket"), b);
-    const wantTabs = o.lado === "fora" && isOuter && o.abas && o.abas.quantidade > 0;
-    const tabs = wantTabs ? tabWindows(path, o.abas!.quantidade, o.abas!.largura + 2 * o.raio) : [];
-    if (wantTabs && tabs.length === 0) contornosSemAba++;
-    const tabTop = o.abas ? -(o.abas.espessura - o.abas.altura) : 0;
+    const path = rotateToNearest(orient(raw, o.direction, o.side === "outside" ? "profile" : "pocket"), b);
+    const wantTabs = o.side === "outside" && isOuter && o.tabs && o.tabs.count > 0;
+    const tabs = wantTabs ? tabWindows(path, o.tabs!.count, o.tabs!.width + 2 * o.radius) : [];
+    if (wantTabs && tabs.length === 0) outlinesWithoutTabs++;
+    const tabTop = o.tabs ? -(o.tabs.thickness - o.tabs.height) : 0;
 
     b.travel(path[0]);
     for (const z of levels) {
@@ -112,22 +112,22 @@ export function profile(b: PathBuilder, region: Region, o: ProfileOpts): Profile
     }
     b.retract();
   }
-  return { contornosSemAba };
+  return { outlinesWithoutTabs };
 }
 
 /** Furo do tamanho exato da fresa: descidas em bicadas, subindo para limpar o cavaco. */
-export function peck(b: PathBuilder, center: Pt, depth: number, passada: number) {
+export function peck(b: PathBuilder, center: Pt, depth: number, stepdown: number) {
   b.travel(center);
-  for (const z of depthLevels(depth, passada)) {
+  for (const z of depthLevels(depth, stepdown)) {
     b.plunge(z);
     b.retract();
   }
 }
 
 /** Gravação com fresa em V seguindo o contorno, numa única profundidade. */
-export function trace(b: PathBuilder, region: Region, depth: number, direcao: Direcao) {
+export function trace(b: PathBuilder, region: Region, depth: number, direction: Direction) {
   for (const raw of nearestOrder(simplify(region), b, () => 0)) {
-    const path = rotateToNearest(orient(raw, direcao, "pocket"), b);
+    const path = rotateToNearest(orient(raw, direction, "pocket"), b);
     b.travel(path[0]);
     b.plunge(-depth);
     for (let i = 1; i < path.length; i++) b.feed(path[i], -depth);
@@ -138,18 +138,18 @@ export function trace(b: PathBuilder, region: Region, depth: number, direcao: Di
 
 export interface VCarveOpts {
   /** Metade do ângulo da ponta, em radianos. */
-  meioAngulo: number;
+  halfAngle: number;
   /** Profundidade máxima (limite do usuário, da fresa e do material). */
-  profundidadeMax: number;
-  passada: number;
-  direcao: Direcao;
+  maxDepth: number;
+  stepdown: number;
+  direction: Direction;
   /** Distância entre anéis, em mm. */
-  passo?: number;
+  step?: number;
 }
 
 export interface VCarveResult {
   /** Área (mm²) que ficou com fundo plano por causa do limite de profundidade. */
-  areaPlana: number;
+  flatArea: number;
 }
 
 /**
@@ -160,30 +160,30 @@ export interface VCarveResult {
  * a própria fresa em V, em passes próximos.
  */
 export function vcarve(b: PathBuilder, region: Region, o: VCarveOpts): VCarveResult {
-  const tan = Math.tan(o.meioAngulo);
-  const passo = o.passo ?? 0.2;
-  const dCap = o.profundidadeMax * tan;
+  const tan = Math.tan(o.halfAngle);
+  const step = o.step ?? 0.2;
+  const dCap = o.maxDepth * tan;
   // No fundo plano, passes próximos o bastante para a crista entre eles ficar com ~0,08 mm.
-  const passoPlano = Math.max(0.1, 2 * 0.08 * tan);
-  let areaPlana = 0;
+  const flatStep = Math.max(0.1, 2 * 0.08 * tan);
+  let flatArea = 0;
 
   type Ring = { d: number; z: number; path: Pt[] };
   for (const comp of components(simplify(region))) {
     const rings: Ring[] = [];
-    let d = passo / 2;
+    let d = step / 2;
     for (let k = 0; k < 20000; k++) {
       const cur = simplify(offset(comp, -d));
       if (area(cur) <= 0) break;
-      const z = -Math.min(d / tan, o.profundidadeMax);
-      for (const p of cur) rings.push({ d, z, path: orient(p, o.direcao, "pocket") });
-      d += d < dCap ? passo : passoPlano;
+      const z = -Math.min(d / tan, o.maxDepth);
+      for (const p of cur) rings.push({ d, z, path: orient(p, o.direction, "pocket") });
+      d += d < dCap ? step : flatStep;
     }
-    areaPlana += Math.max(0, area(offset(comp, -dCap)));
+    flatArea += Math.max(0, area(offset(comp, -dCap)));
     if (!rings.length) continue;
 
     // Por nível de profundidade: cada anel desce no máximo até o nível atual, e só entra nos
     // níveis em que ainda tem material a tirar.
-    const levels = depthLevels(o.profundidadeMax, o.passada);
+    const levels = depthLevels(o.maxDepth, o.stepdown);
     let prev = 0;
     for (const level of levels) {
       const todo = rings.filter((r) => r.z < prev - 1e-6);
@@ -199,7 +199,7 @@ export function vcarve(b: PathBuilder, region: Region, o: VCarveOpts): VCarveRes
       prev = level;
     }
   }
-  return { areaPlana };
+  return { flatArea };
 }
 
 function nearestRings<R extends { path: Pt[] }>(rings: R[], from: Pt): R[] {
@@ -227,13 +227,13 @@ function nearestRings<R extends { path: Pt[] }>(rings: R[], from: Pt): R[] {
 
 export interface HatchOpts {
   /** Raio efetivo da fresa na profundidade (0 para a ponta de uma fresa em V). */
-  raio: number;
-  profundidade: number;
-  passada: number;
-  espacamento: number;
+  radius: number;
+  depth: number;
+  stepdown: number;
+  spacing: number;
   /** Ângulo das linhas, em graus. */
-  angulo: number;
-  direcao: Direcao;
+  angle: number;
+  direction: Direction;
 }
 
 /**
@@ -241,9 +241,9 @@ export interface HatchOpts {
  * esvaziar a área toda. Fica com cara de textura e corta muito mais rápido.
  */
 export function hatch(b: PathBuilder, region: Region, o: HatchOpts): boolean {
-  const inner = o.raio > 0 ? simplify(offset(region, -o.raio)) : simplify(region);
+  const inner = o.radius > 0 ? simplify(offset(region, -o.radius)) : simplify(region);
   if (area(inner) <= 0) return false;
-  const a = (o.angulo * Math.PI) / 180;
+  const a = (o.angle * Math.PI) / 180;
   const c = Math.cos(a);
   const s = Math.sin(a);
   // Gira a região para as linhas ficarem horizontais, corta e desgira.
@@ -257,7 +257,7 @@ export function hatch(b: PathBuilder, region: Region, o: HatchOpts): boolean {
   }
   const segs: [Pt, Pt][] = [];
   let flip = false;
-  for (let y = y0 + o.espacamento / 2; y < y1; y += o.espacamento) {
+  for (let y = y0 + o.spacing / 2; y < y1; y += o.spacing) {
     const xs: number[] = [];
     for (const p of rot) {
       for (let i = 0; i < p.length; i++) {
@@ -276,9 +276,9 @@ export function hatch(b: PathBuilder, region: Region, o: HatchOpts): boolean {
     segs.push(...row);
     flip = !flip;
   }
-  for (const z of depthLevels(o.profundidade, o.passada)) {
+  for (const z of depthLevels(o.depth, o.stepdown)) {
     for (const raw of nearestOrder(inner, b, () => 0)) {
-      const path = rotateToNearest(orient(raw, o.direcao, "pocket"), b);
+      const path = rotateToNearest(orient(raw, o.direction, "pocket"), b);
       b.travel(path[0]);
       b.plunge(z);
       for (let i = 1; i < path.length; i++) b.feed(path[i], z);
@@ -286,7 +286,7 @@ export function hatch(b: PathBuilder, region: Region, o: HatchOpts): boolean {
     }
     for (const [p, q] of segs) {
       // Segmento seguinte começando perto do fim do anterior, dentro da região: segue sem subir.
-      if (Math.abs(b.z - z) < 1e-6 && dist(b, p) <= o.espacamento * 1.6 && segmentInside(inner, b, p)) b.feed(p, z);
+      if (Math.abs(b.z - z) < 1e-6 && dist(b, p) <= o.spacing * 1.6 && segmentInside(inner, b, p)) b.feed(p, z);
       else {
         b.travel(p);
         b.plunge(z);
@@ -305,9 +305,9 @@ export function hatch(b: PathBuilder, region: Region, o: HatchOpts): boolean {
  * Com o spindle girando no sentido horário, essa orientação dá corte convencional
  * num pocket e corte concordante num perfil por fora.
  */
-function orient(p: Pt[], direcao: Direcao, uso: "pocket" | "perfil"): Pt[] {
-  const naturalIsConventional = uso === "pocket";
-  const keep = (direcao === "convencional") === naturalIsConventional;
+function orient(p: Pt[], direction: Direction, use: "pocket" | "profile"): Pt[] {
+  const naturalIsConventional = use === "pocket";
+  const keep = (direction === "conventional") === naturalIsConventional;
   return keep ? p : [...p].reverse();
 }
 

@@ -13,8 +13,8 @@ Veio do repositório Leandro-Apps/scanbusinesscard (pasta `carvcam/`), com o his
 
 Precisa do [Node.js](https://nodejs.org) 18 ou mais novo. Na raiz do repositório:
 
-- **Mac:** clique duas vezes em `testar-carvcam.command`
-- **Windows:** clique duas vezes em `testar-carvcam.cmd`
-- **Linux / terminal:** `./testar-carvcam.sh`
+- **Mac:** clique duas vezes em `try-carvcam.command`
+- **Windows:** clique duas vezes em `try-carvcam.cmd`
+- **Linux / terminal:** `./try-carvcam.sh`
 
 Abre em http://localhost:4173. Detalhes em `gsender-ui/README.md`.

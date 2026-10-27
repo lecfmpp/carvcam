@@ -13,25 +13,25 @@ export interface VerifyLimits {
   /** Profundidade máxima permitida (negativa). */
   zMin: number;
   zMax: number;
-  avancoMax: number;
+  maxFeed: number;
   rpmMin: number;
   rpmMax: number;
 }
 
-export interface Problema {
-  linha: number;
-  severidade: "erro" | "aviso";
-  mensagem: string;
+export interface Problem {
+  line: number;
+  severity: "error" | "warning";
+  message: string;
 }
 
 export interface VerifyResult {
   ok: boolean;
-  problemas: Problema[];
-  estatisticas: {
-    linhas: number;
-    extensao: { xMin: number; xMax: number; yMin: number; yMax: number; zMin: number; zMax: number };
-    comprimentoCorte: number;
-    tempoEstimadoSeg: number;
+  problems: Problem[];
+  stats: {
+    lines: number;
+    extent: { xMin: number; xMax: number; yMin: number; yMax: number; zMin: number; zMax: number };
+    cutLength: number;
+    estimatedTimeSec: number;
   };
 }
 
@@ -39,10 +39,10 @@ const ALLOWED_G = new Set([0, 1, 2, 3, 4, 17, 21, 90, 94]);
 const ALLOWED_M = new Set([2, 3, 5, 6, 30]);
 const ALLOWED_LETTERS = new Set(["G", "M", "T", "S", "F", "X", "Y", "Z", "I", "J", "P", "N"]);
 
-export function verifyGcode(gcode: string, lim: VerifyLimits, rapidRate = lim.avancoMax): VerifyResult {
-  const problemas: Problema[] = [];
-  const err = (linha: number, mensagem: string) => problemas.push({ linha, severidade: "erro", mensagem });
-  const warn = (linha: number, mensagem: string) => problemas.push({ linha, severidade: "aviso", mensagem });
+export function verifyGcode(gcode: string, lim: VerifyLimits, rapidRate = lim.maxFeed): VerifyResult {
+  const problems: Problem[] = [];
+  const err = (line: number, message: string) => problems.push({ line, severity: "error", message });
+  const warn = (line: number, message: string) => problems.push({ line, severity: "warning", message });
   const lines = parseLines(gcode);
 
   let mm = false;
@@ -62,7 +62,7 @@ export function verifyGcode(gcode: string, lim: VerifyLimits, rapidRate = lim.av
       } else if (w.letter === "M" && !ALLOWED_M.has(w.value)) err(l.number, `M${w.value} não está na lista de comandos permitidos.`);
       if (w.letter === "G" && w.value === 21) mm = true;
       if (w.letter === "G" && w.value === 90) abs = true;
-      if (w.letter === "F" && w.value > lim.avancoMax) err(l.number, `Avanço F${w.value} acima do máximo da máquina (${lim.avancoMax} mm/min).`);
+      if (w.letter === "F" && w.value > lim.maxFeed) err(l.number, `Avanço F${w.value} acima do máximo da máquina (${lim.maxFeed} mm/min).`);
       if (w.letter === "S" && (w.value < lim.rpmMin || w.value > lim.rpmMax)) warn(l.number, `Rotação S${w.value} fora da faixa do spindle (${lim.rpmMin}–${lim.rpmMax}).`);
     }
     if (hasMotion && !mm) err(l.number, "Movimento antes de G21: unidade indefinida.");
@@ -112,17 +112,17 @@ export function verifyGcode(gcode: string, lim: VerifyLimits, rapidRate = lim.av
 
   // Um erro por linha basta para a leitura humana.
   const seen = new Set<string>();
-  const dedup = problemas.filter((p) => {
-    const k = `${p.linha}:${p.mensagem}`;
+  const dedup = problems.filter((p) => {
+    const k = `${p.line}:${p.message}`;
     if (seen.has(k)) return false;
     seen.add(k);
     return true;
   });
 
   return {
-    ok: !dedup.some((p) => p.severidade === "erro"),
-    problemas: dedup,
-    estatisticas: { linhas: lines.length, extensao: ext, comprimentoCorte: Math.round(cut), tempoEstimadoSeg: Math.round(time) },
+    ok: !dedup.some((p) => p.severity === "error"),
+    problems: dedup,
+    stats: { lines: lines.length, extent: ext, cutLength: Math.round(cut), estimatedTimeSec: Math.round(time) },
   };
 }
 

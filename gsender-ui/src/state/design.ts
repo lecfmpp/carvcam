@@ -1,4 +1,4 @@
-import type { PlateSpecInput } from "@gsender-next/cam-engine";
+import { migrateLegacyBitId, migrateLegacyProjectId, migrateLegacySpec, type PlateSpecInput } from "@gsender-next/cam-engine";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { materialById, PROJECTS, type Preset } from "../lib/catalog";
@@ -39,8 +39,8 @@ export interface TracingImage {
 export const BLANK: Design = {
   name: "Untitled sign",
   material: "MDF",
-  spec: { tipo: "placa", largura: 200, altura: 120, espessura: 15, material: "mdf", texto: [], borda: { tipo: "arredondada", raio: 8 }, moldura: 0 },
-  bit: "reta-1-8-upcut",
+  spec: { type: "plate", width: 200, height: 120, thickness: 15, material: "mdf", texts: [], edge: { type: "rounded", radius: 8 }, frame: 0 },
+  bit: "flat-1-8-upcut",
   useBit2: false,
   tabs: { count: 4, height: 3 },
 };
@@ -80,7 +80,7 @@ export const useDesign = create<DesignState>()(
             bit2: p.bits[1],
             useBit2: p.bits.length > 1,
             preset: p.speed,
-            tabs: { count: 4, height: Math.min(3, Math.round(p.spec.espessura * 0.35 * 10) / 10) },
+            tabs: { count: 4, height: Math.min(3, Math.round(p.spec.thickness * 0.35 * 10) / 10) },
           },
           rev: get().rev + 1,
         });
@@ -88,10 +88,30 @@ export const useDesign = create<DesignState>()(
       setMaterial: (id, thickness) => {
         const m = materialById(id);
         const d = get().design;
-        const t = thickness ?? (m.thick.includes(d.spec.espessura) ? d.spec.espessura : m.thick.reduce((a, c) => (Math.abs(c - d.spec.espessura) < Math.abs(a - d.spec.espessura) ? c : a)));
-        set({ design: { ...d, material: m.id, spec: { ...d.spec, material: m.engine, espessura: t } }, rev: get().rev + 1 });
+        const t = thickness ?? (m.thick.includes(d.spec.thickness) ? d.spec.thickness : m.thick.reduce((a, c) => (Math.abs(c - d.spec.thickness) < Math.abs(a - d.spec.thickness) ? c : a)));
+        set({ design: { ...d, material: m.id, spec: { ...d.spec, material: m.engine, thickness: t } }, rev: get().rev + 1 });
       },
     }),
-    { name: "gsender-design", version: 1 },
+    {
+      name: "gsender-design",
+      version: 2,
+      // v1 (0.1.0) stored the spec with Portuguese field names.
+      migrate: (persisted, version) => {
+        const st = persisted as Partial<DesignState>;
+        if (version < 2 && st.design) st.design = migrateLegacyDesign(st.design);
+        return st as DesignState;
+      },
+    },
   ),
 );
+
+/** Design saved by 0.1.0: Portuguese spec fields, bit ids and project id. */
+export function migrateLegacyDesign(d: Design): Design {
+  return {
+    ...d,
+    spec: migrateLegacySpec<PlateSpecInput>(d.spec),
+    bit: migrateLegacyBitId(d.bit),
+    bit2: d.bit2 && migrateLegacyBitId(d.bit2),
+    projectId: d.projectId && migrateLegacyProjectId(d.projectId),
+  };
+}

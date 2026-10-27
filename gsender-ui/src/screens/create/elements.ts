@@ -1,4 +1,4 @@
-import { curvePolyline, parseDesenho, SvgInvalido, type GenerateResult, type PlateSpecInput, type RefElemento } from "@gsender-next/cam-engine";
+import { curvePolyline, parseDrawing, InvalidSvg, type GenerateResult, type PlateSpecInput, type ElementRef } from "@gsender-next/cam-engine";
 
 /**
  * Elementos da tela Create sobre a especificação do motor:
@@ -14,35 +14,35 @@ export interface Box {
   h: number;
 }
 
-export type Texto = NonNullable<PlateSpecInput["texto"]>[number];
-export type Forma = NonNullable<PlateSpecInput["formas"]>[number];
-export type Icone = NonNullable<PlateSpecInput["icones"]>[number];
+export type Text = NonNullable<PlateSpecInput["texts"]>[number];
+export type Shape = NonNullable<PlateSpecInput["shapes"]>[number];
+export type Icon = NonNullable<PlateSpecInput["icons"]>[number];
 export type SvgEl = NonNullable<PlateSpecInput["svgs"]>[number];
 
-export const FONTS: { id: NonNullable<Texto["fonte"]>; name: string; tag: string; css: string; widthFactor: number }[] = [
+export const FONTS: { id: NonNullable<Text["font"]>; name: string; tag: string; css: string; widthFactor: number }[] = [
   { id: "archivo-black", name: "Archivo Black", tag: "Easiest to cut", css: "'Archivo Black'", widthFactor: 0.86 },
   { id: "bebas-neue", name: "Bebas Neue", tag: "Condensed, thinner", css: "'Bebas Neue'", widthFactor: 0.46 },
   { id: "pacifico", name: "Pacifico", tag: "Script, letters join", css: "'Pacifico'", widthFactor: 0.82 },
 ];
 export const fontOf = (id?: string) => FONTS.find((f) => f.id === id) ?? FONTS[0];
 
-export const ICONS: { id: Icone["id"]; name: string }[] = [
-  { id: "coracao", name: "Heart" },
-  { id: "estrela", name: "Star" },
-  { id: "casa", name: "House" },
-  { id: "folha", name: "Leaf" },
+export const ICONS: { id: Icon["id"]; name: string }[] = [
+  { id: "heart", name: "Heart" },
+  { id: "star", name: "Star" },
+  { id: "house", name: "House" },
+  { id: "leaf", name: "Leaf" },
 ];
 
-export const MODE_NAME: Record<string, string> = { relevo: "raised", gravado: "engraved", recorte: "cut out" };
-export const SHAPE_NAME: Record<Forma["tipo"], string> = { retangulo: "Rectangle", circulo: "Circle", linha: "Line", poligono: "Polygon", estrela: "Star", curva: "Curve" };
-export const OP_NAME: Record<string, string> = { subtrair: "subtracts", mascara: "mask" };
+export const MODE_NAME: Record<string, string> = { relief: "raised", engrave: "engraved", cutout: "cut out" };
+export const SHAPE_NAME: Record<Shape["type"], string> = { rectangle: "Rectangle", circle: "Circle", line: "Line", polygon: "Polygon", star: "Star", curve: "Curve" };
+export const OP_NAME: Record<string, string> = { subtract: "subtracts", mask: "mask" };
 
-export function idOf(ref: RefElemento | undefined): ElementId | null {
+export function idOf(ref: ElementRef | undefined): ElementId | null {
   if (!ref) return null;
-  if (ref.tipo === "texto") return `t:${ref.indice}`;
-  if (ref.tipo === "forma") return `f:${ref.indice}`;
-  if (ref.tipo === "icone") return `i:${ref.indice}`;
-  if (ref.tipo === "svg") return `s:${ref.indice}`;
+  if (ref.type === "text") return `t:${ref.index}`;
+  if (ref.type === "shape") return `f:${ref.index}`;
+  if (ref.type === "icon") return `i:${ref.index}`;
+  if (ref.type === "svg") return `s:${ref.index}`;
   return "holes";
 }
 
@@ -61,50 +61,50 @@ export interface ElementRow {
 
 /** Lista de elementos na ordem do painel. */
 export function listElements(spec: PlateSpecInput): ElementRow[] {
-  const sign = spec.tipo !== "letreiro";
+  const sign = spec.type !== "lettering";
   const rows: ElementRow[] = [];
-  (spec.texto ?? []).forEach((t, i) =>
+  (spec.texts ?? []).forEach((t, i) =>
     rows.push({
       id: `t:${i}`,
       kind: "text",
-      name: t.conteudo || "Empty text",
-      sub: `Text · ${fontOf(t.fonte).name} · ${t.tamanho} mm · ${opOr(t, sign ? MODE_NAME[t.modo ?? "relevo"] : "cut out")}`,
+      name: t.content || "Empty text",
+      sub: `Text · ${fontOf(t.font).name} · ${t.size} mm · ${opOr(t, sign ? MODE_NAME[t.mode ?? "relief"] : "cut out")}`,
     }),
   );
-  (spec.formas ?? []).forEach((f, i) =>
+  (spec.shapes ?? []).forEach((f, i) =>
     rows.push({
       id: `f:${i}`,
       kind: "shape",
-      name: `${SHAPE_NAME[f.tipo]} ${i + 1}`,
-      sub: `${SHAPE_NAME[f.tipo]} · ${shapeSize(f)} · ${opOr(f, MODE_NAME[f.modo ?? "gravado"])}`,
+      name: `${SHAPE_NAME[f.type]} ${i + 1}`,
+      sub: `${SHAPE_NAME[f.type]} · ${shapeSize(f)} · ${opOr(f, MODE_NAME[f.mode ?? "engrave"])}`,
     }),
   );
-  (spec.icones ?? []).forEach((c, i) =>
-    rows.push({ id: `i:${i}`, kind: "icon", name: ICONS.find((x) => x.id === c.id)?.name ?? "Icon", sub: `Icon · ${c.tamanho} mm · ${opOr(c, MODE_NAME[c.modo ?? "relevo"])}` }),
+  (spec.icons ?? []).forEach((c, i) =>
+    rows.push({ id: `i:${i}`, kind: "icon", name: ICONS.find((x) => x.id === c.id)?.name ?? "Icon", sub: `Icon · ${c.size} mm · ${opOr(c, MODE_NAME[c.mode ?? "relief"])}` }),
   );
   (spec.svgs ?? []).forEach((v, i) =>
-    rows.push({ id: `s:${i}`, kind: "svg", name: v.nome || `Drawing ${i + 1}`, sub: `Drawing · ${r(v.largura)} mm wide · ${opOr(v, sign ? MODE_NAME[v.modo ?? "gravado"] : "cut out")}` }),
+    rows.push({ id: `s:${i}`, kind: "svg", name: v.name || `Drawing ${i + 1}`, sub: `Drawing · ${r(v.width)} mm wide · ${opOr(v, sign ? MODE_NAME[v.mode ?? "engrave"] : "cut out")}` }),
   );
-  const holes = spec.furos?.length ?? 0;
-  const slots = spec.rasgos?.length ?? 0;
+  const holes = spec.holes?.length ?? 0;
+  const slots = spec.slots?.length ?? 0;
   if (holes || slots)
     rows.push({
       id: "holes",
       kind: "holes",
       name: slots ? "Hanging slot" : `${holes} mounting hole${holes > 1 ? "s" : ""}`,
-      sub: slots ? `Slot · ${spec.rasgos![0].largura} mm wide · cut through` : `Holes · ⌀ ${spec.furos![0].diametro} mm · cut through`,
+      sub: slots ? `Slot · ${spec.slots![0].width} mm wide · cut through` : `Holes · ⌀ ${spec.holes![0].diameter} mm · cut through`,
     });
   return rows;
 }
 
-const opOr = (e: { operacao?: string }, mode: string) => (e.operacao && e.operacao !== "normal" ? OP_NAME[e.operacao] : mode);
+const opOr = (e: { operation?: string }, mode: string) => (e.operation && e.operation !== "normal" ? OP_NAME[e.operation] : mode);
 
-function shapeSize(f: Forma) {
-  if (f.tipo === "retangulo") return `${r(f.largura)} × ${r(f.altura)} mm`;
-  if (f.tipo === "circulo") return `⌀ ${r(f.diametro)} mm`;
-  if (f.tipo === "poligono") return `${f.lados ?? 6} sides · ⌀ ${r(f.diametro)} mm`;
-  if (f.tipo === "estrela") return `${f.pontas ?? 5} points · ⌀ ${r(f.diametro)} mm`;
-  if (f.tipo === "curva") return `${f.pontos.length} points · ${f.fechada ?? true ? "closed" : "open"}`;
+function shapeSize(f: Shape) {
+  if (f.type === "rectangle") return `${r(f.width)} × ${r(f.height)} mm`;
+  if (f.type === "circle") return `⌀ ${r(f.diameter)} mm`;
+  if (f.type === "polygon") return `${f.sides ?? 6} sides · ⌀ ${r(f.diameter)} mm`;
+  if (f.type === "star") return `${f.points ?? 5} points · ⌀ ${r(f.diameter)} mm`;
+  if (f.type === "curve") return `${f.nodes.length} points · ${f.closed ?? true ? "closed" : "open"}`;
   return `${r(Math.hypot(f.x2 - f.x, f.y2 - f.y))} mm`;
 }
 
@@ -136,7 +136,7 @@ function bounds(reg: Region | undefined) {
 }
 
 export function margin(spec: PlateSpecInput) {
-  return spec.recorteExterno ?? true ? (spec.margem ?? 10) : 0;
+  return spec.outerCutout ?? true ? (spec.margin ?? 10) : 0;
 }
 
 /**
@@ -149,63 +149,63 @@ export function elementBoxes(spec: PlateSpecInput, result: GenerateResult | null
   const fromEngine = new Map<ElementId, Region>();
   if (result) {
     const L = result.layout;
-    const add = (ref: RefElemento | undefined, reg: Region) => {
+    const add = (ref: ElementRef | undefined, reg: Region) => {
       const id = idOf(ref);
       if (!id) return;
       fromEngine.set(id, [...(fromEngine.get(id) ?? []), ...reg]);
     };
-    L.gravados.forEach((g) => add(g.ref, g.regiao));
-    L.vazados.forEach((v) => add(v.ref, v.regiao));
-    L.relevo?.itens?.forEach((it) => add(it.ref, it.regiao));
-    L.furos.forEach((f) => add(f.ref, f.regiao));
+    L.engraved.forEach((g) => add(g.ref, g.region));
+    L.cutouts.forEach((v) => add(v.ref, v.region));
+    L.relief?.items?.forEach((it) => add(it.ref, it.region));
+    L.holes.forEach((f) => add(f.ref, f.region));
   }
   for (const [id, reg] of fromEngine) {
     const b = bounds(reg);
     if (b) out.set(id, { cx: (b.x0 + b.x1) / 2 - m, cy: (b.y0 + b.y1) / 2 - m, w: b.x1 - b.x0, h: b.y1 - b.y0 });
   }
   // Estimativas para o que o motor não separou (letreiro, ou resultado ainda não chegou).
-  const W = spec.largura;
-  const H = spec.altura;
-  const texts = spec.texto ?? [];
+  const W = spec.width;
+  const H = spec.height;
+  const texts = spec.texts ?? [];
   const auto = texts.map((t, i) => ({ t, i })).filter(({ t }) => t.x === undefined || t.y === undefined);
-  const heights = auto.map(({ t }) => t.tamanho * 1.15);
-  const total = heights.reduce((s, h) => s + h, 0) + auto.slice(1).reduce((s, a) => s + a.t.tamanho * 0.45, 0);
+  const heights = auto.map(({ t }) => t.size * 1.15);
+  const total = heights.reduce((s, h) => s + h, 0) + auto.slice(1).reduce((s, a) => s + a.t.size * 0.45, 0);
   let top = H / 2 + total / 2;
   auto.forEach(({ t, i }, k) => {
     const id: ElementId = `t:${i}`;
     const h = heights[k];
     if (!out.has(id)) out.set(id, { cx: W / 2, cy: top - h / 2, w: textWidth(t), h });
-    top -= h + (auto[k + 1] ? auto[k + 1].t.tamanho * 0.45 : 0);
+    top -= h + (auto[k + 1] ? auto[k + 1].t.size * 0.45 : 0);
   });
   texts.forEach((t, i) => {
     const id: ElementId = `t:${i}`;
-    if (!out.has(id) && t.x !== undefined && t.y !== undefined) out.set(id, { cx: t.x, cy: t.y, w: textWidth(t), h: t.tamanho * 1.15 });
+    if (!out.has(id) && t.x !== undefined && t.y !== undefined) out.set(id, { cx: t.x, cy: t.y, w: textWidth(t), h: t.size * 1.15 });
   });
-  (spec.formas ?? []).forEach((f, i) => {
+  (spec.shapes ?? []).forEach((f, i) => {
     const id: ElementId = `f:${i}`;
     if (out.has(id)) return;
-    if (f.tipo === "retangulo") out.set(id, { cx: f.x, cy: f.y, w: f.largura, h: f.altura });
-    else if (f.tipo === "circulo" || f.tipo === "poligono" || f.tipo === "estrela") out.set(id, { cx: f.x, cy: f.y, w: f.diametro, h: f.diametro });
-    else if (f.tipo === "curva") {
-      const pts = curvePolyline(f.x, f.y, f.pontos, f.fechada ?? true);
+    if (f.type === "rectangle") out.set(id, { cx: f.x, cy: f.y, w: f.width, h: f.height });
+    else if (f.type === "circle" || f.type === "polygon" || f.type === "star") out.set(id, { cx: f.x, cy: f.y, w: f.diameter, h: f.diameter });
+    else if (f.type === "curve") {
+      const pts = curvePolyline(f.x, f.y, f.nodes, f.closed ?? true);
       const b = bounds([pts]);
-      const e = f.fechada ?? true ? 0 : (f.espessura ?? 3.2);
+      const e = f.closed ?? true ? 0 : (f.thickness ?? 3.2);
       if (b) out.set(id, { cx: (b.x0 + b.x1) / 2, cy: (b.y0 + b.y1) / 2, w: b.x1 - b.x0 + e, h: b.y1 - b.y0 + e });
     } else {
-      const e = f.espessura ?? 3.2;
+      const e = f.thickness ?? 3.2;
       out.set(id, { cx: (f.x + f.x2) / 2, cy: (f.y + f.y2) / 2, w: Math.abs(f.x2 - f.x) + e, h: Math.abs(f.y2 - f.y) + e });
     }
   });
-  (spec.icones ?? []).forEach((c, i) => {
+  (spec.icons ?? []).forEach((c, i) => {
     const id: ElementId = `i:${i}`;
-    if (!out.has(id)) out.set(id, { cx: c.x, cy: c.y, w: c.tamanho, h: c.tamanho });
+    if (!out.has(id)) out.set(id, { cx: c.x, cy: c.y, w: c.size, h: c.size });
   });
   (spec.svgs ?? []).forEach((v, i) => {
     const id: ElementId = `s:${i}`;
-    if (!out.has(id)) out.set(id, { cx: v.x, cy: v.y, w: v.largura, h: v.largura * svgAspect(v.conteudo) });
+    if (!out.has(id)) out.set(id, { cx: v.x, cy: v.y, w: v.width, h: v.width * svgAspect(v.content) });
   });
   if (!out.has("holes")) {
-    const pts = [...(spec.furos ?? []).map((f) => ({ x: f.x, y: f.y, r: f.diametro / 2 })), ...(spec.rasgos ?? []).map((s) => ({ x: s.x, y: s.y, r: s.comprimento / 2 }))];
+    const pts = [...(spec.holes ?? []).map((f) => ({ x: f.x, y: f.y, r: f.diameter / 2 })), ...(spec.slots ?? []).map((s) => ({ x: s.x, y: s.y, r: s.length / 2 }))];
     if (pts.length) {
       const x0 = Math.min(...pts.map((p) => p.x - p.r));
       const x1 = Math.max(...pts.map((p) => p.x + p.r));
@@ -217,8 +217,8 @@ export function elementBoxes(spec: PlateSpecInput, result: GenerateResult | null
   return out;
 }
 
-export function textWidth(t: Texto) {
-  return Math.max(t.tamanho * 0.5, (t.conteudo || " ").length * t.tamanho * fontOf(t.fonte).widthFactor);
+export function textWidth(t: Text) {
+  return Math.max(t.size * 0.5, (t.content || " ").length * t.size * fontOf(t.font).widthFactor);
 }
 
 // ------------------------------------------------------------------ edits
@@ -236,18 +236,18 @@ export function moveElement(spec: PlateSpecInput, id: ElementId, cx: number, cy:
     if (!box) return s;
     const dx = cx - box.cx;
     const dy = cy - box.cy;
-    s.furos = s.furos?.map((f) => ({ ...f, x: rx(f.x + dx), y: rx(f.y + dy) }));
-    s.rasgos = s.rasgos?.map((f) => ({ ...f, x: rx(f.x + dx), y: rx(f.y + dy) }));
+    s.holes = s.holes?.map((f) => ({ ...f, x: rx(f.x + dx), y: rx(f.y + dy) }));
+    s.slots = s.slots?.map((f) => ({ ...f, x: rx(f.x + dx), y: rx(f.y + dy) }));
     return s;
   }
-  const el = elementOf(s, id) as (AnyEl & { x?: number; y?: number; x2?: number; y2?: number; tipo?: string }) | null;
+  const el = elementOf(s, id) as (AnyEl & { x?: number; y?: number; x2?: number; y2?: number; type?: string }) | null;
   if (!el) return s;
   // Texto sem posição (empilhado pelo motor): passa a ter posição; o motor centraliza a caixa nela.
   if (kind === "t" && (el.x === undefined || el.y === undefined)) {
     Object.assign(el, { x: rx(cx), y: rx(cy) });
     return s;
   }
-  const line = el.tipo === "linha";
+  const line = el.type === "line";
   const ox = line ? (el.x! + el.x2!) / 2 : el.x!;
   const oy = line ? (el.y! + el.y2!) / 2 : el.y!;
   const dx = cx - (box?.cx ?? ox);
@@ -260,65 +260,65 @@ export function moveElement(spec: PlateSpecInput, id: ElementId, cx: number, cy:
 export function deleteElement(spec: PlateSpecInput, id: ElementId): PlateSpecInput {
   const s = structuredClone(spec);
   const { kind, index } = parseId(id);
-  if (kind === "t") s.texto = (s.texto ?? []).filter((_, i) => i !== index);
-  if (kind === "f") s.formas = (s.formas ?? []).filter((_, i) => i !== index);
-  if (kind === "i") s.icones = (s.icones ?? []).filter((_, i) => i !== index);
+  if (kind === "t") s.texts = (s.texts ?? []).filter((_, i) => i !== index);
+  if (kind === "f") s.shapes = (s.shapes ?? []).filter((_, i) => i !== index);
+  if (kind === "i") s.icons = (s.icons ?? []).filter((_, i) => i !== index);
   if (kind === "s") s.svgs = (s.svgs ?? []).filter((_, i) => i !== index);
   if (kind === "holes") {
-    s.furos = [];
-    s.rasgos = [];
+    s.holes = [];
+    s.slots = [];
     return s;
   }
   // Os alvos de subtrair/máscara apontam por índice: tira o apagado e renumera os seguintes.
-  const tipo = TIPO_OF[kind];
-  for (const key of ["texto", "formas", "icones", "svgs"] as const) {
+  const type = TYPE_OF[kind];
+  for (const key of ["texts", "shapes", "icons", "svgs"] as const) {
     for (const el of (s[key] ?? []) as AnyEl[]) {
-      if (!el.alvos) continue;
-      el.alvos = el.alvos.filter((a) => !(a.tipo === tipo && a.indice === index)).map((a) => (a.tipo === tipo && a.indice > index ? { ...a, indice: a.indice - 1 } : a));
+      if (!el.targets) continue;
+      el.targets = el.targets.filter((a) => !(a.type === type && a.index === index)).map((a) => (a.type === type && a.index > index ? { ...a, index: a.index - 1 } : a));
     }
   }
   return s;
 }
 
-const TIPO_OF = { t: "texto", f: "forma", i: "icone", s: "svg" } as const;
-const KIND_OF = { texto: "t", forma: "f", icone: "i", svg: "s" } as const;
-export type Alvo = { tipo: (typeof TIPO_OF)[keyof typeof TIPO_OF]; indice: number };
+const TYPE_OF = { t: "text", f: "shape", i: "icon", s: "svg" } as const;
+const KIND_OF = { text: "t", shape: "f", icon: "i", svg: "s" } as const;
+export type Target = { type: (typeof TYPE_OF)[keyof typeof TYPE_OF]; index: number };
 
 /** Referência do motor para um elemento da tela (null para o grupo de furos). */
-export function refOf(id: ElementId): Alvo | null {
+export function refOf(id: ElementId): Target | null {
   const { kind, index } = parseId(id);
-  return kind === "holes" ? null : { tipo: TIPO_OF[kind], indice: index };
+  return kind === "holes" ? null : { type: TYPE_OF[kind], index: index };
 }
-export const idOfAlvo = (a: Alvo): ElementId => `${KIND_OF[a.tipo]}:${a.indice}` as ElementId;
+export const idOfTarget = (a: Target): ElementId => `${KIND_OF[a.type]}:${a.index}` as ElementId;
 
 /** Duplica e devolve a especificação e o id da cópia (deslocada 8 mm). */
 export function duplicateElement(spec: PlateSpecInput, id: ElementId, box: Box | undefined): [PlateSpecInput, ElementId | null] {
   const s = structuredClone(spec);
   const { kind, index } = parseId(id);
-  if (kind === "t" && s.texto?.[index]) {
-    const t = structuredClone(s.texto[index]);
-    t.x = (box?.cx ?? spec.largura / 2) + 8;
-    t.y = (box?.cy ?? spec.altura / 2) - 8;
-    s.texto.push(t);
-    return [s, `t:${s.texto.length - 1}`];
+  if (kind === "t" && s.texts?.[index]) {
+    const t = structuredClone(s.texts[index]);
+    t.x = (box?.cx ?? spec.width / 2) + 8;
+    t.y = (box?.cy ?? spec.height / 2) - 8;
+    s.texts.push(t);
+    return [s, `t:${s.texts.length - 1}`];
   }
-  if (kind === "f" && s.formas?.[index]) {
-    const f = structuredClone(s.formas[index]);
+  if (kind === "f" && s.shapes?.[index]) {
+    const f = structuredClone(s.shapes[index]);
     f.x += 8;
     f.y -= 8;
-    if (f.tipo === "linha") {
+    if (f.type === "line") {
       f.x2 += 8;
       f.y2 -= 8;
     }
-    s.formas.push(f);
-    return [s, `f:${s.formas.length - 1}`];
+    s.shapes.push(f);
+    return [s, `f:${s.shapes.length - 1}`];
   }
-  if (kind === "i" && s.icones?.[index]) {
-    const c = structuredClone(s.icones[index]);
+  if (kind === "i" && s.icons?.[index]) {
+    const c = structuredClone(s.icons[index]);
     c.x += 8;
     c.y -= 8;
-    s.icones.push(c);
-    return [s, `i:${s.icones.length - 1}`];
+    s.icons.push(c);
+    return [s, `i:${s.icons.length - 1}`];
   }
   if (kind === "s" && s.svgs?.[index]) {
     const v = structuredClone(s.svgs[index]);
@@ -333,78 +333,78 @@ export function duplicateElement(spec: PlateSpecInput, id: ElementId, box: Box |
 export type Tool = "select" | "text" | "rect" | "circle" | "polygon" | "star" | "line" | "pen";
 
 /** Nó de curva livre (relativo à origem da curva; alças relativas ao nó). */
-export type CurveNode = Extract<Forma, { tipo: "curva" }>["pontos"][number];
+export type CurveNode = Extract<Shape, { type: "curve" }>["nodes"][number];
 
 /**
  * Cria uma curva livre a partir dos nós desenhados com a caneta (em mm absolutos da peça).
  * A origem fica no primeiro nó.
  */
-export function addCurve(spec: PlateSpecInput, nodes: CurveNode[], fechada: boolean): [PlateSpecInput, ElementId] {
+export function addCurve(spec: PlateSpecInput, nodes: CurveNode[], closed: boolean): [PlateSpecInput, ElementId] {
   const s = structuredClone(spec);
   const rx = (v: number) => Math.round(v * 100) / 100;
   const ox = rx(nodes[0].x);
   const oy = rx(nodes[0].y);
   const h = (v: number | undefined) => (v === undefined ? undefined : rx(v));
-  const pontos = nodes.map((n) => {
+  const points = nodes.map((n) => {
     const p: CurveNode = { x: rx(n.x - ox), y: rx(n.y - oy) };
     if (n.ox || n.oy) Object.assign(p, { ox: h(n.ox), oy: h(n.oy), ix: h(n.ix), iy: h(n.iy) });
     return p;
   });
-  const sign = s.tipo !== "letreiro";
-  const f: Forma = { tipo: "curva", x: ox, y: oy, pontos, fechada, espessura: 3.2, modo: sign ? "gravado" : fechada ? "recorte" : "gravado", profundidade: fechada ? 2 : 1 };
-  s.formas = [...(s.formas ?? []), f];
-  return [s, `f:${s.formas.length - 1}`];
+  const sign = s.type !== "lettering";
+  const f: Shape = { type: "curve", x: ox, y: oy, nodes: points, closed, thickness: 3.2, mode: sign ? "engrave" : closed ? "cutout" : "engrave", depth: closed ? 2 : 1 };
+  s.shapes = [...(s.shapes ?? []), f];
+  return [s, `f:${s.shapes.length - 1}`];
 }
 
 /** Acrescenta um elemento novo com o centro em (x, y), mm da peça. */
 export function addElement(spec: PlateSpecInput, tool: Exclude<Tool, "select" | "pen">, x: number, y: number): [PlateSpecInput, ElementId] {
   const s = structuredClone(spec);
   const rx = (v: number) => Math.round(v * 10) / 10;
-  const sign = s.tipo !== "letreiro";
+  const sign = s.type !== "lettering";
   if (tool === "text") {
-    s.texto = [...(s.texto ?? []), { conteudo: "Text", fonte: "archivo-black", tamanho: Math.max(10, Math.min(24, Math.round(s.altura / 6))), modo: sign ? "gravado" : "recorte", profundidade: 2, x: rx(x), y: rx(y) }];
-    return [s, `t:${s.texto.length - 1}`];
+    s.texts = [...(s.texts ?? []), { content: "Text", font: "archivo-black", size: Math.max(10, Math.min(24, Math.round(s.height / 6))), mode: sign ? "engrave" : "cutout", depth: 2, x: rx(x), y: rx(y) }];
+    return [s, `t:${s.texts.length - 1}`];
   }
-  const mode = sign ? "gravado" : "recorte";
-  const f: Forma =
+  const mode = sign ? "engrave" : "cutout";
+  const f: Shape =
     tool === "rect"
-      ? { tipo: "retangulo", x: rx(x), y: rx(y), largura: 40, altura: 24, raio: 0, modo: mode, profundidade: 2 }
+      ? { type: "rectangle", x: rx(x), y: rx(y), width: 40, height: 24, radius: 0, mode: mode, depth: 2 }
       : tool === "circle"
-        ? { tipo: "circulo", x: rx(x), y: rx(y), diametro: 30, modo: mode, profundidade: 2 }
+        ? { type: "circle", x: rx(x), y: rx(y), diameter: 30, mode: mode, depth: 2 }
         : tool === "polygon"
-          ? { tipo: "poligono", x: rx(x), y: rx(y), diametro: 34, lados: 6, rotacao: 0, modo: mode, profundidade: 2 }
+          ? { type: "polygon", x: rx(x), y: rx(y), diameter: 34, sides: 6, rotation: 0, mode: mode, depth: 2 }
           : tool === "star"
-            ? { tipo: "estrela", x: rx(x), y: rx(y), diametro: 36, pontas: 5, interno: 0.45, rotacao: 0, modo: mode, profundidade: 2 }
-            : { tipo: "linha", x: rx(x - 30), y: rx(y), x2: rx(x + 30), y2: rx(y), espessura: 4, modo: "gravado", profundidade: 1 };
-  s.formas = [...(s.formas ?? []), f];
-  return [s, `f:${s.formas.length - 1}`];
+            ? { type: "star", x: rx(x), y: rx(y), diameter: 36, points: 5, inner: 0.45, rotation: 0, mode: mode, depth: 2 }
+            : { type: "line", x: rx(x - 30), y: rx(y), x2: rx(x + 30), y2: rx(y), thickness: 4, mode: "engrave", depth: 1 };
+  s.shapes = [...(s.shapes ?? []), f];
+  return [s, `f:${s.shapes.length - 1}`];
 }
 
 /** Aplica uma correção do motor (campo/valor num elemento) à especificação. */
-export function applyCorrection(spec: PlateSpecInput, ref: RefElemento, campo: string, valor: number): PlateSpecInput {
+export function applyCorrection(spec: PlateSpecInput, ref: ElementRef, field: string, value: number): PlateSpecInput {
   const s = structuredClone(spec) as PlateSpecInput & Record<string, unknown>;
-  const list: Record<string, unknown[] | undefined> = { texto: s.texto, icone: s.icones, forma: s.formas, svg: s.svgs, furo: s.furos, rasgo: s.rasgos };
-  const arr = list[ref.tipo];
-  const el = arr?.[ref.indice] as Record<string, unknown> | undefined;
+  const list: Record<string, unknown[] | undefined> = { text: s.texts, icon: s.icons, shape: s.shapes, svg: s.svgs, hole: s.holes, slot: s.slots };
+  const arr = list[ref.type];
+  const el = arr?.[ref.index] as Record<string, unknown> | undefined;
   if (el) {
-    // Campo pode ser aninhado ("hachura.espacamento").
-    const path = campo.split(".");
+    // Campo pode ser aninhado ("hatch.spacing").
+    const path = field.split(".");
     let obj = el;
     for (const k of path.slice(0, -1)) obj = (obj[k] ??= {}) as Record<string, unknown>;
-    obj[path[path.length - 1]] = valor;
+    obj[path[path.length - 1]] = value;
   }
   // Furos: a correção vale para todos (são um grupo na interface).
-  if (ref.tipo === "furo" && campo === "diametro") s.furos = s.furos?.map((f) => ({ ...f, diametro: valor }));
+  if (ref.type === "hole" && field === "diameter") s.holes = s.holes?.map((f) => ({ ...f, diameter: value }));
   return s;
 }
 
 // ------------------------------------------------------------------ SVG
 
 /** Altura ÷ largura do desenho (1 se o arquivo não puder ser lido). */
-export function svgAspect(conteudo: string) {
+export function svgAspect(content: string) {
   try {
-    const d = parseDesenho(conteudo);
-    return d.altura / d.largura;
+    const d = parseDrawing(content);
+    return d.height / d.width;
   } catch {
     return 1;
   }
@@ -414,26 +414,26 @@ export function svgAspect(conteudo: string) {
  * Importa um arquivo SVG como elemento novo, centrado em (x, y). A largura começa no tamanho
  * natural do arquivo, limitada a 60% da placa (e ao que couber na altura).
  */
-export function addSvg(spec: PlateSpecInput, conteudo: string, nome: string, x: number, y: number): [PlateSpecInput, ElementId, number] | { error: string } {
+export function addSvg(spec: PlateSpecInput, content: string, name: string, x: number, y: number): [PlateSpecInput, ElementId, number] | { error: string } {
   let d;
   try {
-    d = parseDesenho(conteudo);
+    d = parseDrawing(content);
   } catch (e) {
-    return { error: e instanceof SvgInvalido ? e.message : "This file is not a valid SVG or DXF." };
+    return { error: e instanceof InvalidSvg ? e.message : "This file is not a valid SVG or DXF." };
   }
   const s = structuredClone(spec);
-  const sign = s.tipo !== "letreiro";
-  const maxW = Math.min(s.largura * 0.6, (s.altura * 0.6 * d.largura) / d.altura);
-  const largura = Math.max(5, Math.round(Math.min(d.largura, maxW) * 10) / 10);
+  const sign = s.type !== "lettering";
+  const maxW = Math.min(s.width * 0.6, (s.height * 0.6 * d.width) / d.height);
+  const width = Math.max(5, Math.round(Math.min(d.width, maxW) * 10) / 10);
   const rx = (v: number) => Math.round(v * 10) / 10;
-  s.svgs = [...(s.svgs ?? []), { conteudo, nome: nome.replace(/\.(svg|dxf)$/i, "").slice(0, 60), x: rx(x), y: rx(y), largura, modo: sign ? "gravado" : "recorte", profundidade: 2 }];
-  return [s, `s:${s.svgs.length - 1}`, d.abertos ?? 0];
+  s.svgs = [...(s.svgs ?? []), { content, name: name.replace(/\.(svg|dxf)$/i, "").slice(0, 60), x: rx(x), y: rx(y), width, mode: sign ? "engrave" : "cutout", depth: 2 }];
+  return [s, `s:${s.svgs.length - 1}`, d.openPaths ?? 0];
 }
 
 // ------------------------------------------------------------------ generic element access
 
-type AnyEl = Texto | Forma | Icone | SvgEl;
-const LIST = { t: "texto", f: "formas", i: "icones", s: "svgs" } as const;
+type AnyEl = Text | Shape | Icon | SvgEl;
+const LIST = { t: "texts", f: "shapes", i: "icons", s: "svgs" } as const;
 
 /** O objeto do elemento na especificação (null para o grupo de furos). */
 export function elementOf(spec: PlateSpecInput, id: ElementId): AnyEl | null {
@@ -464,7 +464,7 @@ export function alignElements(spec: PlateSpecInput, ids: ElementId[], boxes: Map
   if (!items.length) return spec;
   const ref =
     items.length === 1
-      ? { x0: 0, x1: spec.largura, y0: 0, y1: spec.altura }
+      ? { x0: 0, x1: spec.width, y0: 0, y1: spec.height }
       : {
           x0: Math.min(...items.map(({ b }) => b.cx - b.w / 2)),
           x1: Math.max(...items.map(({ b }) => b.cx + b.w / 2)),
@@ -499,12 +499,12 @@ export function alignElements(spec: PlateSpecInput, ids: ElementId[], boxes: Map
 // ------------------------------------------------------------------ arc text
 
 /** Curvatura do texto em % de meia volta (−100 a 100) ↔ raio do arco em mm. */
-export function bendOf(t: Texto): number {
-  if (!t.arco) return 0;
+export function bendOf(t: Text): number {
+  if (!t.arc) return 0;
   const L = textWidth(t);
-  return Math.max(-100, Math.min(100, Math.round(((L / t.arco) / Math.PI) * 100)));
+  return Math.max(-100, Math.min(100, Math.round(((L / t.arc) / Math.PI) * 100)));
 }
-export function arcFromBend(t: Texto, bend: number): number | undefined {
+export function arcFromBend(t: Text, bend: number): number | undefined {
   if (!bend) return undefined;
   const L = textWidth(t);
   return Math.round((L / ((bend / 100) * Math.PI)) * 10) / 10;

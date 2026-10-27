@@ -1,7 +1,7 @@
 // Empacotamento do CarvCAM, espelhando o package.json "build" do gSender 1.6.4:
 // NSIS assistido, instalação para todos os usuários (Program Files), asar com os módulos nativos
 // (serialport) fora dele, atualizações pelas releases do GitHub e assinatura de código opcional.
-// Assinatura: veja docs/assinatura-de-codigo.md. Sem as variáveis, o instalador sai sem assinatura.
+// Assinatura: veja docs/code-signing.md. Sem as variáveis, o instalador sai sem assinatura.
 const azure = process.env.AZURE_SIGNING_ENDPOINT && process.env.AZURE_SIGNING_ACCOUNT && process.env.AZURE_SIGNING_PROFILE;
 
 /** @type {import("electron-builder").Configuration} */
