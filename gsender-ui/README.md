@@ -52,10 +52,22 @@ Para a tela touch de 15,6″ do gControl. Liga sozinho quando o dispositivo prin
 - `src/lib/catalog.ts`: catálogo da interface derivado do catálogo Sienci do motor (máquinas, cabeçotes, fresas, projetos).
 - `src/engine/`: o motor roda num Web Worker (`generatePlate` + simulação do corte).
 - `src/stage/`: palco com vista de cima (mapa de alturas) e 3D (three.js).
-- `src/machine/store.ts`: máquina simulada (conectar, home, jog, zero, probe, corte com troca de fresa e alarmes). O adaptador real (Socket.IO do servidor do gSender) entra aqui com as mesmas ações.
+- `src/machine/store.ts`: estado da máquina. Com uma controladora conectada, as ações vão para `src/machine/real.ts`; sem ela, o simulador interno anima tudo.
+- `src/machine/grbl/`: protocolo grbl/grblHAL (leitura das respostas, envio por contagem de caracteres, home, jog, zero, placa de toque, overrides, troca de ferramenta, parada segura, retomada no meio) e os transportes (Web Serial e bridge).
+- `bridge/server.mjs`: o carvcam-bridge, que abre a porta USB ou a conexão Ethernet da controladora para o app.
 - `src/assistant/`: provedores do assistente (local e Claude). A IA só edita o projeto; nunca move a máquina.
 
+## Conectar na máquina
+O CarvCAM fala direto com a controladora (LongBoard, SuperLongBoard, SLB-EXT, SLB-LITE), sem o gSender aberto. Feche o gSender antes: só um programa pode usar a conexão.
+
+- **USB:** `npm run local` (ou `testar-carvcam`) inicia o app e o **carvcam-bridge** juntos. No assistente **Connect**, a placa aparece sozinha na lista. No Chrome/Edge também funciona sem o bridge (o navegador pede para escolher a porta).
+- **Ethernet (SLB/SLB-EXT):** escolha Ethernet no assistente e informe o IP da placa (padrão `192.168.5.1`, porta 23). Precisa do bridge.
+- O bridge só aceita conexões do próprio computador e de páginas servidas por ele (`localhost`), para nenhum site da internet conseguir mandar na máquina.
+- **Sem máquina:** escolha **Simulator** no assistente.
+
+Para testar a conexão real sem máquina, há uma placa falsa na rede: `npx vite-node scripts/fake-grbl.ts` e, no assistente, Ethernet com o IP `127.0.0.1:2323`.
+
 ## Limites conhecidos
-- A conexão com a máquina real ainda não existe; para cortar hoje, use **Download G-code** e abra o arquivo no gSender.
+- A conexão real foi testada contra uma placa grbl/grblHAL simulada, ainda não numa LongMill ou AltMill de verdade. No primeiro uso, faça um corte no ar (fresa acima do material) e fique com a mão no E-stop.
 - O assistente via Claude nunca foi testado contra a API (falta uma chave neste ambiente).
 - Os vídeos tutoriais são placeholders (`src/lib/videos.ts`).

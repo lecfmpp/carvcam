@@ -159,7 +159,16 @@ export function CarveStep({ ctx }: { ctx: JobCtx }) {
     ["Measure the new bit height", "Put the touch plate under the bit and attach the magnet clip."],
     tcRouter,
   ];
-  const probeTc = () => {
+  const probeTc = async () => {
+    if (useMachine.getState().conn === "real") {
+      // Máquina de verdade: mede a nova fresa na placa de toque (15 mm) antes de continuar.
+      setProbeLeft(0);
+      useMachine.setState({ zMeasured: false });
+      await useMachine.getState().probeZ(15);
+      setProbeLeft(null);
+      if (useMachine.getState().zMeasured) setTcStep(2);
+      return;
+    }
     let z = 25;
     setProbeLeft(z);
     const t = setInterval(() => {

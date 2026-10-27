@@ -4,6 +4,8 @@ import { createPortal } from "react-dom";
 import { machineName } from "../lib/catalog";
 import { CONTROLLERS, controllersFor, fakePort, handshake, wiringSteps, type ControllerId, type ControllerInfo, type Link, type Step } from "../lib/connectGuide";
 import { headInfo } from "../lib/headInfo";
+import { bridgePorts, webSerial, type BridgePort } from "../machine/grbl/transport";
+import { spinTestReal } from "../machine/real";
 import { useMachine } from "../machine/store";
 import { toast, useUi } from "../state/ui";
 import { useActiveMachine, useWorkshop } from "../state/workshop";
@@ -296,23 +298,80 @@ function WireStep(props: { step: Step; checked: Record<string, boolean>; setChec
 
 /* ---------------- Conectar ---------------- */
 
+type Pick = { kind: "bridge"; path: string } | { kind: "webserial" } | { kind: "tcp" } | { kind: "sim" };
+
+function portName(p: BridgePort) {
+  const vid = p.vendorId?.toLowerCase();
+  const chip = vid === "0483" ? "STM32 (SuperLongBoard)" : vid === "1a86" ? "CH340 (LongBoard)" : vid === "2341" ? "Arduino (LongBoard)" : p.manufacturer;
+  return chip ? `${chip}` : "USB serial device";
+}
+
 function ConnectStep(props: { c: ControllerInfo; link: Link; known: boolean; onBack(): void; onShowWiring(): void; onConnected(): void }) {
   const m = useMachine();
   const { machine } = useActiveMachine();
-  const port = fakePort(props.link);
-  const [log, setLog] = useState<string[]>([]);
+  const [ports, setPorts] = useState<BridgePort[] | null | undefined>(undefined);
+  const [pick, setPick] = useState<Pick | null>(null);
+  const [host, setHost] = useState("192.168.5.1");
+  const [err, setErr] = useState<string | null>(null);
+  const [simLog, setSimLog] = useState<string[]>([]);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const connected = m.status !== "disconnected" && m.status !== "connecting";
+  const hasWebSerial = !!webSerial();
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
+  // Procura a placa a cada 2 s pelo bridge (aparece sozinha quando o cabo é ligado).
+  useEffect(() => {
+    let alive = true;
+    const look = async () => {
+      const p = await bridgePorts();
+      if (!alive) return;
+      setPorts(p);
+    };
+    void look();
+    const t = setInterval(look, 2000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, []);
+  useEffect(() => {
+    if (pick || ports === undefined) return;
+    if (props.link === "ethernet" && ports !== null) setPick({ kind: "tcp" });
+    else if (ports?.length) setPick({ kind: "bridge", path: ports[0].path });
+    else if (hasWebSerial) setPick({ kind: "webserial" });
+  }, [ports, pick, hasWebSerial, props.link]);
+
   const go = async () => {
-    setLog([]);
+    if (!pick) return;
+    setErr(null);
+    setSimLog([]);
     m.setBed({ x: machine.area[0], y: machine.area[1], z: machine.z });
-    const lines = handshake(props.c, props.link, port);
-    lines.forEach((l, i) => timers.current.push(setTimeout(() => setLog((p) => [...p, l]), 120 + i * 160)));
-    await m.connect(port);
-    setTimeout(props.onConnected, 900);
+    try {
+      if (pick.kind === "sim") {
+        const port = fakePort(props.link);
+        handshake(props.c, props.link, port).forEach((l, i) => timers.current.push(setTimeout(() => setSimLog((p) => [...p, l]), 120 + i * 160)));
+        await m.connect(`Simulator · ${port}`);
+      } else if (pick.kind === "bridge") await m.connectReal({ kind: "serial", path: pick.path, label: `USB · ${pick.path}` });
+      else if (pick.kind === "tcp") {
+        const [h, p] = host.trim().split(":");
+        await m.connectReal({ kind: "tcp", host: h, port: Number(p) || 23, label: `Ethernet · ${host.trim()}` });
+      }
+      else {
+        // O navegador mostra a lista de portas USB; a pessoa escolhe a da máquina.
+        const port = await webSerial()!.requestPort();
+        await m.connectReal({ kind: "webserial", port, label: "USB (browser)" });
+      }
+      setTimeout(props.onConnected, 900);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (/No port selected|NotFoundError/i.test(msg)) return;
+      setErr(/busy|access denied|resource busy|locked|EBUSY|Failed to open/i.test(msg) ? "The port is in use. Close gSender or any other program connected to the machine, then try again." : msg);
+    }
   };
+
+  const real = m.conn === "real";
+  const logLines = real ? m.log.slice(-8).map((l) => (l.dir === "out" ? "> " : "") + l.text) : simLog;
+  const noWay = ports === null && !hasWebSerial;
 
   return (
     <div className="cw__pane">
@@ -321,25 +380,69 @@ function ConnectStep(props: { c: ControllerInfo; link: Link; known: boolean; onB
         Turn the controller on, then pick it below. {props.link === "usb" ? "It shows up a few seconds after the USB cable is plugged in." : "It answers on its fixed IP address."}
       </p>
       <div className="cw__ports" role="radiogroup" aria-label="Found devices">
-        <div className="cw__port is-on" role="radio" aria-checked>
-          {props.link === "usb" ? <Usb size={20} /> : <Network size={20} />}
-          <span className="cw__port-text">
-            <span className="cw__port-name">{props.c.name}</span>
-            <span className="cw__port-sub mono">
-              {props.link === "usb" ? "USB" : "Ethernet"} · {port} · {props.c.firmware}
+        {props.link === "ethernet" ? (
+          <div className={`cw__port ${pick?.kind === "tcp" ? "is-on" : ""}`} role="radio" aria-checked={pick?.kind === "tcp"} tabIndex={0} onClick={() => setPick({ kind: "tcp" })}>
+            <Network size={20} />
+            <span className="cw__port-text">
+              <span className="cw__port-name">{props.c.name} over Ethernet</span>
+              <label className="cw__ip">
+                <span>IP address</span>
+                <input className="mono" value={host} onChange={(e) => setHost(e.target.value)} inputMode="decimal" aria-label="Controller IP address" />
+              </label>
             </span>
+          </div>
+        ) : null}
+        {props.link === "usb"
+          ? (ports ?? []).map((p) => {
+              const on = pick?.kind === "bridge" && pick.path === p.path;
+              return (
+                <div key={p.path} className={`cw__port ${on ? "is-on" : ""}`} role="radio" aria-checked={on} tabIndex={0} onClick={() => setPick({ kind: "bridge", path: p.path })}>
+                  <Usb size={20} />
+                  <span className="cw__port-text">
+                    <span className="cw__port-name">{portName(p)}</span>
+                    <span className="cw__port-sub mono">USB · {p.path}</span>
+                  </span>
+                  <span className="cw__port-dot" aria-hidden />
+                </div>
+              );
+            })
+          : null}
+        {props.link === "usb" && hasWebSerial && !(ports && ports.length) ? (
+          <div className={`cw__port ${pick?.kind === "webserial" ? "is-on" : ""}`} role="radio" aria-checked={pick?.kind === "webserial"} tabIndex={0} onClick={() => setPick({ kind: "webserial" })}>
+            <Usb size={20} />
+            <span className="cw__port-text">
+              <span className="cw__port-name">Choose the USB port</span>
+              <span className="cw__port-sub">Your browser shows the list after you press Connect</span>
+            </span>
+          </div>
+        ) : null}
+        {props.link === "usb" && ports && !ports.length && !hasWebSerial ? <div className="cw__note">No USB controller found yet. Check the cable and that the controller is on.</div> : null}
+        {noWay ? (
+          <div className="cw__note">
+            To talk to the machine, start CarvCAM with <b>testar-carvcam</b> (it starts the CarvCAM bridge), or open it in Chrome or Edge.
+          </div>
+        ) : null}
+        <div className={`cw__port cw__port--sim ${pick?.kind === "sim" ? "is-on" : ""}`} role="radio" aria-checked={pick?.kind === "sim"} tabIndex={0} onClick={() => setPick({ kind: "sim" })}>
+          <Cable size={20} />
+          <span className="cw__port-text">
+            <span className="cw__port-name">Simulator</span>
+            <span className="cw__port-sub">No machine: try the steps safely</span>
           </span>
-          <span className="cw__port-dot" aria-hidden />
         </div>
       </div>
-      {log.length ? (
+      {err ? (
+        <div className="cw__caution" role="alert">
+          <AlertTriangle size={16} /> {err}
+        </div>
+      ) : null}
+      {logLines.length ? (
         <pre className="cw__log mono" aria-live="polite">
-          {log.join("\n")}
+          {logLines.join("\n")}
         </pre>
       ) : null}
       {connected ? (
         <div className="cw__ok" role="status">
-          <Check size={16} /> The controller answered. Let's test it.
+          <Check size={16} /> {real ? `${m.firmware} answered.` : "The simulator answered."} Let's test it.
         </div>
       ) : null}
       <details className="cw__details">
@@ -358,7 +461,7 @@ function ConnectStep(props: { c: ControllerInfo; link: Link; known: boolean; onB
         <button className="btn btn--quiet" onClick={props.onBack}>
           <ArrowLeft size={16} /> Back
         </button>
-        <button className="btn btn--primary" disabled={m.status === "connecting" || connected} onClick={go}>
+        <button className="btn btn--primary" disabled={!pick || m.status === "connecting" || connected} onClick={go}>
           <Plug size={16} /> {m.status === "connecting" ? "Connecting…" : connected ? "Connected" : "Connect"}
         </button>
       </div>
@@ -379,8 +482,9 @@ function Verify(props: { c: ControllerInfo; headId: string; onBack(): void; onDo
   const [spinAns, setSpinAns] = useState<Ans>(null);
   const alive = m.status === "idle" || m.status === "homing";
 
+  const real = m.conn === "real";
   const autoChecks: [boolean, string, string][] = [
-    [alive, "Controller answers", `${props.c.firmware} replied to CarvCAM`],
+    [m.status !== "disconnected", "Controller answers", real ? `${m.firmware} on ${m.port}` : `${props.c.firmware} replied to CarvCAM`],
     [m.status !== "alarm", "Not locked", props.c.estop ? "The E-stop is released (no Alarm 10)" : "No alarm reported"],
     [alive, "Ready to move", "Machine state: Idle"],
   ];
@@ -389,9 +493,11 @@ function Verify(props: { c: ControllerInfo; headId: string; onBack(): void; onDo
     m.jog(0, 0, 2);
     setMoved(true);
   };
-  const spin = () => {
+  const spin = async () => {
     setSpun("spinning");
-    setTimeout(() => setSpun("done"), 3000);
+    if (real) await spinTestReal(10000, 3000);
+    else await new Promise((r) => setTimeout(r, 3000));
+    setSpun("done");
   };
   const ready = autoChecks.every((a) => a[0]) && moveAns === "yes" && (!auto || spinAns !== null);
 
@@ -409,6 +515,18 @@ function Verify(props: { c: ControllerInfo; headId: string; onBack(): void; onDo
           </li>
         ))}
       </ul>
+      {m.status === "alarm" ? (
+        <div className="cw__test cw__test--warn">
+          <p>
+            {m.alarm === "estop"
+              ? "The E-stop is pressed. Twist it clockwise until it pops up, then unlock."
+              : "Controllers start locked after power-on, for safety. Make sure the bed is clear, then unlock. You'll find home in the next step."}
+          </p>
+          <button className="btn btn--quiet" onClick={() => m.clearAlarm()}>
+            Unlock the machine
+          </button>
+        </div>
+      ) : null}
 
       <div className="cw__test">
         <div className="cw__test-head">
