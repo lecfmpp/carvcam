@@ -164,6 +164,9 @@ jobs:
         run: |
           cd desktop
           # Sem certificado da Apple o .dmg sai sem assinatura e só como artefato (não vai para a Release).
+          # Segredos que não existem chegam como texto vazio; o electron-builder leria o CSC_LINK vazio
+          # como caminho de certificado, então eles saem do ambiente.
+          if [[ "$HAS_MAC_CERT" != "true" ]]; then unset CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; fi
           PUBLISH=never
           if [[ "$GITHUB_REF" == refs/tags/v* && "$HAS_MAC_CERT" == "true" ]]; then PUBLISH=always; fi
           npm run dist:mac -- --publish "$PUBLISH"
