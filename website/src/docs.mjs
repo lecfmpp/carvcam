@@ -47,21 +47,30 @@ export const docs = {
   install: {
     title: "Install CarvCAM",
     nav: "Install",
-    description: "How to download and install CarvCAM on Windows 10 or 11, open it for the first time, and use it offline.",
-    lead: "CarvCAM runs on Windows 10 and 11. Mac and Linux versions are in development.",
+    description: "How to download and install CarvCAM on Windows 10 or 11 or on Linux (AppImage or .deb), open it for the first time, and use it offline.",
+    lead: "CarvCAM runs on Windows 10 and 11 and on Linux. Mac and Raspberry Pi versions are in development.",
     blocks: [
       ["h2", "What you need"],
-      ["table", ["Item", "Requirement"], [["Computer", "Windows 10 or 11, 64-bit"], ["Internet", "Only to download and for the first start"], ["Connection to the machine", "The USB cable that came with your machine, or an Ethernet cable (SuperLongBoard and SLB-EXT)"]]],
-      ["h2", "Install"],
+      ["table", ["Item", "Requirement"], [["Computer", "Windows 10 or 11, 64-bit, or a 64-bit Linux PC (Ubuntu, Debian, Mint, Fedora…)"], ["Internet", "Only to download and for the first start"], ["Connection to the machine", "The USB cable that came with your machine, or an Ethernet cable (SuperLongBoard and SLB-EXT)"]]],
+      ["h2", "Install on Windows"],
       [
         "steps",
         [
-          ["Download", "Go to the [download page](/download/) and click **Download for Windows**.", null],
-          ["Run the installer", "Open the file you downloaded and follow the prompts. If Windows SmartScreen asks, click **More info**, then **Run anyway**.", null],
-          ["Open CarvCAM", "Start CarvCAM from the Start menu. A short loading screen appears the first time.", "splash"],
+          ["Download", "Go to the [download page](/download/) and click **Download for Windows**. You get **CarvCAM-Windows-64Bit.exe**.", null],
+          ["Run the installer", "Open the file and follow the prompts. If Windows SmartScreen asks, click **More info**, then **Run anyway**.", null],
+          ["Open CarvCAM", "Start CarvCAM from the Start menu or the desktop shortcut. A short loading screen appears the first time.", "splash"],
         ],
       ],
-      ["callout", "tip", "Works offline", "After the first start, CarvCAM opens and carves without internet. Your projects are saved on your computer."],
+      ["h2", "Install on Linux"],
+      [
+        "steps",
+        [
+          ["Ubuntu, Debian or Mint: the .deb", "Download the **.deb** from the [download page](/download/) and double-click it, or run `sudo apt install ./CarvCAM-Linux-amd64.deb`. It also gives your user access to the USB controller.", null],
+          ["Any other distro: the AppImage", "Download the **AppImage**, run `chmod +x CarvCAM-Linux-x86_64.AppImage` and open it.", null],
+          ["USB access with the AppImage", "Add yourself to the dialout group once with `sudo usermod -aG dialout $USER`, then log out and back in.", null],
+        ],
+      ],
+      ["callout", "tip", "Works offline", "After the first start, CarvCAM opens and carves without internet. Your projects are saved on your computer. New versions install themselves on Windows and with the AppImage."],
       ["callout", "note", "One program at a time", "Close gSender or any other program connected to your machine before you connect CarvCAM. Only one program can use the connection at a time."],
       ["cards", [["Next: set up your workshop", "Three questions about your machine, router and bits.", "/docs/workshop/"]]],
     ],

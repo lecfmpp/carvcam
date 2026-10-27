@@ -290,7 +290,7 @@
       "faq": [
         {"q": "Is VCarve Desktop enough for a LongMill 30x30 or 48x30?", "a": "VCarve Desktop limits jobs to 24 x 24 in. Larger LongMill/AltMill beds require tiling or upgrading to VCarve Pro (about $699)."},
         {"q": "How much does VCarve cost?", "a": "VCarve Desktop lists at about $349 and VCarve Pro at $699 as one-time perpetual licenses; Aspire is about $1,995."},
-        {"q": "Does VCarve run on Mac?", "a": "VCarve and Aspire are Windows-only (Mac users use Parallels). CarvCAM is also Windows today, with Mac and Linux in development."},
+        {"q": "Does VCarve run on Mac?", "a": "VCarve and Aspire are Windows-only (Mac users use Parallels). CarvCAM runs on Windows and Linux today, with Mac in development."},
         {"q": "Can VCarve control my LongMill?", "a": "No. You export G-code with the grbl (mm) post-processor and run it in gSender. CarvCAM includes machine control."},
         {"q": "Which post-processor should I use in VCarve for a LongMill?", "a": "Sienci recommends Grbl (mm) or Grbl (inch) .gcode, not .tap, and suggests creating a LongMill/AltMill machine configuration."},
         {"q": "Is VCarve better than CarvCAM for 3D work?", "a": "For 3D roughing/finishing, moulding, nesting and production features, VCarve/Aspire offer far more. CarvCAM focuses on signs, engraving, V-carving and cutouts with Sienci-tuned defaults."}

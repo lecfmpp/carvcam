@@ -401,3 +401,18 @@ a.card:hover { border-color: #d9d5ce; transform: translateY(-2px); box-shadow: 0
   .vsec { padding: 52px 0; }
 }
 @media (max-width: 520px) { .vglance { grid-template-columns: 1fr; } }
+
+/* Downloads */
+.btn svg { flex: none; }
+.plat--4 { grid-template-columns: repeat(4, 1fr); }
+.plat b svg { width: 18px; height: 18px; vertical-align: -3px; margin-right: 4px; }
+.plat a + a { margin-left: 10px; }
+.dlcards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 32px; }
+.dlcard { padding: 24px; border: 1px solid var(--line); border-radius: var(--radius); background: #fff; }
+.dlcard.on { border: 2px solid var(--accent); }
+.dlcard b { display: flex; align-items: center; gap: 8px; font-size: 20px; }
+.dlcard b svg { width: 22px; height: 22px; }
+.dlcard .btn { margin-top: 14px; }
+.dlcard .note { margin: 6px 0 0; }
+.dlcard:target { box-shadow: 0 0 0 4px var(--accent-soft); }
+@media (max-width: 820px) { .plat--4, .dlcards { grid-template-columns: 1fr; } }

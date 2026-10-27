@@ -6,9 +6,15 @@ export const site = {
   // TODO: domínio final.
   // Netlify define URL no build (o endereço principal do site); fora dele, o domínio final.
   url: (process.env.SITE_URL || process.env.URL || "https://www.carvcam.com").replace(/\/$/, ""),
-  download: "/download/#windows",
-  // Instalador publicado pelo CI (desktop/, tag v*) na Release mais recente do GitHub.
-  installer: "https://github.com/lecfmpp/carvcam/releases/latest",
+  download: "/download/",
+  // Instaladores publicados pelo CI (desktop/, tag v*) com nome fixo na Release mais recente do
+  // GitHub: o link sempre baixa a versão nova, sem mudar o site a cada lançamento.
+  downloads: {
+    windows: "https://github.com/lecfmpp/carvcam/releases/latest/download/CarvCAM-Windows-64Bit.exe",
+    appimage: "https://github.com/lecfmpp/carvcam/releases/latest/download/CarvCAM-Linux-x86_64.AppImage",
+    deb: "https://github.com/lecfmpp/carvcam/releases/latest/download/CarvCAM-Linux-amd64.deb",
+    releases: "https://github.com/lecfmpp/carvcam/releases/latest",
+  },
   checked: "October 2026",
 };
 
@@ -251,7 +257,7 @@ export const howtos = [
 export const faq = [
   ["Which machines does CarvCAM support?", "Sienci Labs LongMill MK2 (LongBoard or SuperLongBoard), LongMill MK3 (SLB-LITE) and AltMill 2×4, 4×4 and 4×8 (SLB-EXT), with the Makita, AutoSpin T1 or ER20 spindle kits."],
   ["Do I still need gSender or another sender?", "No. CarvCAM connects to the controller and runs the job itself. You can still export the G-code file if you want to."],
-  ["Which computers can run it?", "Windows 10 and 11 today. Mac and Linux versions are in development."],
+  ["Which computers can run it?", "Windows 10 and 11, and Linux (AppImage or .deb for Ubuntu, Debian and Mint). Mac and Raspberry Pi versions are in development."],
   ["Does it need internet?", "Only to download it. After that it runs entirely on your computer, workshop Wi-Fi or not."],
   ["Can I import my own designs?", "Yes: SVG and DXF files, and images you can trace into outlines."],
   ["Do I need to know G-code or feeds and speeds?", "No. Pick Fast, Balanced or Detailed and CarvCAM sets the numbers for your machine, router and bit, then checks the job before you carve."],

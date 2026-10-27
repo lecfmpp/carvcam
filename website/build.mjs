@@ -32,6 +32,7 @@ const shot = (name, alt, { eager = false, cls = "shot" } = {}) =>
 // Clipe em loop (gravação simulada da tela): leve como vídeo, comporta-se como um GIF. Só baixa perto da tela.
 const clip = (name, alt) =>
   `<div class="shot shot--video"><video class="lazyclip" muted loop playsinline preload="none" width="1280" height="800" poster="${asset(`/assets/video/feature-${name}-poster.webp`)}" data-src="${asset(`/assets/video/feature-${name}.mp4`)}" aria-label="${esc(alt)}"></video></div>`;
+const ICON_LINUX = `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2c-2.2 0-3.6 1.9-3.6 4.5 0 1.3.3 2.3-.6 3.6C6.4 12 5 14 5 16.6c0 .7.1 1.3.4 1.9-.9.4-1.9.9-1.9 1.8 0 1.2 2.2 1.2 3.6 1.4 1 .1 1.8.3 2.6.3.9 0 1.5-.4 2.3-.4s1.4.4 2.3.4c.8 0 1.6-.2 2.6-.3 1.4-.2 3.6-.2 3.6-1.4 0-.9-1-1.4-1.9-1.8.3-.6.4-1.2.4-1.9 0-2.6-1.4-4.6-2.8-6.5-.9-1.3-.6-2.3-.6-3.6C15.6 3.9 14.2 2 12 2Zm-1.6 4.2c.4 0 .7.5.7 1.1s-.3 1.1-.7 1.1-.7-.5-.7-1.1.3-1.1.7-1.1Zm3.2 0c.4 0 .7.5.7 1.1s-.3 1.1-.7 1.1-.7-.5-.7-1.1.3-1.1.7-1.1ZM12 9.4c.9 0 2 .5 2 .9s-1.1 1.1-2 1.1-2-.7-2-1.1.9-.9 2-.9Z"/></svg>`;
 const ICON_WIN = `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 5.5 10.5 4.5v7H3zM11.5 4.4 21 3v8.5h-9.5zM3 12.5h7.5v7L3 18.5zM11.5 12.5H21V21l-9.5-1.4z"/></svg>`;
 const cell = (v) => (v === "yes" ? '<span class="yes">✓ Yes</span>' : v === "no" ? '<span class="no">— No</span>' : v === "part" ? '<span class="part">Partly</span>' : esc(v));
 
@@ -69,13 +70,24 @@ ${ld.map((j) => `<script type="application/ld+json">${JSON.stringify(j)}</script
 <header class="hdr"><div class="wrap">
 <a class="logo" href="${href("/")}" aria-label="CarvCAM home"><img src="${asset("/assets/carvcam-icon.svg")}" alt="" width="28" height="28"><span class="wordmark">Carv<span>CAM</span></span></a>
 <nav class="nav" aria-label="Main">${navHtml}</nav>
-<a class="btn btn--primary" href="${href(site.download)}">${ICON_WIN}Download</a>
+<a class="btn btn--primary" data-dl="short" href="${site.downloads.windows}">${ICON_WIN}<span>Download</span></a>
 </div></header>
 <main id="main">
 ${crumbs ? `<div class="wrap" style="padding-top:28px">${crumbHtml}</div>` : ""}
 ${body}
 </main>
 ${footer()}
+<script>(() => {
+  // Botões de download: Windows por padrão; no Linux vira o AppImage; no Mac leva à página de downloads.
+  const ua = navigator.userAgent, linux = /Linux/.test(ua) && !/Android|CrOS/.test(ua), mac = /Macintosh|Mac OS X/.test(ua) && !/iPhone|iPad/.test(ua);
+  if (!linux && !mac) return;
+  const icon = ${JSON.stringify(ICON_LINUX)};
+  document.querySelectorAll("a[data-dl]").forEach((a) => {
+    const long = a.dataset.dl === "long";
+    if (linux) { a.href = ${JSON.stringify(site.downloads.appimage)}; a.querySelector("svg").outerHTML = icon; a.querySelector("span").textContent = long ? "Download for Linux" : "Download"; }
+    else { a.href = ${JSON.stringify(href(site.download))}; a.querySelector("span").textContent = long ? "Mac version in development" : "Downloads"; }
+  });
+})();</script>
 </body>
 </html>`;
   pages.push({ path, html, title, description, body });
@@ -128,9 +140,9 @@ ${col("Learn", howtos.slice(0, 4).map((h) => [h.short, `/learn/${h.slug}/`]))}
 }
 
 const downloadCta = (center = false) => `<div class="cta"${center ? ' style="justify-content:center"' : ""}>
-<a class="btn btn--accent btn--lg" href="${href(site.download)}">${ICON_WIN}Download for Windows</a>
+<a class="btn btn--accent btn--lg" data-dl="long" href="${site.downloads.windows}">${ICON_WIN}<span>Download for Windows</span></a>
 <a class="btn btn--ghost btn--lg" href="${href("/#how")}">See how it works</a>
-<span class="note"${center ? ' style="text-align:center"' : ""}>Windows 10 and 11 · Works offline · Mac and Linux in development</span>
+<span class="note"${center ? ' style="text-align:center"' : ""}>Windows 10 and 11 · <a href="${site.downloads.appimage}" data-dl-alt>Linux</a> · Works offline · Mac in development · <a href="${href(site.download)}">All downloads</a></span>
 </div>`;
 
 const app = {
@@ -138,7 +150,8 @@ const app = {
   "@type": "SoftwareApplication",
   name: "CarvCAM",
   applicationCategory: "DesignApplication",
-  operatingSystem: "Windows 10, Windows 11",
+  operatingSystem: "Windows 10, Windows 11, Linux",
+  downloadUrl: site.downloads.windows,
   description: "Desktop CNC software for Sienci Labs LongMill and AltMill: sign design, V-carving, toolpaths, machine setup and carving in one app.",
   url: site.url,
 };
@@ -232,11 +245,12 @@ ${clip(img, `CarvCAM ${eb}: screen recording`)}
 </div></section>
 
 <section class="soft"><div class="wrap">
-<div class="sec-head"><span class="eyebrow">Download</span><h2>Available for Windows today</h2></div>
-<div class="plat">
-<div class="on"><b>Windows</b>Windows 10 and 11. <a href="${href(site.download)}" style="font-weight:600">Download →</a></div>
+<div class="sec-head"><span class="eyebrow">Download</span><h2>Available for Windows and Linux</h2></div>
+<div class="plat plat--4">
+<div class="on"><b>${ICON_WIN} Windows</b>Windows 10 and 11. <a href="${site.downloads.windows}" style="font-weight:600">Download .exe →</a></div>
+<div class="on"><b>${ICON_LINUX} Linux</b>Ubuntu, Debian, Mint and others. <a href="${site.downloads.appimage}" style="font-weight:600">AppImage →</a> <a href="${site.downloads.deb}" style="font-weight:600">.deb →</a></div>
 <div><b>macOS</b>In development.</div>
-<div><b>Linux</b>In development.</div>
+<div><b>Raspberry Pi</b>In development.</div>
 </div></div></section>
 
 <section><div class="narrow faq">
@@ -254,28 +268,36 @@ ${downloadCta(true)}
 
 /* ---------------- Download ---------------- */
 function download() {
+  const btn = (url, icon, label) => `<a class="btn btn--accent" href="${url}">${icon}${label}</a>`;
   layout({
     path: at("/download/"),
-    title: "Download CarvCAM for Windows | CNC Software for LongMill & AltMill",
-    description: "Download CarvCAM for Windows 10 and 11. Design, prepare and carve on Sienci LongMill and AltMill machines. Mac and Linux versions are in development.",
+    title: "Download CarvCAM for Windows and Linux | CNC Software for LongMill & AltMill",
+    description: "Download CarvCAM for Windows 10 and 11 or Linux (AppImage and .deb). Design, prepare and carve on Sienci LongMill and AltMill machines. Mac and Raspberry Pi versions are in development.",
     crumbs: [["Home", "/"], ["Download", "/download/"]],
     schema: [app],
     body: `<section class="article"><div class="narrow">
 <h1>Download CarvCAM</h1>
-<p class="lede">Windows today. Mac and Linux are in development.</p>
-<div class="plat" id="windows" style="margin-top:32px">
-<div class="on"><b>Windows</b><p class="note" style="margin:6px 0 14px">Windows 10 and 11, 64-bit</p><a class="btn btn--accent" href="${site.installer}">${ICON_WIN}Download for Windows</a></div>
-<div><b>macOS</b><p class="note" style="margin:6px 0 0">In development</p></div>
-<div><b>Linux</b><p class="note" style="margin:6px 0 0">In development</p></div>
+<p class="lede">Windows and Linux today. Mac and Raspberry Pi are in development. Every link downloads the latest version.</p>
+<div class="dlcards">
+<div class="dlcard on" id="windows"><b>${ICON_WIN} Windows</b><p class="note">Windows 10 and 11, 64-bit</p>${btn(site.downloads.windows, ICON_WIN, "Download for Windows")}<p class="note">CarvCAM-Windows-64Bit.exe</p></div>
+<div class="dlcard on" id="linux"><b>${ICON_LINUX} Linux</b><p class="note">64-bit PC: Ubuntu, Debian, Mint, Fedora and others</p>${btn(site.downloads.appimage, ICON_LINUX, "AppImage")} ${btn(site.downloads.deb, ICON_LINUX, ".deb")}<p class="note">.deb for Ubuntu, Debian and Mint · AppImage for any distro</p></div>
+<div class="dlcard" id="mac"><b>macOS</b><p class="note">Intel and Apple Silicon</p><p>In development.</p></div>
+<div class="dlcard" id="pi"><b>Raspberry Pi</b><p class="note">Pi 4 and 5</p><p>In development.</p></div>
 </div>
 <div class="prose">
-<h2>Install in three steps</h2>
+<h2>Install on Windows</h2>
 <ol class="howto">
-<li><h3>Run the installer</h3><p>Open the downloaded file and follow the prompts.</p></li>
-<li><h3>Open CarvCAM</h3><p>It opens with a short loading screen. After the first start it works without internet.</p></li>
-<li><h3>Pick your machine</h3><p>Choose your LongMill or AltMill, what spins the bit and the bits you own. Then follow <a href="${href("/learn/connect-a-longmill-or-altmill/")}">Connect your machine</a>.</p></li>
+<li><h3>Run the installer</h3><p>Open <b>CarvCAM-Windows-64Bit.exe</b> and follow the prompts. If Windows SmartScreen asks, click <b>More info</b>, then <b>Run anyway</b>.</p></li>
+<li><h3>Open CarvCAM</h3><p>From the Start menu or the desktop shortcut. After the first start it works without internet.</p></li>
+<li><h3>Pick your machine</h3><p>Choose your LongMill or AltMill, what spins the bit and the bits you own. Then follow <a href="${href("/docs/connect/")}">Connect your machine</a>.</p></li>
+</ol>
+<h2>Install on Linux</h2>
+<ol class="howto">
+<li><h3>.deb (Ubuntu, Debian, Mint)</h3><p>Double-click the file, or run <code>sudo apt install ./CarvCAM-Linux-amd64.deb</code>. It also lets your user reach the USB controller, no extra setup.</p></li>
+<li><h3>AppImage (any distro)</h3><p>Make it executable with <code>chmod +x CarvCAM-Linux-x86_64.AppImage</code> and open it. For USB, add yourself to the dialout group once: <code>sudo usermod -aG dialout $USER</code>, then log out and back in.</p></li>
 </ol>
 <div class="callout">Close gSender or any other program connected to your machine before connecting CarvCAM. Only one program can use the connection at a time.</div>
+<p class="note">All versions and release notes: <a href="${site.downloads.releases}">GitHub releases</a>.</p>
 </div></div></section>`,
   });
 }
@@ -550,7 +572,7 @@ ${rec ? `<p class="note" style="margin-top:20px">Sienci Labs itself notes that m
 <section id="options" class="vsec"><div class="wrap">
 <h2>All the options, compared</h2>
 <div class="tablewrap"><table class="cmp"><thead><tr><th>Software</th><th>Does</th><th>Price</th><th>Platforms</th><th>Best for</th></tr></thead><tbody>
-<tr><td class="us">CarvCAM</td><td class="us">Design + CAM + sender, offline</td><td class="us">At launch</td><td class="us">Windows (Mac, Linux in development)</td><td class="us">LongMill and AltMill owners who want one app</td></tr>
+<tr><td class="us">CarvCAM</td><td class="us">Design + CAM + sender, offline</td><td class="us">At launch</td><td class="us">Windows, Linux (Mac in development)</td><td class="us">LongMill and AltMill owners who want one app</td></tr>
 ${comparisons.map((c) => `<tr><td><a href="${href(vsUrl(c))}">${esc(c.name)}</a></td><td>${esc(c.type.split(";")[0].split(" (")[0])}</td><td>${esc(c.pricing[0].price)}${c.pricing[1] ? ` · ${esc(c.pricing[1].price)}` : ""} ${cite(c.pricing[0].source || c.sources[0].url)}</td><td>${esc(c.platformsShort)}</td><td>${esc(c.chooseThem[0])}</td></tr>`).join("")}
 ${others.map((o) => `<tr><td>${esc(o.name)}</td><td>${esc(o.type.split(" (")[0])}</td><td>${esc(o.price)} ${cite(o.source.url, o.source.title)}</td><td>${esc(o.platforms.split(" (")[0])}</td><td>Free or low-cost option</td></tr>`).join("")}
 </tbody></table></div>
@@ -813,7 +835,7 @@ await writeFile(
   join(OUT, "llms.txt"),
   `# CarvCAM
 
-> CarvCAM is a Windows desktop app for Sienci Labs LongMill and AltMill CNC routers that does sign design, CAM (toolpaths with feeds and speeds tuned to the machine, router or spindle and bit) and machine control (connects over USB or Ethernet, guided wiring check, homing, touch-plate zero, carving) in one app that works offline. Mac and Linux versions are in development.
+> CarvCAM is a desktop app for Windows and Linux, for Sienci Labs LongMill and AltMill CNC routers that does sign design, CAM (toolpaths with feeds and speeds tuned to the machine, router or spindle and bit) and machine control (connects over USB or Ethernet, guided wiring check, homing, touch-plate zero, carving) in one app that works offline. Mac and Raspberry Pi versions are in development.
 
 Every page is also available as Markdown by adding \`index.md\` to its URL. The full documentation in one file: ${site.url}/llms-full.txt
 
