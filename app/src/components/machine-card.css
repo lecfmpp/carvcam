@@ -104,7 +104,12 @@
 .bcard__foot { padding-top: 10px; }
 .bcard__toggle { white-space: nowrap; height: 34px; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border-radius: 9px; border: 1px solid var(--pc-line); background: #fff; color: var(--pc-ink); font: 600 12.5px var(--font); }
 .bcard__toggle:hover { border-color: #c9c7c1; }
-.bcard__toggle.is-on { background: var(--pc-ok-bg); border-color: transparent; color: var(--pc-ok); }
+.bcard__toggle.is-add { background: var(--pc-ok-bg); border-color: rgba(20, 107, 75, 0.35); color: var(--pc-ok); }
+.bcard__toggle.is-add:hover { border-color: var(--pc-ok); }
+.bcard__toggle.is-on { background: #fff; color: var(--pc-ink-3); }
+.bcard__toggle.is-on:hover { color: #9b2c20; border-color: #e4b5ae; }
+.bcard.is-removed .bcard__photo, .bcard.is-removed .bcard__body { opacity: 0.55; }
+.bcard__owned--off { background: #ecebe7; color: var(--pc-ink-3); }
 .bcard__buy { white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; height: 34px; padding: 0 12px; border-radius: 9px; background: var(--pc-ink); color: #fff; font: 600 12.5px var(--font); text-decoration: none; }
 .bcard__buy:hover { background: var(--pc-accent); color: #fff; }
 

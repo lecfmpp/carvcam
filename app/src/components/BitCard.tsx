@@ -1,4 +1,4 @@
-import { ArrowUpRight, Check, Plus } from "lucide-react";
+import { ArrowUpRight, Check, Plus, X } from "lucide-react";
 import { useState } from "react";
 import type { BitProfile } from "../lib/catalog";
 import { sienciLink, type Placement } from "../lib/referral";
@@ -29,6 +29,8 @@ export function BitCard(props: {
   placement: Placement;
   compat?: { level: "fits" | "accessory" | "no"; label: string };
   owned?: boolean;
+  /** Just removed from My bits: the card stays in place, dimmed, with "Add back". */
+  removed?: boolean;
   onToggle?(): void;
 }) {
   const { bit } = props;
@@ -39,13 +41,15 @@ export function BitCard(props: {
     ...(bit.flutes ? ([["Flutes", String(bit.flutes)]] as [string, string][]) : []),
   ];
   return (
-    <article className={`mcard bcard ${props.owned ? "is-owned" : ""}`}>
+    <article className={`mcard bcard ${props.owned ? "is-owned" : ""} ${props.removed ? "is-removed" : ""}`}>
       <div className="bcard__photo">
         <BitPhoto bit={bit} />
         {props.owned ? (
           <span className="bcard__owned">
             <Check size={13} strokeWidth={2.5} /> In my bits
           </span>
+        ) : props.removed ? (
+          <span className="bcard__owned bcard__owned--off">Removed from my bits</span>
         ) : null}
       </div>
       <div className="mcard__body bcard__body">
@@ -64,14 +68,15 @@ export function BitCard(props: {
       </div>
       <div className="mcard__foot bcard__foot">
         {props.onToggle ? (
-          <button className={`bcard__toggle ${props.owned ? "is-on" : ""}`} aria-pressed={!!props.owned} onClick={props.onToggle}>
+          // The state shows on the photo ("In my bits"); the button only says what it does.
+          <button className={`bcard__toggle ${props.owned ? "is-on" : "is-add"}`} aria-pressed={!!props.owned} onClick={props.onToggle} title={props.owned ? "Remove from my bits" : "Add to my bits"}>
             {props.owned ? (
               <>
-                <Check size={14} strokeWidth={2.5} /> I have it
+                <X size={14} strokeWidth={2.25} /> Remove
               </>
             ) : (
               <>
-                <Plus size={14} strokeWidth={2.5} /> I have it
+                <Plus size={14} strokeWidth={2.5} /> {props.removed ? "Add back" : "I have this bit"}
               </>
             )}
           </button>

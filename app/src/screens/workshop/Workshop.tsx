@@ -269,10 +269,17 @@ function ProjectCard({ project: p, onMake }: { project: Project; onMake(): void 
 function Library() {
   const { head, headId } = useActiveMachine();
   const { bits, toggleBit } = useWorkshop();
-  const [tab, setTab] = useState<"mine" | "all">("mine");
+  const [tab, setTabRaw] = useState<"mine" | "all">("mine");
+  // Bits removed while looking at My bits stay on screen (dimmed, with "Add back") until the tab changes,
+  // so a card never vanishes from under the pointer.
+  const [kept, setKept] = useState<string[]>([]);
+  const setTab = (t: "mine" | "all") => {
+    setTabRaw(t);
+    setKept([]);
+  };
   const [intent, setIntent] = useState<Intent | null>(null);
   const filtered = BITS.filter((b) => !intent || b.uses.includes(intent));
-  const list = tab === "mine" ? filtered.filter((b) => bits.includes(b.id)) : filtered;
+  const list = tab === "mine" ? filtered.filter((b) => bits.includes(b.id) || kept.includes(b.id)) : filtered;
 
   return (
     <div className="ws-page ws-page--wide" style={{ gap: 24 }}>
@@ -316,7 +323,11 @@ function Library() {
                 placement="bit_library"
                 compat={{ level: c.level, label: c.level === "fits" ? `Fits your ${head.name}` : c.label }}
                 owned={bits.includes(b.id)}
-                onToggle={() => toggleBit(b.id)}
+                removed={tab === "mine" && !bits.includes(b.id)}
+                onToggle={() => {
+                  if (tab === "mine" && bits.includes(b.id) && !kept.includes(b.id)) setKept([...kept, b.id]);
+                  toggleBit(b.id);
+                }}
               />
             );
           })}
