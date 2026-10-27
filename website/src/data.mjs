@@ -36,6 +36,7 @@ export const nav = [
   ["Compare", "/compare/"],
   ["Learn", "/learn/"],
   ["Docs", "/docs/"],
+  ["Pricing", "/pricing/"],
 ];
 
 /* ---------------- Machines ---------------- */

@@ -27,6 +27,25 @@ const db = new PostgrestClient(`${cfg.url}/rest/v1`, {
   },
 });
 
+// Calls a Supabase Edge Function as the signed-in user.
+async function callFn(name, body = {}) {
+  const { data } = await auth.getSession();
+  const res = await fetch(`${cfg.url}/functions/v1/${name}`, {
+    method: "POST",
+    headers: { apikey: cfg.key, Authorization: `Bearer ${data.session?.access_token ?? cfg.key}`, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const out = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(out.error || `Request failed (${res.status})`);
+  return out;
+}
+
+// Where to go after sign-up and onboarding (e.g. back to the plan someone picked on /pricing/).
+const NEXT_KEY = "carvcam-next";
+const safeNext = (n) => (n && n.startsWith("/") && !n.startsWith("//") ? n : null);
+const rememberNext = (n) => { try { if (safeNext(n)) localStorage.setItem(NEXT_KEY, n); } catch {} };
+const takeNext = () => { try { const n = localStorage.getItem(NEXT_KEY); localStorage.removeItem(NEXT_KEY); return safeNext(n); } catch { return null; } };
+
 const $ = (sel, el = document) => el.querySelector(sel);
 const $$ = (sel, el = document) => [...el.querySelectorAll(sel)];
 
@@ -71,6 +90,7 @@ async function afterLogin(user) {
 
 /* ---------------- sign up ---------------- */
 async function signupPage(form) {
+  rememberNext(new URLSearchParams(location.search).get("next"));
   const { data } = await auth.getSession();
   if (data.session) return afterLogin(data.session.user);
   form.addEventListener("submit", async (e) => {
@@ -247,7 +267,7 @@ async function onboardingPage(form) {
       return say(form, friendly(err));
     }
     busy(form, false);
-    if (last) location.assign(root("/account/?welcome=1"));
+    if (last) location.assign(takeNext() || root("/account/?welcome=1"));
     else show(at + 1);
   });
   $("[data-skip]")?.addEventListener("click", async () => {
@@ -273,14 +293,86 @@ async function accountPage(el) {
   $("[data-edit-answers]", el).hidden = !done;
   $("[data-admin]", el).hidden = profile?.role !== "admin";
   el.hidden = false;
+  await showPlan(el, user);
   $("[data-logout]", el).addEventListener("click", async () => {
     await auth.signOut();
     location.assign(root("/login/"));
   });
 }
 
+/* ---------------- plan and billing ---------------- */
+const fmtDate = (iso) => new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+const hasPro = (e) => !!e && (e.plan === "pro" || e.plan === "school") && (e.lifetime || e.source === "manual" || ["trialing", "active", "past_due"].includes(e.status));
+
+async function showPlan(el, user) {
+  const box = $("[data-plan-box]", el);
+  if (!box) return;
+  const params = new URLSearchParams(location.search);
+  let e = null;
+  // Right after Checkout the webhook may still be on its way: look a few times.
+  for (let i = 0; i < (params.get("checkout") === "success" ? 6 : 1); i++) {
+    ({ data: e } = await db.from("entitlements").select("*").eq("user_id", user.id).maybeSingle());
+    if (hasPro(e) || params.get("checkout") !== "success") break;
+    await new Promise((r) => setTimeout(r, 2000));
+  }
+  const pro = hasPro(e);
+  const name = !pro ? "Free" : e.plan === "school" ? "School / Makerspace" : e.lifetime ? "Pro · Lifetime" : "Pro";
+  let detail = "Design, check and carve with no limit on cuts.";
+  if (pro && e.lifetime) detail = "Pro forever. Thanks for backing CarvCAM.";
+  else if (pro && e.status === "trialing" && e.trial_end) detail = `Free trial until ${fmtDate(e.trial_end)}. ${e.cancel_at_period_end ? "It won't renew." : "Then $69/year."}`;
+  else if (pro && e.status === "past_due") detail = "Your last payment didn't go through. Update your card to keep Pro.";
+  else if (pro && e.current_period_end) detail = `${e.cancel_at_period_end ? "Ends" : "Renews"} on ${fmtDate(e.current_period_end)}.`;
+  else if (pro && e.source === "manual") detail = "Granted by the CarvCAM team.";
+  $("[data-plan-name]", box).textContent = name;
+  $("[data-plan-detail]", box).textContent = detail;
+  $("[data-upgrade]", box).hidden = pro;
+  const manage = $("[data-manage]", box);
+  manage.hidden = !e || e.source === "manual" || (!e.stripe_subscription_id && !e.lifetime);
+  manage.onclick = async () => {
+    manage.disabled = true;
+    try {
+      location.assign((await callFn("create-portal")).url);
+    } catch (err) {
+      manage.disabled = false;
+      $("[data-plan-detail]", box).textContent = friendly(err);
+    }
+  };
+  if (params.get("checkout") === "success") $("[data-paid]", el).hidden = !pro;
+  box.hidden = false;
+}
+
+async function pricingPage(el) {
+  const msg = $(".plans__msg", el);
+  const params = new URLSearchParams(location.search);
+  if (params.get("checkout") === "canceled") Object.assign(msg, { textContent: "Checkout canceled. Nothing was charged.", hidden: false }), (msg.dataset.kind = "ok");
+  const { data } = await auth.getSession();
+  if (data.session) {
+    const { data: e } = await db.from("entitlements").select("*").eq("user_id", data.session.user.id).maybeSingle();
+    if (hasPro(e)) {
+      $$("[data-plan]", el).forEach((b) => ((b.disabled = true), (b.textContent = "You have Pro")));
+      return;
+    }
+  }
+  const start = async (plan, btn) => {
+    const { data } = await auth.getSession();
+    if (!data.session) return location.assign(root(`/signup/?next=${encodeURIComponent(location.pathname + "?plan=" + plan)}`));
+    btn && (btn.disabled = true, btn.dataset.label ??= btn.textContent, btn.textContent = "Opening checkout…");
+    try {
+      location.assign((await callFn("create-checkout", { plan })).url);
+    } catch (err) {
+      if (btn) (btn.disabled = false), (btn.textContent = btn.dataset.label);
+      Object.assign(msg, { textContent: friendly(err), hidden: false });
+      msg.dataset.kind = "error";
+    }
+  };
+  $$("[data-plan]", el).forEach((b) => b.addEventListener("click", () => start(b.dataset.plan, b)));
+  // Back from sign-up or log-in with a plan already chosen.
+  const chosen = params.get("plan");
+  if (chosen && data.session) start(chosen, $(`[data-plan="${chosen}"]`, el));
+}
+
 const page = document.querySelector("[data-account]");
-const run = { signup: signupPage, login: loginPage, reset: resetPage, onboarding: onboardingPage, account: accountPage }[page?.dataset.account];
+const run = { signup: signupPage, login: loginPage, reset: resetPage, onboarding: onboardingPage, account: accountPage, pricing: pricingPage }[page?.dataset.account];
 run?.(page).catch((err) => {
   const form = page.closest("form") || page.querySelector("form") || page;
   if ($(".auth__msg", form)) say(form, friendly(err));

@@ -142,8 +142,11 @@ ${msg}
   page("/account/", "Your account | CarvCAM", "Your CarvCAM account.", () =>
     `<section class="acct"><div class="narrow"><div data-account="account" hidden>
 <div class="note note--ok" data-welcome hidden><b>You're all set.</b> Thanks for telling us about your shop.</div>
+<div class="note note--ok" data-paid hidden><b>Payment received.</b> Pro is active on your account. Thank you!</div>
 <p class="eyebrow">Your account</p><h1 data-name></h1>
 <p class="lede"><span data-email></span> · <span class="badge" data-role></span></p>
+<div class="plancard" data-plan-box hidden><div><span class="eyebrow">Your plan</span><h2 data-plan-name>Free</h2><p data-plan-detail></p></div>
+<div class="plancard__actions"><a class="btn btn--primary" href="${href("/pricing/")}" data-upgrade>Upgrade to Pro</a><button type="button" class="btn" data-manage hidden>Manage billing</button></div></div>
 <div class="acct__grid">
 <a class="card" href="${href("/download/")}"><h3>Download CarvCAM</h3><p>Windows, Linux and Raspberry Pi.</p><span class="more">Get the app</span></a>
 <a class="card" href="${href("/onboarding/")}" data-onboarding><h3>Finish your shop profile</h3><p>Five quick questions so CarvCAM fits the way you carve.</p><span class="more">Continue</span></a>

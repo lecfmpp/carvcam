@@ -8,6 +8,7 @@ import { faq, features, howtos, machines, nav, site } from "./src/data.mjs";
 import { comparisons, others, sienciRecs } from "./src/compare.mjs";
 import { docSections, docs } from "./src/docs.mjs";
 import { accountPages } from "./src/account.mjs";
+import { pricingPage } from "./src/pricing.mjs";
 
 const PREVIEW = process.argv.includes("--preview");
 const OUT = new URL("./dist/", import.meta.url).pathname;
@@ -499,7 +500,7 @@ ${c.rows.map(([k, a, b]) => `<tr><td>${esc(k)}</td><td class="us">${cell(a)}</td
 <section id="pricing" class="vsec soft"><div class="wrap narrowish">
 <h2>${esc(c.name)} pricing in 2026</h2>
 <div class="vprice">${c.pricing.map((p) => `<div class="vprice__card"><span class="vprice__plan">${esc(p.plan)}</span><b class="vprice__amt">${esc(p.price)}</b><p>${esc(p.notes)}</p>${p.source ? `<span class="vprice__src">Source ${cite(p.source)}</span>` : ""}</div>`).join("")}</div>
-<p class="note" style="margin-top:16px">List prices in USD as shown by the cited source on ${checked}. CarvCAM pricing will be announced at launch.</p>
+<p class="note" style="margin-top:16px">List prices in USD as shown by the cited source on ${checked}. CarvCAM: <a href="${href("/pricing/")}">free, or Pro at $69/year</a>.</p>
 ${c.limits.length ? `<h3 style="margin-top:36px">Limits to know about</h3><ul class="vlimits">${c.limits.map((l) => `<li>${esc(l.text)} ${cite(l.source)}</li>`).join("")}</ul>` : ""}
 </div></section>
 
@@ -821,6 +822,7 @@ featurePages();
 comparePages();
 learnPages();
 docPages();
+pricingPage({ layout, at, href, asset, esc });
 accountPages({ layout, at, href, asset, esc });
 notFound();
 
