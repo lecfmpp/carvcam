@@ -52,6 +52,8 @@ export const RT = {
   rpmDown10: "\x9b",
   rpmUp1: "\x9c",
   rpmDown1: "\x9d",
+  /** grblHAL: relatório de estado completo (subestado do alarme incluso), como o gSender usa em alarme. */
+  fullStatus: "\x87",
 } as const;
 
 export class GrblController {
@@ -98,20 +100,26 @@ export class GrblController {
       await this.close();
       throw new Error("The controller didn't answer. Check it is on and the E-stop is released.");
     }
-    const info = await this.send("$I").catch(() => [] as string[]);
+    // Como o gSender: o firmware sai do texto do $I ("[FIRMWARE:grblHAL]" ou o [VER:] do grbl).
+    // A SLB não reinicia ao conectar, então nem sempre há mensagem de boas-vindas.
+    let info: string[] = [];
+    for (let i = 0; i < 3 && !info.length; i++) info = await this.send("$I").catch(() => [] as string[]);
     for (const l of info) {
       const m = parseLine(l);
       if (m.type === "ver") this.version = m.version;
       if (m.type === "opt" && m.rx) this.rxSize = Math.max(64, Math.min(m.rx - 8, 1016));
     }
-    // Sem a mensagem de boas-vindas (a SLB não reinicia ao conectar), o [OPT] do grblHAL tem buffer maior.
+    const said = info.join("\n");
+    if (/grblhal/i.test(said)) this.firmware = "grblHAL";
+    else if (!this.firmware && /grbl|fluidnc/i.test(said)) this.firmware = "grbl";
+    // Último recurso: só o grblHAL informa buffer maior que 128 no [OPT].
     if (!this.firmware) this.firmware = this.rxSize > 128 ? "grblHAL" : "grbl";
     const set = await this.send("$$").catch(() => [] as string[]);
     for (const l of set) {
       const m = parseLine(l);
       if (m.type === "setting") this.settings[m.key] = m.value;
     }
-    this.poll = setInterval(() => void this.rt(RT.status), this.opts.pollMs ?? 200);
+    this.poll = setInterval(() => void this.rt(this.firmware === "grblHAL" && this.last?.state === "Alarm" ? RT.fullStatus : RT.status), this.opts.pollMs ?? 200);
   }
 
   async close() {

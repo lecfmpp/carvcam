@@ -108,6 +108,8 @@ export interface BridgePort {
   vendorId?: string;
   productId?: string;
   serialNumber?: string;
+  /** Chip USB usado por controladoras de CNC (mesma lista do gSender). */
+  known?: boolean;
 }
 
 export type BridgeTarget = { kind: "serial"; path: string; baud?: number } | { kind: "tcp"; host: string; port: number };

@@ -33,6 +33,11 @@ export function originAllowed(origin) {
 }
 
 /** Lista portas seriais. No Linux sem udevadm (alguns contêineres), procura em /dev. */
+// Mesma lista de chips USB que o gSender 1.6.4 aceita como controladora (CNCEngine.js):
+// 0483 STM32 (SuperLongBoard, SLB-EXT, SLB-LITE), 1A86 CH340 e 2341 Arduino (LongBoard), FTDI, CP210x, Teensy, RP2040...
+const KNOWN_VIDS = ["2E8A", "16C0", "1D50", "0403", "2341", "0042", "1A86", "10C4", "067B", "03EB", "16D0", "0483"];
+export const knownController = (p) => !!p.vendorId && KNOWN_VIDS.includes(String(p.vendorId).toUpperCase());
+
 export async function listPorts() {
   if (process.platform === "linux" && !["/usr/bin/udevadm", "/bin/udevadm", "/sbin/udevadm", "/usr/sbin/udevadm"].some(existsSync)) {
     return readdirSync("/dev")
@@ -42,7 +47,9 @@ export async function listPorts() {
   const ports = await SerialPort.list();
   return ports
     .filter((p) => p.vendorId || /usb|acm|modem|COM\d/i.test(p.path))
-    .map((p) => ({ path: p.path, manufacturer: p.manufacturer, vendorId: p.vendorId, productId: p.productId, serialNumber: p.serialNumber }));
+    .map((p) => ({ path: p.path, manufacturer: p.manufacturer, vendorId: p.vendorId, productId: p.productId, serialNumber: p.serialNumber, known: knownController(p) }))
+    // Controladoras conhecidas primeiro (no Windows, portas Bluetooth e de modem também aparecem como COM).
+    .sort((a, b) => Number(b.known) - Number(a.known));
 }
 
 export function startBridge({ port = BRIDGE_PORT, log = console.log } = {}) {

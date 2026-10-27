@@ -50,6 +50,25 @@ describe("controller", () => {
     await c.close();
   });
 
+  it("identifies grblHAL from the $I reply, like gSender, even with a small buffer", async () => {
+    const f = new FakeGrbl("grblHAL", 128);
+    const c = new GrblController(f, {}, { pollMs: 20 });
+    await c.connect();
+    expect(c.firmware).toBe("grblHAL");
+    expect(c.rxSize).toBe(120);
+    await c.close();
+  });
+
+  it("asks grblHAL for the full status report (0x87) while in alarm", async () => {
+    const f = new FakeGrbl("grblHAL");
+    const c = new GrblController(f, {}, { pollMs: 20 });
+    await c.connect();
+    (f as unknown as { state: string }).state = "Alarm";
+    await until(() => c.last?.state === "Alarm");
+    await until(() => f.realtime.includes("\x87"));
+    await c.close();
+  });
+
   it("waits for a LongBoard (grbl) that restarts on connect", async () => {
     const f = new FakeGrbl("grbl");
     const c = new GrblController(f, {}, { pollMs: 20 });

@@ -57,6 +57,8 @@ export class FakeGrbl implements Transport {
     if (text.length === 1 && "?!~\x18".includes(text)) return this.rtCmd(text);
     if (text.length === 1 && text.charCodeAt(0) > 0x7f) {
       this.realtime.push(text);
+      // 0x87: relatório completo do grblHAL; aqui responde como o "?".
+      if (text === "\x87" && this.kind === "grblHAL") this.rtCmd("?", false);
       return;
     }
     for (const l of text.split("\n")) {
@@ -68,8 +70,8 @@ export class FakeGrbl implements Transport {
     }
   }
 
-  private rtCmd(c: string) {
-    this.realtime.push(c);
+  private rtCmd(c: string, record = true) {
+    if (record) this.realtime.push(c);
     if (!this.booted) return;
     if (c === "?") {
       const p = this.mpos;
@@ -104,7 +106,8 @@ export class FakeGrbl implements Transport {
     this.received.push(l);
     if (this.errors[l]) return this.emit(`error:${this.errors[l]}`);
     if (l === "$I") {
-      if (this.kind === "grblHAL") this.emit("[VER:1.1f.20240514:SLB]", "[OPT:VNMSL,35,1024,3,0]");
+      // Como a SLB responde: [VER], [OPT] com o buffer e [FIRMWARE:grblHAL].
+      if (this.kind === "grblHAL") this.emit("[VER:1.1f.20240514:SLB]", `[OPT:VNMSL,35,${this.rx},3,0]`, "[FIRMWARE:grblHAL]");
       else this.emit("[VER:1.1h.20190825:]", "[OPT:V,15,128]");
     } else if (l === "$$") this.emit("$110=4000.000", "$130=1260.000", "$22=1");
     else if (l === "$H") this.mpos = { x: 0, y: 0, z: 0 };

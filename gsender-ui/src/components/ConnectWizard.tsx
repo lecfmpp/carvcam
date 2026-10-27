@@ -400,7 +400,7 @@ function ConnectStep(props: { c: ControllerInfo; link: Link; known: boolean; onB
                   <Usb size={20} />
                   <span className="cw__port-text">
                     <span className="cw__port-name">{portName(p)}</span>
-                    <span className="cw__port-sub mono">USB · {p.path}</span>
+                    <span className="cw__port-sub mono">USB · {p.path}{p.known === false ? " · not a known CNC controller" : ""}</span>
                   </span>
                   <span className="cw__port-dot" aria-hidden />
                 </div>
