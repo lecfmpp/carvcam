@@ -37,10 +37,26 @@ export function Stepper(props: { value: number; onChange(v: number): void; step?
   );
 }
 
+/**
+ * On phones the side panel becomes a bottom sheet under the canvas; this handle folds it down to its
+ * header and footer so the canvas gets the screen. Hidden on larger screens.
+ */
+export function useSheet() {
+  const [collapsed, setCollapsed] = useState(false);
+  const handle = (
+    <button className="sheet-handle" aria-label={collapsed ? "Show the panel" : "Fold the panel down"} aria-expanded={!collapsed} onClick={() => setCollapsed(!collapsed)}>
+      <span />
+    </button>
+  );
+  return { cls: collapsed ? "is-collapsed" : "", handle };
+}
+
 /** Glass side panel on the right, with header, scrollable body and fixed footer. */
 export function SidePanel(props: { title: ReactNode; sub?: ReactNode; children: ReactNode; foot?: ReactNode; headExtra?: ReactNode }) {
+  const sheet = useSheet();
   return (
-    <aside className="sidepanel">
+    <aside className={`sidepanel ${sheet.cls}`}>
+      {sheet.handle}
       <div className="sidepanel__head">
         <h2 className="sidepanel__title">{props.title}</h2>
         {props.headExtra ?? (props.sub ? <span className="sidepanel__sub">{props.sub}</span> : null)}

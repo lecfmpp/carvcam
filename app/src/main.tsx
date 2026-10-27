@@ -5,6 +5,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import { warmEngine } from "./engine/useEngine";
 import "./styles/app.css";
+import "./styles/mobile.css";
 
 declare global {
   interface Window {

@@ -318,7 +318,8 @@ export default function Create() {
             );
           }
           // The open legend takes the top-right corner: the board centers in the space left of it.
-          const side = legendOpen && result ? LEGEND_SPACE : 0;
+          // (On a phone the legend is hidden, so nothing is reserved.)
+          const side = legendOpen && result && api.size.w > 700 ? LEGEND_SPACE : 0;
           const s = fitScale({ w: api.size.w - side, h: api.size.h }, block.width, block.height, { x: side ? 220 : 260, y: 280 });
           return (
             <div style={{ marginRight: side, transition: "margin 180ms var(--ease)" }}>

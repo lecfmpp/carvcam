@@ -118,7 +118,7 @@ function JobSteps({ step, reachable }: { step: JobStep; reachable: JobStep[] }) 
           return (
             <button key={s} className={cls} aria-current={i === idx ? "step" : undefined} disabled={!can && i !== idx} onClick={() => can && nav(`/${s}`)}>
               <span className="step__dot">{i < idx ? <Check size={12} strokeWidth={2} /> : i + 1}</span>
-              {label}
+              <span className="step__label">{label}</span>
             </button>
           );
         })}

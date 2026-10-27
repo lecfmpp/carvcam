@@ -106,5 +106,7 @@ export function Stage(props: { caption?: ReactNode; tools?: ReactNode; overlay?:
 
 /** Scale (px per mm) to fit a w × h mm object on the stage, with some margin. */
 export function fitScale(size: { w: number; h: number }, w: number, h: number, pad = { x: 200, y: 240 }) {
+  // Small stages (phones, a narrow window) keep at most a quarter of their size as margin.
+  pad = { x: Math.min(pad.x, size.w * 0.25), y: Math.min(pad.y, size.h * 0.3) };
   return Math.max(0.05, Math.min((size.w - pad.x) / w, (size.h - pad.y) / h));
 }

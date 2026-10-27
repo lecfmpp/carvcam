@@ -2,7 +2,7 @@ import type { PlateSpecInput } from "@carvcam/cam-engine";
 import { AlertCircle, AlertTriangle, ArrowRight, CheckCircle2, ChevronDown, ChevronRight, ChevronUp, Circle, Copy, FileUp, Heart, Hexagon, ImagePlus, Layers, Move, Wand2, Minus, MoveVertical, PenTool, Shapes, Square, Star, Trash2, Type, XCircle } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { AccItem, Seg, Stepper } from "../../components/ui";
+import { AccItem, Seg, Stepper, useSheet } from "../../components/ui";
 import { BITS, bitById, compat, materialById, MATERIALS } from "../../lib/catalog";
 import { useDesign } from "../../state/design";
 import { toast } from "../../state/ui";
@@ -48,6 +48,7 @@ export function CreatePanel(p: Props) {
     selRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [p.sel]);
 
+  const sheet = useSheet();
   // One section open at a time, so the panel fits without scrolling. Selecting an element opens Elements;
   // "Pick another bit" (from a warning) opens Wood & bit.
   const [sec, setSec] = useState<"wood" | "shape" | "tracing" | "elements">("elements");
@@ -80,7 +81,8 @@ export function CreatePanel(p: Props) {
   const sign = spec.type !== "lettering";
 
   return (
-    <aside className="sidepanel create-panel" aria-label="Design">
+    <aside className={`sidepanel create-panel ${sheet.cls}`} aria-label="Design">
+      {sheet.handle}
       <div className="create-panel__head">
         <div className="create-panel__titlerow">
           <input className="create-panel__name" value={design.name} aria-label="Design name" onChange={(e) => patch({ name: e.target.value })} />

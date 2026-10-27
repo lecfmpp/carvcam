@@ -1,0 +1,98 @@
+/*
+ * Phones and narrow windows (≤ 820 px). The desktop layout puts the panel on the right of the canvas;
+ * here the canvas takes the top of the screen and the panel becomes a bottom sheet that folds down.
+ */
+.sheet-handle { display: none; }
+
+@media (max-width: 820px) {
+  :root { --header-h: 56px; --sheet-h: 54vh; }
+  html .app { min-width: 0; --sheet-h: 54vh; }
+  html .app:has(.sidepanel.is-collapsed) { --sheet-h: 170px; }
+
+  /* ---------- top bar: icons and the current step only, scrolls sideways if it must */
+  html .topbar { gap: 6px; padding: 0 8px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+  html .topbar::-webkit-scrollbar { display: none; }
+  html .topbar > * { flex: none; }
+  html .topbar .wordmark { display: none; }
+  html .topbar > .seg { display: none; }
+  html .navtabs { margin-left: 4px !important; gap: 0; flex: none; }
+  html .navtab { padding: 0 10px; font-size: 13px; white-space: nowrap; }
+  html .steps { flex: 1 0 auto; justify-content: flex-start; }
+  html .steps__row { gap: 10px; }
+  html .step:not(.step--current) .step__label { display: none; }
+  html .acct-chip__label { display: none; }
+  html .machine-chip { font-size: 0; gap: 0; padding: 0 10px; }
+  html .machine-chip svg { width: 18px; height: 18px; }
+  html .pill { font-size: 0; gap: 0; padding: 0 10px; min-width: 32px; justify-content: center; }
+  html .pill__dot { width: 10px; height: 10px; }
+  html .stop-btn .kbd { display: none; }
+  html .topbar__disconnect { font-size: 0; gap: 0; padding: 0 9px; }
+
+  /* ---------- canvas on top, panel as a bottom sheet */
+  html .stage { right: 0; bottom: var(--sheet-h); transition: bottom 200ms var(--ease); }
+  html .sidepanel { left: 0; right: 0; top: auto; bottom: 0; width: auto; height: var(--sheet-h); border-radius: 18px 18px 0 0; border-bottom: 0; transition: height 200ms var(--ease); }
+  html .sidepanel.is-collapsed .sidepanel__body, html .sidepanel.is-collapsed .create-status, html .sidepanel.is-collapsed .sidepanel__sub { display: none; }
+  html .sidepanel.is-collapsed { height: auto; max-height: var(--sheet-h); }
+  html .sheet-handle { display: flex; justify-content: center; align-items: center; flex: none; width: 100%; height: 22px; border: 0; background: transparent; padding: 0; cursor: pointer; }
+  html .sheet-handle span { width: 44px; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.28); }
+  html .sidepanel__head, html .create-panel__head { padding: 4px 16px 12px; }
+  html .sidepanel__body { padding: 12px 14px; }
+  html .sidepanel__foot { padding: 10px 14px 14px; gap: 8px; }
+  html .sidepanel__foot .btn--lg { height: 48px; }
+  html .sidepanel__foot .sidepanel__hint { display: none; }
+  html .sidepanel__foot .btn--outline { height: 38px; }
+  html .create-status { font-size: 12px; }
+  html .create-panel__titlerow { gap: 8px; }
+  html .create-panel__name { font-size: 17px; }
+
+  html .stage__toolbar { left: 10px; right: 10px; top: 10px; gap: 6px; flex-wrap: wrap; }
+  html .stage__caption { display: none; }
+  html .stage__toolbar .tool-btn { height: 36px; padding: 0 10px; font-size: 13px; }
+  html .stage__toolbar .seg--lg .seg__opt { height: 34px; padding: 0 12px; }
+  html .stage__zoom { right: 10px; bottom: 10px; padding: 2px; }
+  html .stage__zoomval { display: none; }
+  html .stage__zoom button { width: 38px; height: 40px; }
+  html .stage__bottomleft { left: 10px; bottom: 10px; right: 104px; max-width: none; }
+  html .video-chip { height: 46px; padding: 4px 10px 4px 4px; max-width: 220px; }
+  html .video-chip__text .tiny { white-space: nowrap; }
+  html .video-chip__thumb { width: 52px; height: 36px; }
+  html .create-ai { width: auto; max-width: none; flex: 1; min-width: 0; }
+  html .create-ai__bar { height: 48px; padding: 0 6px 0 12px; gap: 6px; }
+  html .create-ai__bar .kbd { display: none; }
+  html .create-ai__toggle { padding: 0 8px; }
+  html .create-ai__panel { position: fixed; left: 8px; right: 8px; bottom: calc(var(--sheet-h) + 64px); max-height: 50vh; }
+  html .stage__bottomleft:has(.create-ai) .video-chip { display: none; }
+  html .issue-tray { right: 10px; bottom: 60px; width: calc(100% - 20px); }
+  html .issue-tray__pill { height: 36px; }
+  html .issue-tray__list { max-height: 40vh; }
+
+  /* Create: smaller tool rail, legend off (the warnings tray says what matters) */
+  html .create-rail { left: 10px; top: 58px; gap: 2px; padding: 3px; }
+  html .create-rail__btn { width: 36px; height: 36px; }
+  html .create-legend { display: none; }
+  html .create-chips { flex-wrap: wrap; }
+  html .create-chips__pop { left: 12px; right: 12px; }
+  html .proj-actions { gap: 4px; }
+
+  /* ---------- workshop pages, onboarding: one column */
+  html .ws-page, html .ws-page--wide, html .ws-page--mid, html .ws-page--narrow { padding: 20px 16px 32px; gap: 18px; max-width: none; }
+  html .ws-title { font-size: 28px; }
+  html .ws-title--sm { font-size: 26px; }
+  html .ws-lead { font-size: 15px; }
+  html .ws-page > div { flex-wrap: wrap; }
+  html .ws-projects { grid-template-columns: 1fr; }
+  html .ws-track ol { grid-template-columns: 1fr; }
+  html .ws-track-item { min-height: 48px; }
+  html .bgrid { grid-template-columns: 1fr; }
+  html .ws-main [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+  html .ws-tabs { width: 100%; overflow-x: auto; }
+
+  /* ---------- dialogs fill the screen width */
+  html .jmodal, html .create-modal { padding: 10px; align-items: flex-end; }
+  html .jmodal__card, html .create-modal__card { width: 100%; max-height: calc(100dvh - 20px); }
+  html .jmodal__foot { flex-wrap: wrap; }
+  html .jmodal__foot .btn { flex: 1 1 auto; }
+  html .toasts { top: auto; bottom: calc(var(--sheet-h) + 70px); width: calc(100% - 24px); }
+  html .toast { text-align: center; }
+  html .popover { max-width: calc(100vw - 16px); }
+}

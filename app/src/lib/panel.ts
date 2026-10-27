@@ -3,13 +3,14 @@ import { useWorkshop } from "../state/workshop";
 
 /**
  * Panel mode: UI for the gControl touchscreen (15.6″, 1920×1080, Windows at 125–150% scaling).
- * Turns on by itself when the primary pointer is touch, via the option in Settings, or with
- * `?panel=1` in the URL.
+ * Turns on by itself on a large touchscreen (phones and small tablets get the mobile layout instead),
+ * via the option in Settings, or with `?panel=1` in the URL.
  */
+const TOUCH_PANEL = "(pointer: coarse) and (min-width: 1000px)";
 export function detectTouchPanel() {
   if (typeof window === "undefined") return false;
   if (new URLSearchParams(window.location.search).get("panel") === "1") return true;
-  return window.matchMedia("(pointer: coarse)").matches;
+  return window.matchMedia(TOUCH_PANEL).matches;
 }
 
 export function isPanelMode(setting = useWorkshop.getState().panel) {
@@ -23,7 +24,7 @@ export function usePanelMode() {
   useEffect(() => {
     const update = () => setOn(isPanelMode(setting));
     update();
-    const mq = window.matchMedia("(pointer: coarse)");
+    const mq = window.matchMedia(TOUCH_PANEL);
     mq.addEventListener("change", update);
     return () => mq.removeEventListener("change", update);
   }, [setting]);
