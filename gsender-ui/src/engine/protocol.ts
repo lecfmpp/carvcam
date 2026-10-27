@@ -1,4 +1,5 @@
 import type { GenerateOptions, GenerateResult, PlateSpecInput } from "@gsender-next/cam-engine";
+import type { BatchRow } from "../lib/batch";
 
 export interface EngineRequest {
   id: number;
@@ -30,3 +31,39 @@ export interface EngineResponse {
   result: GenerateResult | null;
   sim: SimGrid | null;
 }
+
+/** Batch from CSV: one file per row, generated in the worker (progress after each row). */
+export interface BatchRequest {
+  id: number;
+  kind: "batch";
+  spec: PlateSpecInput;
+  rows: Record<string, string>[];
+  /** CSV headers, for the summary.csv columns. */
+  headers: string[];
+  options: Omit<GenerateOptions, "fonts">;
+  fileNameField?: string;
+  /** Also builds the ZIP (the .nc files of the rows that are ok + summary.csv). */
+  zip: boolean;
+}
+
+export interface BatchProgress {
+  id: number;
+  kind: "batch-progress";
+  done: number;
+  total: number;
+}
+
+export interface BatchDone {
+  id: number;
+  kind: "batch-done";
+  ok: boolean;
+  error?: string;
+  rows: BatchRow[];
+  okCount: number;
+  failed: number;
+  totalTimeSec: number;
+  zip: Uint8Array | null;
+}
+
+export type WorkerRequest = EngineRequest | BatchRequest;
+export type WorkerMessage = EngineResponse | BatchProgress | BatchDone;

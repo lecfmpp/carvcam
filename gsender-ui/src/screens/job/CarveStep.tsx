@@ -1,4 +1,4 @@
-import { AlertTriangle, Check, OctagonAlert, Pause } from "lucide-react";
+import { AlertTriangle, Check, OctagonAlert, Pause, Printer } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Banner, SidePanel, VideoCard } from "../../components/ui";
@@ -7,12 +7,15 @@ import { useMachine, workPos, type AlarmCode } from "../../machine/store";
 import { useDesign } from "../../state/design";
 import { toast } from "../../state/ui";
 import { useWorkshop } from "../../state/workshop";
-import { Board, ToolpathOverlay, useSegments } from "../../stage/Board";
+import { Board, LayoutOverlay, ToolpathOverlay, useSegments } from "../../stage/Board";
+import { KeepOutLayer } from "../../stage/KeepOutLayer";
 import { SimCanvas } from "../../stage/SimCanvas";
 import { fitScale, Stage } from "../../stage/Stage";
 import { ThreeView } from "../../stage/ThreeView";
 import type { JobCtx } from "./Job";
 import { bitNameFor, fmtMin, rpmText, useFlow } from "./jobUtil";
+import { zoneIssues, zoneOverhang } from "./zones";
+import { SetupSheetDialog } from "./SetupSheetDialog";
 
 /** Alarms with guided recovery (prototype copy). "hold" = pause only, the position is still valid. */
 const ALARMS: Record<AlarmCode, { kind: string; hold?: boolean; title: string; why: string; steps: [string, string][]; resume: string; code: string }> = {
@@ -68,6 +71,7 @@ export function CarveStep({ ctx }: { ctx: JobCtx }) {
   const [tcStep, setTcStep] = useState(0);
   const [probeLeft, setProbeLeft] = useState<number | null>(null);
   const [doneSpin, setDoneSpin] = useState(0);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   const phase: Phase = m.status === "running" ? "running" : m.status === "paused" ? "paused" : m.status === "toolchange" ? "toolchange" : m.status === "alarm" ? "alarm" : m.status === "done" ? "done" : "check";
   const b = result?.layout.stock;
@@ -109,6 +113,8 @@ export function CarveStep({ ctx }: { ctx: JobCtx }) {
   const twoBits = new Set(groups.map((g) => g.tool)).size > 1;
   const rpm = result?.params.main.rpm ?? 18000;
   const dial = result?.manualAdjustments.find((a) => a.tool === firstTool) ?? null;
+  const zones = design.keepOut ?? [];
+  const koIssues = zoneIssues(result, zones);
   const fits = b ? b.width <= machine.area[0] && b.height <= machine.area[1] : true;
 
   type Check = { label: string; sub: string; ok: boolean; fix?: [string, () => void]; dial?: number };
@@ -131,6 +137,13 @@ export function CarveStep({ ctx }: { ctx: JobCtx }) {
         ctx.hasProfile && design.tabs.count > 0
           ? { label: `${design.tabs.count} holding tabs`, sub: `${design.tabs.count} tabs, ${design.tabs.height} mm high`, ok: true }
           : { label: "Piece held down", sub: ctx.hasProfile ? "Double-sided tape under the board" : "Clamped on the bed; nothing gets cut loose", ok: true },
+        ...(zones.length
+          ? [
+              koIssues.length
+                ? { label: "A clamp is in the bit's way", sub: koIssues[0].title, ok: false, fix: ["Fix", () => nav("/position")] as [string, () => void] }
+                : { label: "Clamps clear of the toolpath", sub: `${zones.length} keep-out zone${zones.length > 1 ? "s" : ""} checked · travel raised over them`, ok: true },
+            ]
+          : []),
       ]
     : [];
   const toFix = checks.filter((c) => !c.ok).length;
@@ -278,7 +291,8 @@ export function CarveStep({ ctx }: { ctx: JobCtx }) {
         }
         render={(api) => {
           if (!b) return <div className="muted">Preparing the job…</div>;
-          const s = fitScale(api.size, b.width, b.height);
+          const oh = zoneOverhang(zones, b);
+          const s = fitScale(api.size, b.width + 2 * oh.x, b.height + 2 * oh.y);
           if ((api.view === "3d" || phase === "done") && sim)
             return <ThreeView sim={sim} thickness={b.thickness} material={mat} board={{ width: b.width, height: b.height }} zoom={api.zoom} spin={api.spin + doneSpin} size={api.size} />;
           const live = phase !== "check" && carved;
@@ -290,6 +304,7 @@ export function CarveStep({ ctx }: { ctx: JobCtx }) {
               ) : (
                 <ToolpathOverlay segments={segs} width={b.width} height={b.height} scale={s} opacity={0.75} />
               )}
+              {zones.length ? <KeepOutLayer zones={zones} scale={s} frame={{ width: b.width, height: b.height }} /> : null}
               {live && phase !== "done" ? (
                 <>
                   <div className="live-bit" style={{ left: wp.x * s - 8, bottom: wp.y * s - 8 }} />
@@ -347,12 +362,25 @@ export function CarveStep({ ctx }: { ctx: JobCtx }) {
                 </div>
               ))}
             </div>
+            {!zones.length ? (
+              <div className="job-tip">
+                <span>Tip: mark your clamps so CarvCAM can keep the bit away from them.</span>
+                <button className="link" onClick={() => nav("/position")}>
+                  Mark clamps
+                </button>
+              </div>
+            ) : null}
             <div className="job-row job-row--box">
               <span>{toFix ? `${toFix} to fix` : "All checks passed"}</span>
               <span className="mono" style={{ color: "var(--text)" }}>
                 {fmtMin(totalSec / 60)}
               </span>
             </div>
+            <button className="btn btn--outline btn--sm job-sheet-btn" disabled={!result?.gcode} onClick={() => setSheetOpen(true)}>
+              <Printer size={15} strokeWidth={1.75} />
+              Print setup sheet
+            </button>
+            {sheetOpen ? <SetupSheetDialog ctx={ctx} onClose={() => setSheetOpen(false)} /> : null}
           </>
         ) : null}
 

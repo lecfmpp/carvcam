@@ -3,6 +3,21 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { HEADS, KIT, machineById, type HeadId, type MachineId } from "../lib/catalog";
 
+/** Shop-wide inputs of the cost calculator (Pro). Money in the user's currency. */
+export interface ShopCost {
+  currency: string;
+  laborRate: number;
+  machineRate: number;
+  marginPct: number;
+  fee: "none" | "etsy" | "custom";
+  customFeePct: number;
+  setupMin: number;
+  /** Bit price and life (hours of cutting), by bit id; defaults come from the bit type. */
+  bits: Record<string, { cost: number; lifeHours: number }>;
+}
+
+export const DEFAULT_SHOP_COST: ShopCost = { currency: "$", laborRate: 25, machineRate: 1.5, marginPct: 50, fee: "none", customFeePct: 0, setupMin: 15, bits: {} };
+
 /** The user's workshop: machines, head, the bits they own and progress on the "Start here" track. */
 export interface WorkshopState {
   onboarded: boolean;
@@ -17,6 +32,7 @@ export interface WorkshopState {
   wired: string[];
   /** Wizard choices per machine: controller (MK2 has two) and cable. */
   link: Record<string, { controller: string; link: "usb" | "ethernet" }>;
+  cost: ShopCost;
 
   finishOnboarding(machine: MachineId, head: HeadId, bits: string[]): void;
   skipOnboarding(): void;
@@ -31,6 +47,7 @@ export interface WorkshopState {
   setPanel(panel: "auto" | "on" | "off"): void;
   markWired(key: string): void;
   setLink(machine: string, v: { controller: string; link: "usb" | "ethernet" }): void;
+  setCost(p: Partial<ShopCost>): void;
 }
 
 export const useWorkshop = create<WorkshopState>()(
@@ -45,6 +62,7 @@ export const useWorkshop = create<WorkshopState>()(
       panel: "auto",
       wired: [],
       link: {},
+      cost: DEFAULT_SHOP_COST,
 
       finishOnboarding: (machine, head, bits) => set({ onboarded: true, machines: [{ id: machine, head }], active: 0, bits }),
       skipOnboarding: () => set({ onboarded: true }),
@@ -73,6 +91,7 @@ export const useWorkshop = create<WorkshopState>()(
         if (!get().wired.includes(key)) set({ wired: [...get().wired, key] });
       },
       setLink: (machine, v) => set({ link: { ...get().link, [machine]: v } }),
+      setCost: (p) => set({ cost: { ...DEFAULT_SHOP_COST, ...get().cost, ...p } }),
     }),
     {
       name: "gsender-workshop",

@@ -1,17 +1,24 @@
 import type { CutParams } from "@gsender-next/cam-engine";
-import { AlertTriangle, Check, Download, Pause, Play, XCircle } from "lucide-react";
+import { AlertTriangle, Check, Download, Pause, Play, Printer, Rows3, XCircle } from "lucide-react";
+import { templateFields } from "@gsender-next/cam-engine";
+import { ProBadge } from "../../account/ProGate";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Issue, SidePanel, Stepper, VideoCard } from "../../components/ui";
-import { engineOptions, runEngine } from "../../engine/useEngine";
+import { engineKey, engineOptions, runEngine } from "../../engine/useEngine";
 import { BITS, bitById, machineName, materialById, PRESET_LABEL, type Preset } from "../../lib/catalog";
 import { useDesign } from "../../state/design";
 import { useWorkshop } from "../../state/workshop";
-import { Board, ToolpathOverlay, useSegments } from "../../stage/Board";
+import { Board, LayoutOverlay, ToolpathOverlay, useSegments } from "../../stage/Board";
+import { KeepOutLayer } from "../../stage/KeepOutLayer";
 import { fitScale, Stage } from "../../stage/Stage";
 import { ThreeView } from "../../stage/ThreeView";
 import type { JobCtx } from "./Job";
 import { bitNameFor, fmtMin, PRESETS, rpmText } from "./jobUtil";
+import { zoneIssues, zoneOverhang } from "./zones";
+import { SetupSheetDialog } from "./SetupSheetDialog";
+import { CostPanel } from "./CostPanel";
+import { BatchDialog } from "./BatchDialog";
 
 const HINT: Record<Preset, string> = {
   fast: "Shorter job; edges may need a bit more sanding.",
@@ -23,7 +30,7 @@ const HINT: Record<Preset, string> = {
 function usePresetTimes(ctx: JobCtx) {
   const { design, machine, headId, preset, result } = ctx;
   const [other, setOther] = useState<Partial<Record<Preset, { sec: number; params: CutParams }>>>({});
-  const key = JSON.stringify([design.spec, design.bit, design.bit2, design.useBit2, design.tabs, machine.id, headId]);
+  const key = engineKey(design, machine.id, headId);
   useEffect(() => {
     let alive = true;
     setOther({});
@@ -53,6 +60,9 @@ export function PrepareStep({ ctx }: { ctx: JobCtx }) {
   const segs = useSegments(result?.gcode);
   const [playing, setPlaying] = useState(false);
   const [played, setPlayed] = useState(1);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [batchOpen, setBatchOpen] = useState(false);
+  const fields = useMemo(() => templateFields(design.spec), [design.spec]);
 
   // "Play toolpath": draws the path in ~9 s.
   useEffect(() => {
@@ -97,6 +107,10 @@ export function PrepareStep({ ctx }: { ctx: JobCtx }) {
   const totalSec = result?.verification?.stats.estimatedTimeSec ?? 0;
   const p = result?.params.main;
   const tools = new Set(groups.map((g) => g.tool));
+  const zones = design.keepOut ?? [];
+  const koPath = zoneIssues(result, zones).filter((i) => i.code === "KEEP_OUT_PATH");
+  const isKo = (code: string) => code === "KEEP_OUT_OVERLAP" || code === "KEEP_OUT_TOO_TALL";
+  const koBlocked = errors.some((a) => isKo(a.code)) || koPath.length > 0;
   const maxTabH = Math.max(0.5, Math.min(5, (design.spec.thickness ?? 6) - 1));
 
   return (
@@ -117,13 +131,15 @@ export function PrepareStep({ ctx }: { ctx: JobCtx }) {
         }
         render={(api) => {
           if (!b) return <div className="muted">Preparing the toolpath…</div>;
-          const s = fitScale(api.size, b.width, b.height);
+          const oh = zoneOverhang(zones, b);
+          const s = fitScale(api.size, b.width + 2 * oh.x, b.height + 2 * oh.y);
           const mat = materialById(design.material);
           if (api.view === "3d" && sim) return <ThreeView sim={sim} thickness={b.thickness} material={mat} board={{ width: b.width, height: b.height }} zoom={api.zoom} spin={api.spin} size={api.size} />;
           return (
             <Board width={b.width} height={b.height} scale={s} zoom={api.zoom} label={`Board ${fmtN(b.width)} × ${fmtN(b.height)} mm`}>
               <div className={`job-face ${mat.grain ? "job-face--grain" : ""}`} style={{ background: mat.face }} />
-              <ToolpathOverlay segments={segs} width={b.width} height={b.height} scale={s} played={played} opacity={0.75} />
+              {segs.length ? <ToolpathOverlay segments={segs} width={b.width} height={b.height} scale={s} played={played} opacity={0.75} /> : <LayoutOverlay layout={result!.layout} scale={s} />}
+              {zones.length ? <KeepOutLayer zones={zones} scale={s} frame={{ width: b.width, height: b.height }} /> : null}
             </Board>
           );
         }}
@@ -133,7 +149,13 @@ export function PrepareStep({ ctx }: { ctx: JobCtx }) {
         sub={design.name}
         foot={
           <>
-            <div className="sidepanel__hint">{errors.length ? "Fix the errors in Create to continue." : `Everything below is checked for your ${machineName(machine)}.`}</div>
+            <div className="sidepanel__hint">
+              {koBlocked
+                ? "A clamp is in the bit's way. Move the clamp in Position or the design in Create."
+                : errors.length
+                  ? "Fix the errors in Create to continue."
+                  : `Everything below is checked for your ${machineName(machine)}.`}
+            </div>
             <button className="btn btn--primary btn--lg" disabled={!verified} onClick={() => nav("/position")}>
               Continue to Position →
             </button>
@@ -144,8 +166,42 @@ export function PrepareStep({ ctx }: { ctx: JobCtx }) {
           </>
         }
       >
-        {errors.map((a, i) => (
-          <Issue key={i} kind="error" eyebrow="Error · blocks continue" title={a.message} body={a.suggestion} actions={<button className="btn btn--light btn--sm" onClick={() => nav("/create")}>Back to Create</button>} />
+        {errors.map((a, i) =>
+          isKo(a.code) ? (
+            <Issue
+              key={i}
+              kind="error"
+              eyebrow="Keep-out zone · blocks continue"
+              title={a.message}
+              body={a.suggestion}
+              actions={
+                <>
+                  <button className="btn btn--light btn--sm" onClick={() => nav("/position")}>
+                    Edit clamps
+                  </button>
+                  <button className="btn btn--outline btn--sm" onClick={() => nav("/create")}>
+                    Move design
+                  </button>
+                </>
+              }
+            />
+          ) : (
+            <Issue key={i} kind="error" eyebrow="Error · blocks continue" title={a.message} body={a.suggestion} actions={<button className="btn btn--light btn--sm" onClick={() => nav("/create")}>Back to Create</button>} />
+          ),
+        )}
+        {koPath.map((it, i) => (
+          <Issue
+            key={`p${i}`}
+            kind="error"
+            eyebrow="Keep-out zone · blocks continue"
+            title={it.title}
+            body={it.body}
+            actions={
+              <button className="btn btn--light btn--sm" onClick={() => nav("/position")}>
+                Edit clamps
+              </button>
+            }
+          />
         ))}
 
         <section className="job-sec">
@@ -276,7 +332,25 @@ export function PrepareStep({ ctx }: { ctx: JobCtx }) {
               {result.verification.stats.lines.toLocaleString("en-US")} lines · inside travel · no rapid moves into stock
             </div>
           ) : null}
+          <button className="btn btn--outline btn--sm job-sheet-btn" disabled={!result?.gcode} onClick={() => setSheetOpen(true)}>
+            <Printer size={15} strokeWidth={1.75} />
+            Print setup sheet
+          </button>
         </section>
+        {sheetOpen ? <SetupSheetDialog ctx={ctx} onClose={() => setSheetOpen(false)} /> : null}
+
+        <button className="batch-launch" onClick={() => setBatchOpen(true)}>
+          <Rows3 size={18} strokeWidth={1.5} color="var(--text-2)" />
+          <span className="batch-launch__text">
+            <span className="batch-launch__title">
+              Batch from CSV <ProBadge />
+            </span>
+            <span className="batch-launch__sub">{fields.length ? `One file per row · fills ${fields.map((f) => `{{${f}}}`).join(", ")}` : "Name tags, numbered plaques: one file per row of a spreadsheet"}</span>
+          </span>
+        </button>
+        {batchOpen ? <BatchDialog ctx={ctx} onClose={() => setBatchOpen(false)} /> : null}
+
+        <CostPanel ctx={ctx} />
 
         <VideoCard id="prepare" />
       </SidePanel>

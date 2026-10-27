@@ -2,7 +2,7 @@ import type { GenerateResult } from "@gsender-next/cam-engine";
 import { useEffect, useMemo, useRef } from "react";
 import { TopBar, type JobStep } from "../../components/TopBar";
 import type { SimGrid } from "../../engine/protocol";
-import { useEngine } from "../../engine/useEngine";
+import { engineKey, useEngine } from "../../engine/useEngine";
 import type { Head, HeadId, Machine, Preset } from "../../lib/catalog";
 import { useMachine } from "../../machine/store";
 import { useDesign, type Design } from "../../state/design";
@@ -37,7 +37,7 @@ export default function Job({ step }: { step: JobStep }) {
   const { machine, head, headId } = useActiveMachine();
   const preset = design.preset ?? machine.preset;
   const eng = useEngine(design, { preset, delay: 50 });
-  const key = JSON.stringify([design.spec, design.bit, design.bit2, design.useBit2, design.tabs, machine.id, headId, preset]);
+  const key = engineKey(design, machine.id, headId, preset);
   if (!eng.busy && eng.result) cache = { key, result: eng.result, sim: eng.sim };
   const fromCache = cache && cache.key === key ? cache : null;
   const result = eng.result ?? fromCache?.result ?? null;

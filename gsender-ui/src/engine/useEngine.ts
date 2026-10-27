@@ -4,21 +4,41 @@ import { PRESET_TO_SPEED, type Preset } from "../lib/catalog";
 import { isPanelMode } from "../lib/panel";
 import type { Design } from "../state/design";
 import { useActiveMachine } from "../state/workshop";
-import type { EngineRequest, EngineResponse, SimGrid } from "./protocol";
+import type { BatchDone, BatchRequest, EngineRequest, EngineResponse, SimGrid, WorkerMessage } from "./protocol";
 
 let worker: Worker | null = null;
 let nextId = 1;
 const pending = new Map<number, (r: EngineResponse) => void>();
+const batches = new Map<number, { done(r: BatchDone): void; progress?(done: number, total: number): void }>();
 
 function getWorker() {
   if (!worker) {
     worker = new Worker(new URL("./worker.ts", import.meta.url), { type: "module" });
-    worker.onmessage = (ev: MessageEvent<EngineResponse>) => {
-      pending.get(ev.data.id)?.(ev.data);
-      pending.delete(ev.data.id);
+    worker.onmessage = (ev: MessageEvent<WorkerMessage>) => {
+      const m = ev.data;
+      if ("kind" in m) {
+        const b = batches.get(m.id);
+        if (m.kind === "batch-progress") b?.progress?.(m.done, m.total);
+        else {
+          b?.done(m);
+          batches.delete(m.id);
+        }
+        return;
+      }
+      pending.get(m.id)?.(m);
+      pending.delete(m.id);
     };
   }
   return worker;
+}
+
+/** Generates one file per CSV row in the worker (the UI stays responsive), with progress. */
+export function runBatch(req: Omit<BatchRequest, "id" | "kind">, onProgress?: (done: number, total: number) => void): Promise<BatchDone> {
+  const id = nextId++;
+  return new Promise((resolve) => {
+    batches.set(id, { done: resolve, progress: onProgress });
+    getWorker().postMessage({ ...req, id, kind: "batch" } satisfies BatchRequest);
+  });
 }
 
 /** Asks the worker for a generation. */
@@ -52,7 +72,13 @@ export function engineOptions(design: Design, machineId: string, headId: string,
     },
     tabs: { count: design.tabs.count, height: design.tabs.height },
     title: design.name,
+    ...(design.keepOut?.length ? { keepOut: design.keepOut } : {}),
   };
+}
+
+/** Everything that changes the generated job (used to know when to regenerate). */
+export function engineKey(design: Design, machineId: string, headId: string, preset?: Preset) {
+  return JSON.stringify([design.spec, design.bit, design.bit2, design.useBit2, design.tabs, design.keepOut ?? [], machineId, headId, preset ?? null]);
 }
 
 export interface EngineState {
@@ -71,7 +97,7 @@ export function useEngine(design: Design, opts: { simulate?: boolean; delay?: nu
   const preset = opts.preset ?? design.preset ?? machine.preset;
   const [state, setState] = useState<EngineState>({ busy: true, result: null, sim: null, error: null });
   const latest = useRef(0);
-  const key = JSON.stringify([design.spec, design.bit, design.bit2, design.useBit2, design.tabs, machine.id, headId, preset]);
+  const key = engineKey(design, machine.id, headId, preset);
 
   useEffect(() => {
     const ticket = ++latest.current;

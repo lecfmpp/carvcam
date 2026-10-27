@@ -5,10 +5,18 @@ import { Seg, SidePanel, VideoCard } from "../../components/ui";
 import { machineName, materialById } from "../../lib/catalog";
 import { useMachine, workPos } from "../../machine/store";
 import { openConnect, toast } from "../../state/ui";
+import { useDesign } from "../../state/design";
 import { useWorkshop } from "../../state/workshop";
+import { Board, LayoutOverlay, ToolpathOverlay, useSegments } from "../../stage/Board";
+import { KeepOutLayer } from "../../stage/KeepOutLayer";
 import { fitScale, Stage } from "../../stage/Stage";
 import type { JobCtx } from "./Job";
 import { useFlow } from "./jobUtil";
+import { KeepOutPanel } from "./KeepOutPanel";
+import { nextZoneLabel, NO_ZONES, zoneBounds, zoneId, zoneIssues } from "./zones";
+
+/** Room shown around the board in the "Board" view, for clamps on the edges (mm). */
+const BOARD_PAD = 45;
 
 /** Where the user clamps the stock, in machine coordinates (bottom-left corner). */
 export const STOCK_AT = { x: 60, y: 60 };
@@ -24,10 +32,19 @@ export function PositionStep({ ctx }: { ctx: JobCtx }) {
   const { machine, design, result } = ctx;
   const [probing, setProbing] = useState(false);
   const bedRef = useRef<HTMLDivElement>(null);
+  const zones = useDesign((st) => st.design.keepOut) ?? NO_ZONES;
+  const setKeepOut = useDesign((st) => st.setKeepOut);
+  const [zoneSel, setZoneSel] = useState<number | null>(null);
+  const [drawing, setDrawing] = useState(false);
+  const [view, setView] = useState<"bed" | "board">("bed");
+  const segs = useSegments(result?.gcode);
 
   const connected = m.status !== "disconnected" && m.status !== "connecting";
   const sub: Sub = !connected ? "connect" : !m.homed ? "home" : !flow.stockOk ? "stock" : !flow.zeroSet ? "zero" : "done";
-  const stock = result?.layout.stock ?? { width: design.spec.width, height: design.spec.height, thickness: design.spec.thickness };
+  // Before the first result: the sign plus the default 10 mm margin around an outer cutout.
+  const sp = design.spec as { width: number; height: number; thickness: number; outerCutout?: boolean; margin?: number };
+  const pad0 = sp.outerCutout === false ? 0 : (sp.margin ?? 10);
+  const stock = result?.layout.stock ?? { width: sp.width + 2 * pad0, height: sp.height + 2 * pad0, thickness: sp.thickness };
   const margin = result ? (stock.width - design.spec.width) / 2 : 0;
   const atCorner = Math.abs(m.pos.x - STOCK_AT.x) < 0.05 && Math.abs(m.pos.y - STOCK_AT.y) < 0.05;
   const stockW = Math.round(stock.width * 10) / 10;
@@ -81,7 +98,9 @@ export function PositionStep({ ctx }: { ctx: JobCtx }) {
       hint = m.zMeasured ? (atCorner ? "The bit is on the corner." : "Click the board corner on the preview to move there.") : "Measure the tool height first.";
     }
   }
-  if (sub === "done") primary = { label: "Continue to Carve →", click: () => nav("/carve"), enabled: true };
+  if (sub === "done") primary = { label: "Continue to Carve →", click: () => nav("/carve"), enabled: !!result?.ok };
+  const koIssues = zoneIssues(result, zones);
+  if (koIssues.length) hint = "A clamp is in the way of the bit. Move it, or move the design, to continue.";
 
   const steps: [Sub, string, string][] = [
     ["connect", "Connect", `${machineName(machine)} over USB`],
@@ -93,7 +112,32 @@ export function PositionStep({ ctx }: { ctx: JobCtx }) {
   const ci = order.indexOf(sub);
   const video = sub === "zero" && flow.probeOpen ? "position-probe" : `position-${sub === "done" ? "zero" : sub}`;
   const wp = workPos(m);
-  const showStock = flow.stockOk || sub === "stock";
+  const showStock = flow.stockOk || sub === "stock" || zones.length > 0 || drawing;
+  const bounds = zoneBounds(stock);
+  const badZones = koIssues.map((i) => i.zoneIndex).filter((i): i is number => i != null);
+  const selectZone = (i: number | null) => {
+    setZoneSel(i);
+    if (i != null) setView("board");
+  };
+  const zoneLayer = (scale: number, frame: { width: number; height: number }, origin: { x: number; y: number }) => (
+    <KeepOutLayer
+      zones={zones}
+      scale={scale}
+      frame={frame}
+      origin={origin}
+      bounds={bounds}
+      selected={zoneSel}
+      invalid={badZones}
+      drawing={drawing}
+      onSelect={setZoneSel}
+      onChange={setKeepOut}
+      onDrawn={(r) => {
+        setKeepOut([...zones, { id: zoneId(), label: nextZoneLabel(zones), ...r, clearance: 20 }]);
+        setZoneSel(zones.length);
+        setDrawing(false);
+      }}
+    />
+  );
   const mat = materialById(design.material);
   // Before connecting, the position is unknown: the marker sits in the middle of the bed.
   const bitAt = connected ? m.pos : { x: machine.area[0] / 2, y: machine.area[1] / 2, z: 0 };
@@ -102,8 +146,46 @@ export function PositionStep({ ctx }: { ctx: JobCtx }) {
     <>
       <Stage
         noViewToggle
-        caption={sub === "zero" ? "Click the board corner to move the bit there" : `Machine bed · top view · ${machineName(machine)} (${machine.area[0]} × ${machine.area[1]} mm)`}
+        tools={
+          <Seg<"bed" | "board">
+            label="View"
+            size="lg"
+            value={view}
+            onChange={setView}
+            options={[
+              ["bed", "Whole bed"],
+              ["board", "Board & clamps"],
+            ]}
+            style={{ background: "rgba(26,27,30,.72)", backdropFilter: "var(--blur)" }}
+          />
+        }
+        caption={
+          drawing
+            ? "Drag on the board to mark a clamp"
+            : view === "board"
+              ? `Board ${stockW} × ${stockH} mm · drag a zone to move it, its corners to resize`
+              : sub === "zero"
+                ? "Click the board corner to move the bit there"
+                : `Machine bed · top view · ${machineName(machine)} (${machine.area[0]} × ${machine.area[1]} mm)`
+        }
         render={(api) => {
+          if (view === "board") {
+            const fw = stock.width + 2 * BOARD_PAD;
+            const fh = stock.height + 2 * BOARD_PAD;
+            const s = fitScale(api.size, fw, fh, { x: 120, y: 200 });
+            return (
+              <div style={{ position: "relative", width: fw * s, height: fh * s, transform: `scale(${api.zoom})`, transition: "transform 180ms var(--ease)" }}>
+                <div className="bed__grid" style={{ borderRadius: 10, opacity: 0.6 }} />
+                <div style={{ position: "absolute", left: BOARD_PAD * s, bottom: BOARD_PAD * s }}>
+                  <Board width={stock.width} height={stock.height} scale={s} label={`X0 Y0 at the bottom-left corner`}>
+                    <div className={`job-face ${mat.grain ? "job-face--grain" : ""}`} style={{ background: mat.face }} />
+                    {segs.length ? <ToolpathOverlay segments={segs} width={stock.width} height={stock.height} scale={s} opacity={0.6} /> : result ? <LayoutOverlay layout={result.layout} scale={s} /> : null}
+                  </Board>
+                </div>
+                {zoneLayer(s, { width: fw, height: fh }, { x: BOARD_PAD, y: BOARD_PAD })}
+              </div>
+            );
+          }
           const s = fitScale(api.size, machine.area[0], machine.area[1], { x: 140, y: 200 });
           const px = (v: number) => v * s;
           const clickable = sub === "zero" && !flow.probeOpen;
@@ -138,6 +220,7 @@ export function PositionStep({ ctx }: { ctx: JobCtx }) {
                     </div>
                   </>
                 ) : null}
+                {showStock ? zoneLayer(s, { width: machine.area[0], height: machine.area[1] }, STOCK_AT) : null}
                 <div
                   className="bed__bit"
                   style={{ left: px(bitAt.x) - 11, bottom: px(bitAt.y) - 11, background: `rgba(255,91,31,${0.15 + 0.35 * Math.min(1, -bitAt.z / machine.z)})` }}
@@ -334,6 +417,18 @@ export function PositionStep({ ctx }: { ctx: JobCtx }) {
             </button>
           </div>
         ) : null}
+
+        <KeepOutPanel
+          stock={stock}
+          result={result}
+          selected={zoneSel}
+          onSelect={selectZone}
+          drawing={drawing}
+          onDrawing={(on) => {
+            setDrawing(on);
+            if (on) setView("board");
+          }}
+        />
 
         <VideoCard id={video} />
       </SidePanel>

@@ -61,3 +61,32 @@ export function ToolpathOverlay(props: { segments: Segment[]; width: number; hei
     </svg>
   );
 }
+
+type Poly = { x: number; y: number }[];
+const pathOf = (region: Poly[], s: number, height: number) =>
+  region
+    .filter((p) => p.length > 1)
+    .map((p) => "M" + p.map((q) => `${(q.x * s).toFixed(1)} ${((height - q.y) * s).toFixed(1)}`).join("L") + "Z")
+    .join("");
+
+/**
+ * The design's cut areas from the layout (no G-code needed): shown when the job has errors and
+ * there is no toolpath, so you still see what sits under a clamp.
+ */
+export function LayoutOverlay(props: { layout: { stock: { height: number }; engraved: { region: Poly[] }[]; relief: { region: Poly[] } | null; cutouts: { region: Poly[] }[]; holes: { region: Poly[] }[]; profile: { region: Poly[] } | null }; scale: number }) {
+  const { layout: L, scale: s } = props;
+  const H = L.stock.height;
+  const d = useMemo(() => {
+    const fill = [...L.engraved, ...(L.relief ? [L.relief] : [])].map((c) => pathOf(c.region, s, H)).join("");
+    const through = [...L.cutouts, ...L.holes].map((c) => pathOf(c.region, s, H)).join("");
+    const outline = L.profile ? pathOf(L.profile.region, s, H) : "";
+    return { fill, through, outline };
+  }, [L, s, H]);
+  return (
+    <svg style={{ position: "absolute", left: 0, top: 0, width: "100%", height: "100%", overflow: "visible", pointerEvents: "none" }} aria-hidden="true">
+      <path d={d.fill} fill="rgba(255,91,31,.28)" fillRule="evenodd" stroke="#FF5B1F" strokeWidth={1} strokeOpacity={0.85} />
+      <path d={d.through} fill="rgba(28,29,32,.85)" fillRule="evenodd" />
+      <path d={d.outline} fill="none" stroke="#FF5B1F" strokeWidth={1.2} strokeDasharray="5 3" />
+    </svg>
+  );
+}

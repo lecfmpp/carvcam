@@ -40,8 +40,14 @@ const finerInStore = (ctx: Ctx) => BITS.find((b) => b.profile === "flat" && b.d 
 export function buildIssues(result: GenerateResult | null, ctx: Ctx): UiIssue[] {
   if (!result) return [];
   const out = result.warnings.map((a, k) => toIssue(a, k, ctx));
+  let keepOutShown = false;
   for (const p of result.verification?.problems ?? []) {
     if (p.severity !== "error") continue;
+    // Moves through a clamp: one card is enough (the zones are edited in Position).
+    if (/keep-out zone/i.test(p.message)) {
+      if (keepOutShown) continue;
+      keepOutShown = true;
+    }
     out.push({ key: `v${p.line}`, level: "error", title: "The carving program failed a safety check", detail: p.message, alts: [], target: null });
   }
   return out.sort((a, b) => rank(a.level) - rank(b.level));
