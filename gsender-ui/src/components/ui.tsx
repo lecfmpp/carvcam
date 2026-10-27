@@ -1,7 +1,8 @@
 import { AlertCircle, AlertTriangle, Info, Play, XCircle } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useCallback, useState, type ReactNode } from "react";
 import { VIDEOS } from "../lib/videos";
 import { toast, useUi } from "../state/ui";
+import { VideoTheater } from "./VideoTheater";
 
 /** Segmented control (Top/3D, Simple/Pro, Whole bed/Custom area…). */
 export function Seg<T extends string>(props: { options: [T, ReactNode][]; value: T; onChange(v: T): void; label: string; size?: "lg"; style?: React.CSSProperties }) {
@@ -57,11 +58,12 @@ function toSec(s: string) {
   return s ? s.split(":").map(Number).reduce((a, c) => a * 60 + (c || 0), 0) : 0;
 }
 
-/** "Watch how" card: a YouTube video that plays in place, or a placeholder. */
+/** "Watch how" card: opens the YouTube video in theater mode, or shows a placeholder. */
 export function VideoCard({ id }: { id: string }) {
   const v = VIDEOS[id] ?? { title: "How to do this step", url: "", start: "0:00" };
   const yt = youtubeId(v.url);
   const [open, setOpen] = useState(false);
+  const close = useCallback(() => setOpen(false), []);
   let sec = toSec(v.start);
   if (!sec) sec = Number(/[?&]t=(\d+)/.exec(v.url)?.[1] ?? 0);
   const ts = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`;
@@ -70,8 +72,8 @@ export function VideoCard({ id }: { id: string }) {
     <div>
       <button
         className="video"
-        onClick={() => (yt ? setOpen(!open) : toast("The video for this step is coming soon."))}
-        aria-expanded={open}
+        onClick={() => (yt ? setOpen(true) : toast("The video for this step is coming soon."))}
+        aria-haspopup="dialog"
       >
         <span className="video__thumb" style={yt ? { background: `center/cover no-repeat url(https://img.youtube.com/vi/${yt}/mqdefault.jpg)` } : undefined}>
           <span className="video__play">
@@ -79,18 +81,17 @@ export function VideoCard({ id }: { id: string }) {
           </span>
         </span>
         <span style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <span className="tiny muted">{open ? "Hide video" : "Watch how"}</span>
+          <span className="tiny muted">Watch how</span>
           <span style={{ font: "600 14px var(--font)" }}>{v.title}</span>
           <span className="tiny muted">{yt ? `YouTube · ${ts}${end > sec ? `–${v.end}` : ""}` : "Video coming soon"}</span>
         </span>
       </button>
       {open && yt ? (
-        <iframe
+        <VideoTheater
           title={v.title}
-          src={`https://www.youtube-nocookie.com/embed/${yt}?start=${sec}${end > sec ? `&end=${end}` : ""}&autoplay=1&rel=0`}
-          style={{ width: "100%", aspectRatio: "16/9", border: 0, borderRadius: 12, marginTop: 8 }}
-          allow="autoplay; encrypted-media; picture-in-picture"
-          allowFullScreen
+          range={`${ts}${end > sec ? `–${v.end}` : ""}`}
+          src={`https://www.youtube-nocookie.com/embed/${yt}?start=${sec}${end > sec ? `&end=${end}` : ""}&autoplay=1&rel=0&modestbranding=1`}
+          onClose={close}
         />
       ) : null}
     </div>
