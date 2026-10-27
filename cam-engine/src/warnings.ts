@@ -40,7 +40,10 @@ export interface Warning {
     | "INVALID_SVG"
     | "VCARVE_FLAT_BOTTOM"
     | "ENGRAVED_IN_FLOOR"
-    | "HATCH_TOO_DENSE";
+    | "HATCH_TOO_DENSE"
+    | "KEEP_OUT_OVERLAP"
+    | "KEEP_OUT_TOO_TALL"
+    | "INVALID_SPEC";
   severity: "error" | "warning";
   message: string;
   suggestion?: string;

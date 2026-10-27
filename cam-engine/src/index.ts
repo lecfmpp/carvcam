@@ -16,3 +16,6 @@ export { curvePolyline } from "./geometry/shapes.js";
 export { traceMask, maskFromRgba, regionToSvg, type TraceOpts } from "./trace.js";
 export { ELEMENTS, ELEMENT_BY_ID, type DesignElement, type ElementCategory } from "./catalog/elements.js";
 export { migrateLegacySpec, migrateLegacyBitId, migrateLegacyProjectId, LEGACY_BIT_IDS, LEGACY_PROJECT_IDS } from "./migrate.js";
+export { type KeepOutZone, DEFAULT_KEEP_OUT_CLEARANCE, KEEP_OUT_MARGIN } from "./keepout.js";
+export { parseCsv, templateFields, fillTemplate, generateBatch, slug, type BatchItem, type BatchResult } from "./batch.js";
+export { estimateCost, type CostInputs, type CostBreakdown } from "./cost.js";

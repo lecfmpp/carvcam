@@ -74,7 +74,7 @@ Colors: beige = untouched surface; brown = cleared; black = cut through.
 
 ```bash
 npm install
-npm test                      # 136 tests, including the v1 acceptance criterion and the Sienci projects
+npm test                      # 162 tests, including the v1 acceptance criterion and the Sienci projects
 npm run generate -- examples/anas-house.json output.nc
 npm run render -- output.nc output.png 220 120 15 examples/anas-house.json
 ```
@@ -100,6 +100,25 @@ if (res.ok) await fetch("/api/gcode", { method: "POST", body: res.gcode }); // s
 ```
 
 **Work origin:** X0 Y0 at the bottom-left corner of the stock and Z0 on the top surface. When there is an outer cutout, the stock is the sign plus `margin` (10 mm) on each side.
+
+## Production features
+
+### Keep-out zones (clamps, screws, hold-downs)
+
+`generatePlate(spec, { ..., keepOut: [{ label: "Clamp 1", x, y, width, height, clearance? }] })`, in stock coordinates (x/y = bottom-left corner of the rectangle; `clearance` = obstacle height above the stock top, default 20 mm).
+
+- Any cut overlapping a zone is a `KEEP_OUT_OVERLAP` error pointing at the element (pockets/engravings/cutouts/holes use their own area; the outer profile uses the ring one bit diameter outside the outline).
+- Travel height, the simple and safe way: with at least one zone, **both** the safe height and the retract height of the whole job become at least `tallest clearance + 2 mm`, so every G0 (between and within operations) clears every obstacle. The header gets a `; Keep-out zones: …` note. If that height plus the stock thickness exceeds the machine's Z travel: `KEEP_OUT_TOO_TALL` error. Jobs get slower (longer retracts), never unsafe.
+- The verifier (`VerifyLimits.keepOut` + `toolRadius`) rejects any move, rapid or feed, arcs included, whose straight XY path enters a zone grown by the largest bit radius while Z is below the zone's clearance (segment clipping, not just end points). `generatePlate` passes the zones in, so `ok` is false if anything enters one.
+- Without zones (omitted or `[]`) the G-code is byte-identical to before.
+
+### Batch production from a CSV
+
+`parseCsv(text)` (RFC 4180, BOM, CRLF, `,`/`;`/tab detected) → `generateBatch(template, rows, { ...options, fileNameField?, onProgress? })`. The template's texts carry `{{field}}` placeholders (`templateFields`, `fillTemplate`). Each item is a normal `generatePlate` result named `001-<slug>.nc`; a row that does not fit fails alone (`TEXT_DOES_NOT_FIT`, or `INVALID_SPEC` for other schema errors), texts left empty by a row are dropped, and `totalTimeSec` sums the items that are ok.
+
+### Cost and price
+
+`estimateCost({ timeSec, quantity, material, bits, machineRatePerHour, laborRatePerHour, setupMinutes, finishingMinutesPerPiece, attendedPct, extrasPerPiece, marginPct, platformFeePct })` → per-piece material, bit wear, machine, labor, extras; job totals; `suggestedPrice = total × (1 + margin) / (1 − fee)` rounded up to the next 0.50. Every formula is in the JSDoc of `src/cost.ts`.
 
 ## Decisions and known limits
 
