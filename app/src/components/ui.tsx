@@ -1,5 +1,5 @@
 import { AlertCircle, AlertTriangle, Check, ChevronDown, Info, Play, XCircle } from "lucide-react";
-import { useCallback, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { VIDEOS } from "../lib/videos";
 import { useUi } from "../state/ui";
 import { VideoTheater } from "./VideoTheater";
@@ -148,10 +148,42 @@ export function Issue(props: { kind: "error" | "warning" | "info"; eyebrow: stri
   );
 }
 
+/**
+ * Web app: a tab left open keeps running the build it loaded. When a newer build is published
+ * (index.html points to a different main script), offer a reload. Checked on focus and every 5 minutes.
+ */
+function useNewVersion() {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    if (!import.meta.env.PROD || !location.protocol.startsWith("http")) return;
+    const mine = [...document.querySelectorAll<HTMLScriptElement>("script[type=module][src]")].map((x) => x.getAttribute("src")!).find((x) => /assets\/index-[\w-]+\.js$/.test(x));
+    if (!mine) return;
+    const check = () =>
+      fetch("./index.html", { cache: "no-store" })
+        .then((r) => (r.ok ? r.text() : ""))
+        .then((html) => html && !html.includes(mine) && setReady(true))
+        .catch(() => undefined);
+    const onVisible = () => document.visibilityState === "visible" && check();
+    const timer = setInterval(check, 5 * 60_000);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, []);
+  return ready;
+}
+
 export function Toasts() {
   const toasts = useUi((s) => s.toasts);
+  const newVersion = useNewVersion();
   return (
     <div className="toasts" role="status" aria-live="polite">
+      {newVersion ? (
+        <button className="toast toast--update" onClick={() => location.reload()}>
+          A new version of CarvCAM is ready · <b>Reload</b>
+        </button>
+      ) : null}
       {toasts.map((t) => (
         <div key={t.id} className="toast">
           {t.text}

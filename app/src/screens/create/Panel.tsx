@@ -492,6 +492,10 @@ function ShapeTools({ id, spec, patchSpec }: { id: ElementId; spec: PlateSpecInp
   const hatchGap = bit && bit.profile !== "v" ? Math.ceil(bit.d * 1.8 * 2) / 2 : 2;
   const set = (p: Record<string, unknown>) => patchSpec((s) => patchElement(s, id, p));
   const ring = el.outline;
+  // A ring narrower than a flat bit can't be cut at all (the bit doesn't fit in it), so it starts
+  // a bit wider than the bit. V-bits carve any width.
+  const ringWidth = bit && bit.profile !== "v" ? Math.ceil(bit.d * 1.3 * 2) / 2 : 2;
+  const ringTooThin = !!ring && !!bit && bit.profile !== "v" && (ring.width ?? 2) < bit.d;
   const op = el.operation ?? "normal";
   return (
     <div className="create-fields create-inspector create-more">
@@ -505,7 +509,7 @@ function ShapeTools({ id, spec, patchSpec }: { id: ElementId; spec: PlateSpecInp
             <Seg<"off" | "on">
               label="Outline ring"
               value={ring ? "on" : "off"}
-              onChange={(v) => set({ outline: v === "on" ? { distance: 2, width: 2 } : undefined })}
+              onChange={(v) => set({ outline: v === "on" ? { distance: 2, width: ringWidth } : undefined })}
               options={[
                 ["off", "None"],
                 ["on", "Add ring"],
@@ -520,6 +524,14 @@ function ShapeTools({ id, spec, patchSpec }: { id: ElementId; spec: PlateSpecInp
               <Field label="Ring width">
                 <Stepper label="Ring width" value={ring.width ?? 2} step={0.5} min={0.5} max={20} unit="mm" onChange={(v) => set({ outline: { ...ring, width: v } })} />
               </Field>
+            </div>
+          ) : null}
+          {ringTooThin ? (
+            <div className="tiny" style={{ color: "var(--paused)" }}>
+              The ring is narrower than the {bit!.name} bit ({bit!.d.toFixed(2)} mm), so the bit can't cut it.{" "}
+              <button className="link" onClick={() => set({ outline: { ...ring, width: ringWidth } })}>
+                Make it {ringWidth} mm
+              </button>
             </div>
           ) : null}
           <Field label="Combine with others">
