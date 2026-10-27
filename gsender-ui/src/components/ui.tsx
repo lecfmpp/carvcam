@@ -3,7 +3,7 @@ import { useState, type ReactNode } from "react";
 import { VIDEOS } from "../lib/videos";
 import { toast, useUi } from "../state/ui";
 
-/** Controle segmentado (Top/3D, Simple/Pro, Whole bed/Custom area…). */
+/** Segmented control (Top/3D, Simple/Pro, Whole bed/Custom area…). */
 export function Seg<T extends string>(props: { options: [T, ReactNode][]; value: T; onChange(v: T): void; label: string; size?: "lg"; style?: React.CSSProperties }) {
   return (
     <div role="group" aria-label={props.label} className={`seg ${props.size === "lg" ? "seg--lg" : ""}`} style={props.style}>
@@ -16,7 +16,7 @@ export function Seg<T extends string>(props: { options: [T, ReactNode][]; value:
   );
 }
 
-/** Campo numérico com − e +. */
+/** Number field with − and +. */
 export function Stepper(props: { value: number; onChange(v: number): void; step?: number; min?: number; max?: number; unit?: string; label: string; format?(v: number): string }) {
   const { value, step = 1, min = -Infinity, max = Infinity } = props;
   const set = (v: number) => props.onChange(Math.round(Math.max(min, Math.min(max, v)) * 1000) / 1000);
@@ -36,7 +36,7 @@ export function Stepper(props: { value: number; onChange(v: number): void; step?
   );
 }
 
-/** Painel lateral de vidro à direita, com cabeçalho, corpo rolável e rodapé fixo. */
+/** Glass side panel on the right, with header, scrollable body and fixed footer. */
 export function SidePanel(props: { title: ReactNode; sub?: ReactNode; children: ReactNode; foot?: ReactNode; headExtra?: ReactNode }) {
   return (
     <aside className="sidepanel">
@@ -57,7 +57,7 @@ function toSec(s: string) {
   return s ? s.split(":").map(Number).reduce((a, c) => a * 60 + (c || 0), 0) : 0;
 }
 
-/** Cartão "Watch how": vídeo do YouTube que abre ali mesmo, ou um placeholder. */
+/** "Watch how" card: a YouTube video that plays in place, or a placeholder. */
 export function VideoCard({ id }: { id: string }) {
   const v = VIDEOS[id] ?? { title: "How to do this step", url: "", start: "0:00" };
   const yt = youtubeId(v.url);
@@ -96,7 +96,7 @@ export function VideoCard({ id }: { id: string }) {
   );
 }
 
-/** Cartão de erro, aviso ou informação, com ações ("Apply suggestion"…). */
+/** Error, warning or info card, with actions ("Apply suggestion"…). */
 export function Issue(props: { kind: "error" | "warning" | "info"; eyebrow: string; title: ReactNode; body?: ReactNode; fix?: ReactNode; actions?: ReactNode; onFocus?(): void }) {
   const Icon = props.kind === "error" ? XCircle : props.kind === "warning" ? AlertTriangle : Info;
   const color = props.kind === "error" ? "var(--alarm-text)" : props.kind === "warning" ? "var(--paused)" : "var(--text-3)";

@@ -4,30 +4,30 @@ import { persist } from "zustand/middleware";
 import { materialById, PROJECTS, type Preset } from "../lib/catalog";
 
 /**
- * O projeto em edição: a especificação que vai para o motor de CAM e as escolhas de
- * Preparar (velocidade, abas, segunda fresa). Persistido para sobreviver a recarregar a página.
+ * The project being edited: the spec sent to the CAM engine plus the Prepare choices
+ * (speed, tabs, second bit). Persisted so it survives a page reload.
  */
 export interface Design {
   name: string;
   projectId?: string;
-  /** Material na interface (MDF, Pine…); o motor recebe o id correspondente em `spec.material`. */
+  /** Material as shown in the UI (MDF, Pine…); the engine gets the matching id in `spec.material`. */
   material: string;
   spec: PlateSpecInput;
   bit: string;
-  /** Segunda fresa (recortes e furos), quando ligada. */
+  /** Second bit (cutouts and holes), when enabled. */
   bit2?: string;
   useBit2: boolean;
   preset?: Preset;
   tabs: { count: number; height: number };
-  /** Imagem de referência para decalcar: aparece sob o desenho e nunca é cortada. */
+  /** Reference image to trace over: shown under the design and never cut. */
   tracing?: TracingImage;
 }
 
 export interface TracingImage {
-  /** JPEG reduzido (data URL), para caber no armazenamento local. */
+  /** Downscaled JPEG (data URL), so it fits in local storage. */
   src: string;
   name: string;
-  /** Centro e largura em mm da peça; a altura segue `aspect` (altura ÷ largura). */
+  /** Center and width in mm on the stock; height follows `aspect` (height ÷ width). */
   x: number;
   y: number;
   width: number;
@@ -47,7 +47,7 @@ export const BLANK: Design = {
 
 interface DesignState {
   design: Design;
-  /** Incrementa a cada mudança na especificação, para a interface saber quando regenerar. */
+  /** Bumped on every spec change, so the UI knows when to regenerate. */
   rev: number;
   setDesign(d: Design): void;
   patch(p: Partial<Design>): void;

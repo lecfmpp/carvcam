@@ -14,7 +14,7 @@ import { ThreeView } from "../../stage/ThreeView";
 import type { JobCtx } from "./Job";
 import { bitNameFor, fmtMin, rpmText, useFlow } from "./jobUtil";
 
-/** Alarmes com resolução guiada (texto do protótipo). "hold" = só pausa, a posição continua valendo. */
+/** Alarms with guided recovery (prototype copy). "hold" = pause only, the position is still valid. */
 const ALARMS: Record<AlarmCode, { kind: string; hold?: boolean; title: string; why: string; steps: [string, string][]; resume: string; code: string }> = {
   door: { kind: "Paused · door open", hold: true, title: "The enclosure door opened and the carve paused", why: "The bit stopped spinning so nobody gets hurt. Your position is kept.", steps: [["Close the enclosure door", "Door is closed"]], resume: "Resume carving", code: "Hold:1 · Safety door opened" },
   limit: {
@@ -75,12 +75,12 @@ export function CarveStep({ ctx }: { ctx: JobCtx }) {
   const job = m.job;
   const progress = job && phase !== "check" ? Math.min(1, m.elapsed / Math.max(1, job.total)) : 0;
 
-  // Operação atual (grupo) a partir do segmento que está sendo cortado.
+  // Current operation (group) from the segment being cut.
   const segIdx = job ? upper(job.times, m.elapsed) : 0;
   const rawOp = job ? (job.opOfSeg[Math.min(segIdx, job.opOfSeg.length - 1)] ?? 0) : 0;
   const curGroup = Math.max(0, groups.findIndex((g) => g.raw.includes(rawOp)));
 
-  // Parar no meio do trabalho volta para o checklist com um aviso.
+  // Stopping mid-job goes back to the checklist with a notice.
   const prev = useRef(m.status);
   useEffect(() => {
     if ((prev.current === "running" || prev.current === "paused" || prev.current === "toolchange") && m.status === "idle") {
@@ -144,7 +144,7 @@ export function CarveStep({ ctx }: { ctx: JobCtx }) {
     useMachine.getState().start();
   };
 
-  // ---------- Troca de fresa ----------
+  // ---------- Bit change ----------
   const tcFrom = bitNameFor(design, m.activeTool);
   const tcTo = bitNameFor(design, m.pendingTool ?? 2);
   const dialNext = result?.manualAdjustments.find((a) => a.tool === (m.pendingTool ?? 2));
@@ -161,7 +161,7 @@ export function CarveStep({ ctx }: { ctx: JobCtx }) {
   ];
   const probeTc = async () => {
     if (useMachine.getState().conn === "real") {
-      // Máquina de verdade: mede a nova fresa na placa de toque (15 mm) antes de continuar.
+      // Real machine: measure the new bit on the touch plate (15 mm) before continuing.
       setProbeLeft(0);
       useMachine.setState({ zMeasured: false });
       await useMachine.getState().probeZ(15);
@@ -181,7 +181,7 @@ export function CarveStep({ ctx }: { ctx: JobCtx }) {
     }, 90);
   };
 
-  // ---------- Alarme ----------
+  // ---------- Alarm ----------
   const A = m.alarm ? ALARMS[m.alarm] : null;
   const alarmResolved = !!A && alarmStep >= A.steps.length;
   const resumeFromAlarm = () => {
@@ -199,7 +199,7 @@ export function CarveStep({ ctx }: { ctx: JobCtx }) {
     toast(`Restarting "${g?.label ?? "the operation"}" from the beginning.`);
   };
 
-  // ---------- Painel ----------
+  // ---------- Panel ----------
   let title = "Before you carve";
   let hint = "";
   let primary: { label: string; click(): void; enabled: boolean } | null = null;
@@ -572,7 +572,7 @@ export function CarveStep({ ctx }: { ctx: JobCtx }) {
   );
 }
 
-/** Dial do Makita com a posição destacada (1 a 6). */
+/** Makita dial with the setting highlighted (1 to 6). */
 function Dial({ pos }: { pos: number }) {
   return (
     <div aria-hidden="true" className="dial">

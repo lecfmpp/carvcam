@@ -11,8 +11,8 @@ const ICON_WORDS: [RegExp, Icon, string][] = [
 ];
 
 /**
- * Assistente offline: entende pedidos comuns em inglês e devolve a especificação alterada.
- * Não precisa de rede nem de chave; é o padrão até a pessoa conectar o Claude.
+ * Offline assistant: understands common requests in English and returns the modified spec.
+ * Needs no network or key; it's the default until the user connects Claude.
  */
 export const localAssistant: AssistantProvider = {
   name: "Built-in",
@@ -31,7 +31,7 @@ export function interpret(message: string, ctx: AssistantContext): AssistantRepl
   if (/\b(lion|dog|cat|horse|box|3d|bowl|statue|gear|bracket|portrait|photo)\b/.test(low) && !icon)
     return { text: "This version makes flat signs and lettering, so 3D carvings aren't possible yet. I can engrave a simple shape on the sign instead, like a heart, star, house or leaf." };
 
-  // Texto entre aspas: "change the text to …", "says …"
+  // Quoted text: "change the text to …", "says …"
   const quoted = /["“”'‘’]([^"“”'‘’]{1,60})["“”'‘’]/.exec(message)?.[1] ?? /\b(?:says|text to|reads?|write)\s+(.{1,60})$/i.exec(message)?.[1];
   if (quoted && /\b(text|say|says|read|write|name|change)\b/.test(low)) {
     const value = quoted.trim();
@@ -116,7 +116,7 @@ export function interpret(message: string, ctx: AssistantContext): AssistantRepl
   if (/\b(hang|slot|keyhole)/.test(low)) {
     spec.holes = [];
     spec.slots = [{ x: spec.width / 2, y: spec.height - 14, length: 14, width: 6, angle: 0 }];
-    return { text: "Added a hanging slot at the top centre.", spec };
+    return { text: "Added a hanging slot at the top center.", spec };
   }
 
   if (/chamfer/.test(low)) {

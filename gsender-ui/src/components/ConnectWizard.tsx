@@ -12,9 +12,9 @@ import { useActiveMachine, useWorkshop } from "../state/workshop";
 import "./connect-wizard.css";
 
 /**
- * Assistente "Connect": mostra onde vai cada cabo (energia, E-stop, router/spindle e USB ou
- * Ethernet), conecta e confere que a máquina responde de verdade (placa responde, E-stop solto,
- * um movimento pequeno no Z e, quando dá, girar o spindle). Abre no lugar do antigo "Connect".
+ * "Connect" wizard: shows where each cable goes (power, E-stop, router/spindle and USB or
+ * Ethernet), connects and checks that the machine really responds (controller answers, E-stop released,
+ * a small Z move and, when possible, spinning the spindle). Opens in place of the old "Connect".
  */
 export function ConnectWizardHost() {
   const open = useUi((s) => s.connectOpen);
@@ -44,7 +44,7 @@ function ConnectWizard() {
     return () => window.removeEventListener("keydown", onKey);
   }, [close]);
 
-  // Barra de progresso: escolha + passos de cabo + conectar + conferir.
+  // Progress bar: choice + cable steps + connect + check.
   const total = steps.length + 3;
   const at = phase.kind === "setup" ? 0 : phase.kind === "wire" ? phase.i + 1 : phase.kind === "connect" ? steps.length + 1 : steps.length + 2;
   const stepNow = phase.kind === "wire" ? steps[phase.i] : null;
@@ -155,7 +155,7 @@ function ConnectWizard() {
   );
 }
 
-/* ---------------- Passo 0: qual placa e qual cabo ---------------- */
+/* ---------------- Step 0: which controller and which cable ---------------- */
 
 function Setup(props: {
   c: ControllerInfo;
@@ -236,7 +236,7 @@ function Setup(props: {
   );
 }
 
-/* ---------------- Passos de cabo ---------------- */
+/* ---------------- Cable steps ---------------- */
 
 function WireStep(props: { step: Step; checked: Record<string, boolean>; setChecked(v: Record<string, boolean>): void; onBack(): void; onNext(): void }) {
   const { step } = props;
@@ -296,7 +296,7 @@ function WireStep(props: { step: Step; checked: Record<string, boolean>; setChec
   );
 }
 
-/* ---------------- Conectar ---------------- */
+/* ---------------- Connect ---------------- */
 
 type Pick = { kind: "bridge"; path: string } | { kind: "webserial" } | { kind: "tcp" } | { kind: "sim" };
 
@@ -319,7 +319,7 @@ function ConnectStep(props: { c: ControllerInfo; link: Link; known: boolean; onB
   const hasWebSerial = !!webSerial();
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
-  // Procura a placa a cada 2 s pelo bridge (aparece sozinha quando o cabo é ligado).
+  // Look for the controller every 2 s through the bridge (it shows up by itself when the cable is plugged in).
   useEffect(() => {
     let alive = true;
     const look = async () => {
@@ -357,7 +357,7 @@ function ConnectStep(props: { c: ControllerInfo; link: Link; known: boolean; onB
         await m.connectReal({ kind: "tcp", host: h, port: Number(p) || 23, label: `Ethernet · ${host.trim()}` });
       }
       else {
-        // O navegador mostra a lista de portas USB; a pessoa escolhe a da máquina.
+        // The browser shows the list of USB ports; the user picks the machine's.
         const port = await webSerial()!.requestPort();
         await m.connectReal({ kind: "webserial", port, label: "USB (browser)" });
       }
@@ -469,7 +469,7 @@ function ConnectStep(props: { c: ControllerInfo; link: Link; known: boolean; onB
   );
 }
 
-/* ---------------- Conferir ---------------- */
+/* ---------------- Check ---------------- */
 
 type Ans = "yes" | "no" | null;
 
@@ -605,11 +605,11 @@ function YesNo(props: { q: string; value: Ans; onChange(v: Ans): void }) {
   );
 }
 
-/* ---------------- Mapa de ligação ---------------- */
+/* ---------------- Wiring map ---------------- */
 
 /**
- * Desenho de onde vai cada cabo: computador, controladora (com as portas), fonte, tomada, E-stop
- * e o router/spindle. O cabo do passo atual fica laranja e animado; os feitos, verdes.
+ * Drawing of where each cable goes: computer, controller (with its ports), power supply, outlet, E-stop
+ * and the router/spindle. The current step's cable is orange and animated; finished ones are green.
  */
 function WiringMap(props: { c: ControllerInfo; headId: string; link: Link; done: Set<string>; current: string | null }) {
   const { c, link, done, current } = props;
@@ -633,7 +633,7 @@ function WiringMap(props: { c: ControllerInfo; headId: string; link: Link; done:
       </defs>
       <rect width="560" height="380" fill="url(#cw-dots)" />
 
-      {/* cabos (atrás dos aparelhos) */}
+      {/* cables (behind the devices) */}
       <path className={`cw-cable is-${linkSt}`} d={link === "usb" ? "M150 205 C 185 205, 190 186, 222 186" : "M150 215 C 185 215, 190 222, 222 222"} />
       <path className={`cw-cable is-${powerSt}`} d="M262 270 L262 306" />
       <path className={`cw-cable cw-cable--ac is-${powerSt}`} d="M292 322 C 380 322, 420 330, 470 330" />
@@ -651,7 +651,7 @@ function WiringMap(props: { c: ControllerInfo; headId: string; link: Link; done:
         </>
       )}
 
-      {/* computador */}
+      {/* computer */}
       <g className="cw-dev">
         <rect x="40" y="150" width="110" height="74" rx="6" />
         <rect x="48" y="158" width="94" height="58" rx="3" className="cw-screen" />
@@ -659,7 +659,7 @@ function WiringMap(props: { c: ControllerInfo; headId: string; link: Link; done:
         <text x="95" y="264" className="cw-label">Computer</text>
       </g>
 
-      {/* controladora */}
+      {/* controller */}
       <g className="cw-dev cw-ctrl">
         <rect x="222" y="150" width="166" height="120" rx="10" />
         <text x="305" y="232" className="cw-label cw-label--in">{c.name}</text>
@@ -671,7 +671,7 @@ function WiringMap(props: { c: ControllerInfo; headId: string; link: Link; done:
         <circle cx="374" cy="258" r="4" className={`cw-led ${powerSt === "done" ? "is-on" : ""}`} />
       </g>
 
-      {/* fonte e tomada */}
+      {/* power supply and outlet */}
       <g className="cw-dev">
         <rect x="232" y="306" width="60" height="32" rx="6" />
         <text x="262" y="356" className="cw-label">{c.psu ? `Power supply ${c.psu}` : "Power supply"}</text>
@@ -687,7 +687,7 @@ function WiringMap(props: { c: ControllerInfo; headId: string; link: Link; done:
         </g>
       ) : null}
 
-      {/* router / spindle e VFD */}
+      {/* router / spindle and VFD */}
       <g className="cw-dev">
         {isVfd ? (
           <>

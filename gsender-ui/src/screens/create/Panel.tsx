@@ -33,7 +33,7 @@ interface Props {
   onDelete(id: ElementId): void;
 }
 
-/** Painel à direita da tela Create: material, fresa, problemas, forma e elementos. */
+/** Panel on the right of the Create screen: material, bit, issues, shape and elements. */
 export function CreatePanel(p: Props) {
   const nav = useNavigate();
   const { design, patch, patchSpec, setMaterial, newBlank } = useDesign();
@@ -369,8 +369,8 @@ function ShapeSection({ spec, patchSpec }: { spec: PlateSpecInput; patchSpec(fn:
 }
 
 /**
- * Imagem de decalque: referência sob o desenho (não é cortada). Dá para desenhar por cima com
- * a caneta, ou converter em vetor automaticamente.
+ * Tracing image: a reference under the design (not cut). You can draw over it with
+ * the pen, or convert it to vectors automatically.
  */
 function TracingSection({ spec, onAdded }: { spec: PlateSpecInput; onAdded(id: ElementId): void }) {
   const t = useDesign((s) => s.design.tracing);
@@ -492,8 +492,8 @@ function Slider(props: { label: string; value: number; min: number; max: number;
 }
 
 /**
- * Profundidade. Com fresa em V, gravar vira V-carve: a profundidade acompanha a largura do
- * traço e o valor aqui é só o limite.
+ * Depth. With a V-bit, engraving becomes V-carving: the depth follows the stroke width
+ * and the value here is just the limit.
  */
 function DepthSlider({ mode, value, min, max, onChange }: { mode: Mode; value: number; min: number; max: number; onChange(v: number): void }) {
   const bitId = useDesign((s) => s.design.bit);
@@ -532,13 +532,13 @@ function Inspector({ id, spec, patchSpec, sign }: { id: ElementId; spec: PlateSp
   );
 }
 
-/** Ajustes comuns: engrossar/afinar, anel de contorno e combinar com outros elementos. */
+/** Common adjustments: thicken/thin, outline ring and combining with other elements. */
 function ShapeTools({ id, spec, patchSpec }: { id: ElementId; spec: PlateSpecInput; patchSpec(fn: (s: PlateSpecInput) => PlateSpecInput): void }) {
   const el = elementOf(spec, id);
   const [open, setOpen] = useState(() => !!el && (!!el.offset || !!el.outline || !!el.hatch || (el.operation ?? "normal") !== "normal"));
   const bit = bitById(useDesign((s) => s.design.bit));
   if (!el) return null;
-  // Espaçamento inicial da hachura: com fresa reta, ~1,8× a largura do corte para as linhas aparecerem.
+  // Initial hatch spacing: with a flat bit, ~1.8× the cut width so the lines show.
   const hatchGap = bit && bit.profile !== "v" ? Math.ceil(bit.d * 1.8 * 2) / 2 : 2;
   const set = (p: Record<string, unknown>) => patchSpec((s) => patchElement(s, id, p));
   const ring = el.outline;
@@ -624,8 +624,8 @@ function ShapeTools({ id, spec, patchSpec }: { id: ElementId; spec: PlateSpecInp
 }
 
 /**
- * A quais elementos o subtrair/máscara se aplica. Sem lista (padrão) vale para todos; ao
- * desmarcar o primeiro, a lista passa a ser explícita.
+ * Which elements subtract/mask applies to. No list (default) means all of them; unchecking
+ * the first one makes the list explicit.
  */
 function Targets({ id, spec, targets, onChange }: { id: ElementId; spec: PlateSpecInput; targets: Target[] | undefined; onChange(a: Target[] | undefined): void }) {
   const rows = listElements(spec).filter((r) => r.id !== id && r.kind !== "holes" && (elementOf(spec, r.id)?.operation ?? "normal") === "normal");
@@ -635,7 +635,7 @@ function Targets({ id, spec, targets, onChange }: { id: ElementId; spec: PlateSp
   const toggle = (r: ElementId) => {
     const cur = targets ?? all;
     const next = on(r) ? cur.filter((a) => idOfTarget(a) !== r) : [...cur, refOf(r)!];
-    // Todos marcados volta ao padrão ("todos"), que também inclui elementos novos.
+    // All checked goes back to the default ("all"), which also includes new elements.
     onChange(rows.every((x) => next.some((a) => idOfTarget(a) === x.id)) ? undefined : next);
   };
   return (
@@ -874,7 +874,7 @@ function AddChips({ spec, onAdd }: { spec: PlateSpecInput; onAdd(s: PlateSpecInp
   const cx = spec.width / 2;
   const cy = spec.height / 2;
   const add = (t: "text" | "rect" | "circle" | "polygon" | "star" | "line") => {
-    // Texto novo sem posição: o motor empilha e centraliza.
+    // New text without a position: the engine stacks and centers it.
     if (t === "text") {
       const [s, id] = addElement(spec, "text", cx, cy);
       const last = s.texts!.length - 1;

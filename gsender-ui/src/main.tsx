@@ -20,9 +20,9 @@ createRoot(document.getElementById("root")!).render(
 );
 
 /**
- * Inicialização com progresso real: fontes da interface, motor de CAM (worker + fontes das
- * letras + uma peça mínima) e as telas principais. Tudo vem do próprio computador; se algo
- * falhar, a interface abre assim mesmo (o erro aparece onde for usado).
+ * Startup with real progress: UI fonts, the CAM engine (worker + lettering fonts + a
+ * minimal part) and the main screens. Everything comes from the local computer; if something
+ * fails, the UI opens anyway (the error shows up where it's used).
  */
 async function start() {
   const steps: [number, string, () => Promise<unknown>][] = [
@@ -46,7 +46,7 @@ async function start() {
     try {
       await run();
     } catch {
-      /* segue: a tela de entrada não pode prender o app */
+      /* keep going: the splash screen must never block the app */
     }
     boot?.step(pct);
   }
@@ -54,7 +54,7 @@ async function start() {
 }
 void start();
 
-// Versão instalada (build): guarda os arquivos para abrir sem internet nas próximas vezes.
+// Installed build: caches the files so it opens offline next time.
 if (import.meta.env.PROD && "serviceWorker" in navigator && location.protocol.startsWith("http")) {
   window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => undefined));
 }

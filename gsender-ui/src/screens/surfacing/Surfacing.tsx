@@ -26,7 +26,7 @@ const PRESETS: [Preset, string, string][] = [
   ["fast", "Fast", "Maximum"],
 ];
 
-/** Assistente de aplainamento da mesa: área → fresa e profundidade → prévia → checklist → corte. */
+/** Spoilboard surfacing wizard: area → bit and depth → preview → checklist → cut. */
 export default function Surfacing() {
   const nav = useNavigate();
   const { machine, head, headId } = useActiveMachine();
@@ -47,7 +47,7 @@ export default function Surfacing() {
   const [started, setStarted] = useState(false);
   const [play, setPlay] = useState<{ on: boolean; t: number }>({ on: false, t: 0 });
 
-  // Troca de máquina: volta à área inteira da nova máquina.
+  // Machine changed: reset to the new machine's full area.
   useEffect(() => {
     setW(aw);
     setH(ah);
@@ -67,7 +67,7 @@ export default function Surfacing() {
   const mins = (k: Preset) => Math.max(1, Math.round(jobs[k].verification.stats.estimatedTimeSec / 60));
   const segs = useSegments(job.gcode);
 
-  // Fase derivada da máquina simulada.
+  // Phase derived from the simulated machine.
   const mine = started && m.job?.name === JOB_NAME;
   const phase = !mine ? "setup" : m.status === "running" || m.status === "toolchange" ? "running" : m.status === "paused" ? "paused" : m.status === "done" ? "done" : "setup";
   const progress = mine && m.job ? Math.min(1, m.elapsed / Math.max(1e-6, m.job.total)) : 0;
@@ -75,7 +75,7 @@ export default function Surfacing() {
   useEffect(() => {
     if (phase === "done") markDone("surface");
   }, [phase, markDone]);
-  // Parado pelo botão Stop (ou alarme): volta ao checklist.
+  // Stopped with the Stop button (or an alarm): back to the checklist.
   const prevStatus = useRef(m.status);
   useEffect(() => {
     if (started && (prevStatus.current === "running" || prevStatus.current === "paused") && (m.status === "idle" || m.status === "alarm")) {
@@ -86,7 +86,7 @@ export default function Surfacing() {
     prevStatus.current = m.status;
   }, [m.status, started]);
 
-  // "Play toolpath": 8 s para percorrer o caminho.
+  // "Play toolpath": 8 s to trace the path.
   useEffect(() => {
     if (!play.on) return;
     let raf = 0;
@@ -134,7 +134,7 @@ export default function Surfacing() {
           sub: "Lower it until it just touches the spoilboard, then set Z zero",
           fixLabel: "It's in",
           fix: () => {
-            // Zero do trabalho: canto frontal esquerdo da área, Z na face da mesa.
+            // Work zero: front-left corner of the area, Z on the bed surface.
             useMachine.setState({ workZero: { x: x0, y: y0, z: -(machine.z - 20) }, zMeasured: true });
             setBitIn(true);
           },
@@ -157,7 +157,7 @@ export default function Surfacing() {
     useMachine.getState().start();
   };
 
-  // Geometria no palco.
+  // Geometry on the stage.
   const si = STEPS.indexOf(step);
   const so = job.params.stepover;
   const rows = job.lines;
@@ -580,7 +580,7 @@ function CheckRow({ c }: { c: Check }) {
   );
 }
 
-/** Inclina a mesa em 3D (CSS) e dá a volta de 360° quando pedido. */
+/** Tilts the bed in 3D (CSS) and does the 360° turn when asked. */
 function Bed3D({ turned, spin, zoom, children }: { turned: boolean; spin: number; zoom: number; children: React.ReactNode }) {
   const [yaw, setYaw] = useState(0);
   useEffect(() => {

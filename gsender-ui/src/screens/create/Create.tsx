@@ -44,7 +44,7 @@ import { CreatePanel } from "./Panel";
 import { importSvgFile, isSvgFile, pickSvgFile } from "./svgImport";
 import "./create.css";
 
-// As mesmas fontes do motor, para o seletor de fontes e a edição no quadro.
+// The engine's own fonts, for the font picker and on-board editing.
 let fontsLoaded = false;
 function loadUiFonts() {
   if (fontsLoaded || typeof FontFace === "undefined") return;
@@ -99,11 +99,11 @@ export default function Create() {
   const [focusKey, setFocusKey] = useState<string | null>(null);
   const assistantInput = useRef<HTMLInputElement>(null);
 
-  // O resultado mostrado é o da especificação atual ou o último que chegou (enquanto regenera).
+  // The result shown is the current spec's, or the last one that arrived (while regenerating).
   const result = eng.result;
   const issues = useMemo(
     () => buildIssues(result, { spec, bit, ownedBits, machineName: machineName(machine) }),
-    // Os avisos referem-se à especificação que gerou o resultado; recalcular só quando ele muda.
+    // Warnings refer to the spec that produced the result; recompute only when it changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [result, bit, ownedBits, machine],
   );
@@ -111,7 +111,7 @@ export default function Create() {
   const warnings = issues.filter((i) => i.level === "warning").length;
   const boxes = useMemo(() => elementBoxes(spec, result), [spec, result]);
 
-  // Seleção múltipla (Shift+clique): `sel` é o elemento principal (o do painel); `extra`, os demais.
+  // Multi-select (Shift+click): `sel` is the primary element (the one in the panel); `extra`, the rest.
   const [extra, setExtra] = useState<ElementId[]>([]);
   const selected = sel ? [sel, ...extra.filter((x) => x !== sel && boxes.has(x))] : [];
   const choose = (id: ElementId | null) => {
@@ -134,7 +134,7 @@ export default function Create() {
       }, sp),
     );
 
-  // Seleção some quando o elemento deixa de existir (apagado pelo assistente, por exemplo).
+  // Selection clears when the element no longer exists (deleted by the assistant, for example).
   useEffect(() => {
     if (sel && !boxes.has(sel)) setSel(null);
     if (extra.some((x) => !boxes.has(x))) setExtra(extra.filter((x) => boxes.has(x)));
@@ -151,7 +151,7 @@ export default function Create() {
   };
 
   const remove = (id: ElementId) => {
-    // Com vários selecionados, apaga todos (do maior índice para o menor, para não deslocar os outros).
+    // With several selected, delete them all (highest index first, so the others don't shift).
     const ids = selected.includes(id) ? selected : [id];
     const order = [...ids].sort((a, b) => parseId(b).index - parseId(a).index);
     patchSpec((s) => order.reduce((acc, x) => deleteElement(acc, x), s));
@@ -217,7 +217,7 @@ export default function Create() {
         const files = [...e.dataTransfer.files];
         const img = files.find(isImageFile);
         if (img && !files.some(isSvgFile)) {
-          // Foto ou logo: vira imagem de decalque (não é cortada).
+          // Photo or logo: becomes a tracing image (not cut).
           tracingFromFile(img, useDesign.getState().design.spec).then(
             (t) => {
               useDesign.getState().patch({ tracing: t });
@@ -379,8 +379,8 @@ type Region = { x: number; y: number }[][];
 const pathOf = (reg: Region) => reg.map((p) => `M${p.map((q) => `${q.x.toFixed(2)},${q.y.toFixed(2)}`).join("L")}Z`).join("");
 
 /**
- * Desenho rápido a partir das regiões do motor: aparece na hora, enquanto a simulação do corte
- * (mais lenta) ainda está sendo calculada.
+ * Quick drawing from the engine's regions: shows up instantly, while the cut simulation
+ * (slower) is still being computed.
  */
 function VectorPreview({ result, material, faded, lineWidth }: { result: GenerateResult; material: Material; faded: boolean; lineWidth: number }) {
   const L = result.layout;
@@ -393,8 +393,8 @@ function VectorPreview({ result, material, faded, lineWidth }: { result: Generat
         {L.engraved.map((g, i) => {
           const color = g.depth >= L.stock.thickness ? THROUGH_COLOR : material.recess;
           if (!g.hatch) return <path key={`g${i}`} d={pathOf(g.region as Region)} fill={color} />;
-          // Hachura: contorno mais linhas paralelas, na largura do corte da fresa. O padrão fica no
-          // mesmo sistema (Y para cima) que o motor usa para o ângulo.
+          // Hatch: outline plus parallel lines, at the bit's cut width. The pattern lives in the
+          // same coordinate system (Y up) the engine uses for the angle.
           const { spacing: e, angle } = g.hatch;
           const pid = `hatch-${i}`;
           return (
@@ -417,8 +417,8 @@ function VectorPreview({ result, material, faded, lineWidth }: { result: Generat
 }
 
 /**
- * Esconde a sobra de material fora do contorno: mostra a peça e a faixa do corte externo
- * (com as abas), como ela vai sair da máquina.
+ * Hides the leftover stock outside the outline: shows the part and the outer cut's band
+ * (with the tabs), as it will come off the machine.
  */
 function pieceMask(result: GenerateResult | null, d: number): React.CSSProperties | undefined {
   const L = result?.layout;
@@ -440,7 +440,7 @@ interface OverlayProps {
   issues: UiIssue[];
   tool: Tool;
   sel: ElementId | null;
-  /** Todos os selecionados (o principal primeiro). */
+  /** All selected elements (primary first). */
   selected: ElementId[];
   setSel(id: ElementId | null): void;
   onPick(id: ElementId, additive: boolean): void;
@@ -464,9 +464,9 @@ function Overlay(p: OverlayProps) {
   const m = margin(p.spec);
   const s = p.scale;
   const H = p.block.height;
-  // mm da peça → px dentro do quadro
+  // part mm → px inside the board
   const px = (b: Box) => ({ left: (b.cx - b.w / 2 + m) * s, top: (H - (b.cy + b.h / 2 + m)) * s, width: b.w * s, height: b.h * s });
-  /** Converte pixels da tela para mm (o quadro pode estar com zoom). */
+  /** Converts screen pixels to mm (the board may be zoomed). */
   const mmPerPx = () => {
     const r = ref.current!.getBoundingClientRect();
     return p.block.width / r.width;
@@ -483,7 +483,7 @@ function Overlay(p: OverlayProps) {
   const errorTargets = new Set(p.issues.filter((i) => i.level === "error" && i.target).map((i) => i.target!));
   const focused = p.issues.find((i) => i.key === p.focusKey)?.target ?? null;
   const markers = p.issues.filter((i) => i.pct !== undefined && i.target && p.boxes.has(i.target));
-  // Arrastar um elemento selecionado leva junto os outros selecionados.
+  // Dragging a selected element brings the other selected ones along.
   const group = drag && p.selected.includes(drag.id) ? p.selected : drag ? [drag.id] : [];
 
   const down = (id: ElementId) => (e: RPointerEvent) => {
@@ -497,7 +497,7 @@ function Overlay(p: OverlayProps) {
     try {
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     } catch {
-      /* ponteiro sintético: o arrasto segue pelos eventos do quadro */
+      /* synthetic pointer: the drag continues through the board's events */
     }
     setDrag({ id, x0: e.clientX, y0: e.clientY, dx: 0, dy: 0 });
   };
@@ -535,7 +535,7 @@ function Overlay(p: OverlayProps) {
       onPointerMove={move}
       onPointerUp={up}
     >
-      {/* Medidas da peça */}
+      {/* Part dimensions */}
       <div className="create-dim create-dim--w mono" style={{ left: piece.left, width: piece.width, top: piece.top - 30 }}>
         {fmt(p.spec.width)} mm
       </div>
@@ -619,8 +619,8 @@ function Overlay(p: OverlayProps) {
 }
 
 /**
- * Barra de ações acima da seleção; vai para baixo quando ficaria fora do quadro ou, numa
- * curva, em cima dos nós e alças do topo.
+ * Action bar above the selection; moves below when it would fall outside the board or, on a
+ * curve, on top of the nodes and handles at the top.
  */
 function selToolsPos(r: { left: number; top: number; width: number; height: number }, curve: boolean, boardH: number): React.CSSProperties {
   const above = r.top - 46;

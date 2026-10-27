@@ -20,7 +20,7 @@ const STEPS: [View, string][] = [
   ["bits", "Bits"],
 ];
 
-/** Primeiro uso: máquina → o que gira a fresa → fresas → pronto. `?add=1` acrescenta outra máquina. */
+/** First run: machine → what spins the bit → bits → done. `?add=1` adds another machine. */
 export default function Onboarding() {
   const nav = useNavigate();
   const [params] = useSearchParams();
@@ -53,7 +53,7 @@ export default function Onboarding() {
       ws.addMachine(mId, hId);
       ws.setBits(bits);
     } else if (ws.onboarded) {
-      // Trocar a máquina ativa (Settings › Change machine).
+      // Switch the active machine (Settings › Change machine).
       useWorkshop.setState({ machines: ws.machines.map((m, i) => (i === ws.active ? { id: mId, head: hId } : m)), bits });
     } else ws.finishOnboarding(mId, hId, bits);
     setView("ready");
@@ -299,7 +299,7 @@ export function IntentChips({ value, onChange }: { value: Intent | null; onChang
   );
 }
 
-/** Ilustração em linha: fresa larga varrendo a mesa em passadas sobrepostas. */
+/** Inline illustration: a wide bit sweeping the bed in overlapping passes. */
 function SurfacingIllustration() {
   return (
     <svg width="220" height="140" viewBox="0 0 220 140" fill="none" stroke="#A4A29D" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">

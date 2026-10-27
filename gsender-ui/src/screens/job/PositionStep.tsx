@@ -10,9 +10,9 @@ import { fitScale, Stage } from "../../stage/Stage";
 import type { JobCtx } from "./Job";
 import { useFlow } from "./jobUtil";
 
-/** Onde a pessoa prende o bloco, em coordenadas de máquina (canto inferior esquerdo). */
+/** Where the user clamps the stock, in machine coordinates (bottom-left corner). */
 export const STOCK_AT = { x: 60, y: 60 };
-const PLATE = 15; // espessura da placa de toque (mm)
+const PLATE = 15; // touch plate thickness (mm)
 
 type Sub = "connect" | "home" | "stock" | "zero" | "done";
 
@@ -33,7 +33,7 @@ export function PositionStep({ ctx }: { ctx: JobCtx }) {
   const stockW = Math.round(stock.width * 10) / 10;
   const stockH = Math.round(stock.height * 10) / 10;
 
-  // Teclado: setas movem em X/Y, PageUp/PageDown em Z.
+  // Keyboard: arrows jog X/Y, PageUp/PageDown jog Z.
   useEffect(() => {
     if (sub !== "zero" || flow.probeOpen) return;
     const onKey = (e: KeyboardEvent) => {
@@ -95,7 +95,7 @@ export function PositionStep({ ctx }: { ctx: JobCtx }) {
   const wp = workPos(m);
   const showStock = flow.stockOk || sub === "stock";
   const mat = materialById(design.material);
-  // Antes de conectar, a posição é desconhecida: o marcador fica no meio da cama.
+  // Before connecting, the position is unknown: the marker sits in the middle of the bed.
   const bitAt = connected ? m.pos : { x: machine.area[0] / 2, y: machine.area[1] / 2, z: 0 };
 
   return (
@@ -341,7 +341,7 @@ export function PositionStep({ ctx }: { ctx: JobCtx }) {
   );
 }
 
-/** Desenho do bloco com o zero no canto inferior esquerdo da face de cima (do protótipo). */
+/** Stock drawing with zero at the bottom-left corner of the top face (from the prototype). */
 function ZeroIllustration({ face, recess, side }: { face: string; recess: string; side: string }) {
   return (
     <div className="zero-illus">

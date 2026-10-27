@@ -6,8 +6,8 @@ import pacifico from "@gsender-next/cam-engine/fonts/pacifico/Pacifico-Regular.t
 import type { EngineRequest, EngineResponse } from "./protocol";
 
 /**
- * Roda o motor de CAM fora da thread da interface: gerar uma placa leva de 50 ms a alguns
- * segundos, e a simulação do corte outro tanto.
+ * Runs the CAM engine off the UI thread: generating a sign takes from 50 ms to a few
+ * seconds, and simulating the cut about as long again.
  */
 const URLS: Record<string, string> = {
   "archivoblack/ArchivoBlack-Regular.ttf": archivo,
@@ -22,7 +22,7 @@ self.onmessage = async (ev: MessageEvent<EngineRequest>) => {
   const req = ev.data;
   try {
     if (req.warmup) {
-      // Fontes + uma peça mínima: compila os caminhos quentes do motor antes do primeiro uso.
+      // Fonts + a minimal part: warms up the engine's hot paths before first use.
       const loaded = await getFonts();
       generatePlate({ width: 60, height: 30, thickness: 6, texts: [{ content: "Hi", size: 12, mode: "engrave", depth: 1 }] }, { fonts: loaded });
       (self as unknown as Worker).postMessage({ id: req.id, ok: true, result: null, sim: null } satisfies EngineResponse);
@@ -46,7 +46,7 @@ self.onmessage = async (ev: MessageEvent<EngineRequest>) => {
   }
 };
 
-/** Resolução da simulação: ~900 células no lado maior (600 no modo Painel), entre 0,15 e 2 mm. */
+/** Simulation resolution: ~900 cells on the longer side (600 in Panel mode), between 0.15 and 2 mm. */
 function simResFor(w: number, h: number, lowPower = false) {
   return Math.min(2, Math.max(0.15, Math.max(w, h) / (lowPower ? 600 : 900)));
 }

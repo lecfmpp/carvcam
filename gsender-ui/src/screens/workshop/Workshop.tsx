@@ -31,7 +31,7 @@ export default function Workshop({ tab }: { tab: Tab }) {
 
 // ---------------------------------------------------------------- First cuts
 
-/** Projeto do catálogo no formato do editor (igual ao que `openProject` monta). */
+/** Catalog project in the editor's format (same as what `openProject` builds). */
 function projectDesign(p: Project): Design {
   const m = materialById(p.material);
   return {
@@ -51,11 +51,11 @@ interface Preview {
   sim: SimGrid | null;
   minutes: number | null;
   board: { width: number; height: number; thickness: number } | null;
-  /** Contorno da peça final (sem a sobra do bloco), para recortar a prévia. */
+  /** Outline of the finished part (without the stock margin), to clip the preview. */
   piece: { x: number; y: number }[][] | null;
 }
 
-// Simulações das prévias, guardadas enquanto o app estiver aberto.
+// Preview simulations, cached while the app is open.
 const cache = new Map<string, Preview>();
 let queue: Promise<unknown> = Promise.resolve();
 
@@ -63,13 +63,13 @@ function previewKey(p: Project, m: Machine, head: HeadId) {
   return `${p.id}|${m.id}|${head}`;
 }
 
-/** Gera a prévia de um projeto (uma por vez, para não travar o worker). */
+/** Generates a project's preview (one at a time, so the worker doesn't stall). */
 function loadPreview(p: Project, m: Machine, head: HeadId): Promise<Preview> {
   const key = previewKey(p, m, head);
   const hit = cache.get(key);
   if (hit) return Promise.resolve(hit);
   const fits = projectFits(p, m);
-  // Se não cabe, a prévia é gerada numa máquina grande só para mostrar a peça.
+  // If it doesn't fit, the preview is generated on a large machine just to show the part.
   const target = fits ? m : machineById("altmill-4x8");
   const tHead = fits ? head : target.defaultHead;
   const d = projectDesign(p);
@@ -197,7 +197,7 @@ function ProjectCard({ project: p, onMake }: { project: Project; onMake(): void 
       <div className={`ws-proj-pv ${ok ? "" : "is-dim"}`}>
         {pv?.sim && pv.board ? (
           (() => {
-            // Enquadra só a peça (o bloco tem 10 mm de sobra quando há recorte).
+            // Frame only the part (the stock has a 10 mm margin when there's a cutout).
             const bb = pv.piece?.length ? bounds(pv.piece) : { minX: 0, minY: 0, maxX: pv.board.width, maxY: pv.board.height };
             const s = Math.min(box.w / (bb.maxX - bb.minX), box.h / (bb.maxY - bb.minY));
             const H = pv.board.height;
@@ -349,7 +349,7 @@ function Library() {
   );
 }
 
-/** Tipo da fresa em uma linha, para o card. */
+/** Bit type on one line, for the card. */
 function bitKind(b: Bit) {
   if (b.profile === "v") return `V-bit · ${b.angle ?? 60}°`;
   if (b.profile === "ball") return "Ball nose · upcut";
@@ -410,7 +410,7 @@ function Settings() {
   );
 }
 
-/** Modo Painel para a tela touch do gControl. */
+/** Panel mode for the gControl touchscreen. */
 function PanelSetting() {
   const { panel, setPanel } = useWorkshop();
   const on = usePanelMode();

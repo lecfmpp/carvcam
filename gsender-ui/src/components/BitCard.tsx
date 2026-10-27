@@ -8,7 +8,7 @@ import "./machine-card.css";
 export interface BitCardData {
   id: string;
   name: string;
-  /** Tipo em uma linha ("Flat · upcut", "V-bit · 60°"). */
+  /** Type on one line ("Flat · upcut", "V-bit · 60°"). */
   kind: string;
   profile: BitProfile;
   d: number;
@@ -21,8 +21,8 @@ export interface BitCardData {
 }
 
 /**
- * Card branco de fresa: foto (WebP) ou silhueta, tipo, nome, para que serve, ficha com rótulos,
- * compatibilidade com o cabeçote e o link da loja (com UTM e código de afiliado).
+ * White bit card: photo (WebP) or silhouette, type, name, what it's for, labeled spec sheet,
+ * compatibility with the head and the store link (with UTM and affiliate code).
  */
 export function BitCard(props: {
   bit: BitCardData;

@@ -1,13 +1,13 @@
 import { curvePolyline, parseDrawing, InvalidSvg, type GenerateResult, type PlateSpecInput, type ElementRef } from "@gsender-next/cam-engine";
 
 /**
- * Elementos da tela Create sobre a especificação do motor:
- * textos (t:i), formas (f:i), ícones (i:i), desenhos SVG importados (s:i) e o grupo de furos/rasgo (holes).
+ * Elements of the Create screen on top of the engine spec:
+ * texts (t:i), shapes (f:i), icons (i:i), imported SVG drawings (s:i) and the holes/slot group (holes).
  */
 export type ElementId = `t:${number}` | `f:${number}` | `i:${number}` | `s:${number}` | "holes";
 
 export interface Box {
-  /** Centro e tamanho em mm, coordenadas da peça (origem no canto inferior esquerdo da placa). */
+  /** Center and size in mm, part coordinates (origin at the sign's bottom-left corner). */
   cx: number;
   cy: number;
   w: number;
@@ -59,7 +59,7 @@ export interface ElementRow {
   sub: string;
 }
 
-/** Lista de elementos na ordem do painel. */
+/** Elements in panel order. */
 export function listElements(spec: PlateSpecInput): ElementRow[] {
   const sign = spec.type !== "lettering";
   const rows: ElementRow[] = [];
@@ -140,8 +140,8 @@ export function margin(spec: PlateSpecInput) {
 }
 
 /**
- * Caixa de cada elemento. Usa a geometria real do motor quando existe (o motor diz onde cada
- * texto foi parar); senão estima a partir da especificação.
+ * Box of each element. Uses the engine's real geometry when available (the engine says where each
+ * text ended up); otherwise estimates it from the spec.
  */
 export function elementBoxes(spec: PlateSpecInput, result: GenerateResult | null): Map<ElementId, Box> {
   const m = margin(spec);
@@ -163,7 +163,7 @@ export function elementBoxes(spec: PlateSpecInput, result: GenerateResult | null
     const b = bounds(reg);
     if (b) out.set(id, { cx: (b.x0 + b.x1) / 2 - m, cy: (b.y0 + b.y1) / 2 - m, w: b.x1 - b.x0, h: b.y1 - b.y0 });
   }
-  // Estimativas para o que o motor não separou (letreiro, ou resultado ainda não chegou).
+  // Estimates for what the engine didn't separate (lettering, or the result hasn't arrived yet).
   const W = spec.width;
   const H = spec.height;
   const texts = spec.texts ?? [];
@@ -224,9 +224,9 @@ export function textWidth(t: Text) {
 // ------------------------------------------------------------------ edits
 
 /**
- * Move um elemento para que o centro da caixa fique em (cx, cy), em mm da peça. A âncora (x, y)
- * de uma estrela, de um polígono ímpar ou de um elemento com anel não é o centro da caixa, então
- * aplicamos o deslocamento da caixa à âncora em vez de copiar o centro.
+ * Moves an element so its box center lands at (cx, cy), in part mm. The anchor (x, y)
+ * of a star, an odd polygon or an element with a ring isn't the box center, so
+ * we apply the box offset to the anchor instead of copying the center.
  */
 export function moveElement(spec: PlateSpecInput, id: ElementId, cx: number, cy: number, box: Box | undefined): PlateSpecInput {
   const s = structuredClone(spec);
@@ -242,7 +242,7 @@ export function moveElement(spec: PlateSpecInput, id: ElementId, cx: number, cy:
   }
   const el = elementOf(s, id) as (AnyEl & { x?: number; y?: number; x2?: number; y2?: number; type?: string }) | null;
   if (!el) return s;
-  // Texto sem posição (empilhado pelo motor): passa a ter posição; o motor centraliza a caixa nela.
+  // Text without a position (stacked by the engine): it gets one; the engine centers the box on it.
   if (kind === "t" && (el.x === undefined || el.y === undefined)) {
     Object.assign(el, { x: rx(cx), y: rx(cy) });
     return s;
@@ -269,7 +269,7 @@ export function deleteElement(spec: PlateSpecInput, id: ElementId): PlateSpecInp
     s.slots = [];
     return s;
   }
-  // Os alvos de subtrair/máscara apontam por índice: tira o apagado e renumera os seguintes.
+  // Subtract/mask targets point by index: drop the deleted one and renumber the ones after it.
   const type = TYPE_OF[kind];
   for (const key of ["texts", "shapes", "icons", "svgs"] as const) {
     for (const el of (s[key] ?? []) as AnyEl[]) {
@@ -284,14 +284,14 @@ const TYPE_OF = { t: "text", f: "shape", i: "icon", s: "svg" } as const;
 const KIND_OF = { text: "t", shape: "f", icon: "i", svg: "s" } as const;
 export type Target = { type: (typeof TYPE_OF)[keyof typeof TYPE_OF]; index: number };
 
-/** Referência do motor para um elemento da tela (null para o grupo de furos). */
+/** Engine reference for an on-screen element (null for the holes group). */
 export function refOf(id: ElementId): Target | null {
   const { kind, index } = parseId(id);
   return kind === "holes" ? null : { type: TYPE_OF[kind], index: index };
 }
 export const idOfTarget = (a: Target): ElementId => `${KIND_OF[a.type]}:${a.index}` as ElementId;
 
-/** Duplica e devolve a especificação e o id da cópia (deslocada 8 mm). */
+/** Duplicates and returns the spec and the copy's id (offset by 8 mm). */
 export function duplicateElement(spec: PlateSpecInput, id: ElementId, box: Box | undefined): [PlateSpecInput, ElementId | null] {
   const s = structuredClone(spec);
   const { kind, index } = parseId(id);
@@ -332,12 +332,12 @@ export function duplicateElement(spec: PlateSpecInput, id: ElementId, box: Box |
 
 export type Tool = "select" | "text" | "rect" | "circle" | "polygon" | "star" | "line" | "pen";
 
-/** Nó de curva livre (relativo à origem da curva; alças relativas ao nó). */
+/** Freeform curve node (relative to the curve origin; handles relative to the node). */
 export type CurveNode = Extract<Shape, { type: "curve" }>["nodes"][number];
 
 /**
- * Cria uma curva livre a partir dos nós desenhados com a caneta (em mm absolutos da peça).
- * A origem fica no primeiro nó.
+ * Creates a freeform curve from the nodes drawn with the pen (in absolute part mm).
+ * The origin is the first node.
  */
 export function addCurve(spec: PlateSpecInput, nodes: CurveNode[], closed: boolean): [PlateSpecInput, ElementId] {
   const s = structuredClone(spec);
@@ -356,7 +356,7 @@ export function addCurve(spec: PlateSpecInput, nodes: CurveNode[], closed: boole
   return [s, `f:${s.shapes.length - 1}`];
 }
 
-/** Acrescenta um elemento novo com o centro em (x, y), mm da peça. */
+/** Adds a new element centered at (x, y), part mm. */
 export function addElement(spec: PlateSpecInput, tool: Exclude<Tool, "select" | "pen">, x: number, y: number): [PlateSpecInput, ElementId] {
   const s = structuredClone(spec);
   const rx = (v: number) => Math.round(v * 10) / 10;
@@ -380,27 +380,27 @@ export function addElement(spec: PlateSpecInput, tool: Exclude<Tool, "select" | 
   return [s, `f:${s.shapes.length - 1}`];
 }
 
-/** Aplica uma correção do motor (campo/valor num elemento) à especificação. */
+/** Applies an engine fix (field/value on an element) to the spec. */
 export function applyCorrection(spec: PlateSpecInput, ref: ElementRef, field: string, value: number): PlateSpecInput {
   const s = structuredClone(spec) as PlateSpecInput & Record<string, unknown>;
   const list: Record<string, unknown[] | undefined> = { text: s.texts, icon: s.icons, shape: s.shapes, svg: s.svgs, hole: s.holes, slot: s.slots };
   const arr = list[ref.type];
   const el = arr?.[ref.index] as Record<string, unknown> | undefined;
   if (el) {
-    // Campo pode ser aninhado ("hatch.spacing").
+    // The field may be nested ("hatch.spacing").
     const path = field.split(".");
     let obj = el;
     for (const k of path.slice(0, -1)) obj = (obj[k] ??= {}) as Record<string, unknown>;
     obj[path[path.length - 1]] = value;
   }
-  // Furos: a correção vale para todos (são um grupo na interface).
+  // Holes: the fix applies to all of them (they're one group in the UI).
   if (ref.type === "hole" && field === "diameter") s.holes = s.holes?.map((f) => ({ ...f, diameter: value }));
   return s;
 }
 
 // ------------------------------------------------------------------ SVG
 
-/** Altura ÷ largura do desenho (1 se o arquivo não puder ser lido). */
+/** Height ÷ width of the drawing (1 if the file can't be read). */
 export function svgAspect(content: string) {
   try {
     const d = parseDrawing(content);
@@ -411,8 +411,8 @@ export function svgAspect(content: string) {
 }
 
 /**
- * Importa um arquivo SVG como elemento novo, centrado em (x, y). A largura começa no tamanho
- * natural do arquivo, limitada a 60% da placa (e ao que couber na altura).
+ * Imports an SVG file as a new element, centered at (x, y). The width starts at the file's
+ * natural size, capped at 60% of the sign (and whatever fits in the height).
  */
 export function addSvg(spec: PlateSpecInput, content: string, name: string, x: number, y: number): [PlateSpecInput, ElementId, number] | { error: string } {
   let d;
@@ -435,14 +435,14 @@ export function addSvg(spec: PlateSpecInput, content: string, name: string, x: n
 type AnyEl = Text | Shape | Icon | SvgEl;
 const LIST = { t: "texts", f: "shapes", i: "icons", s: "svgs" } as const;
 
-/** O objeto do elemento na especificação (null para o grupo de furos). */
+/** The element's object in the spec (null for the holes group). */
 export function elementOf(spec: PlateSpecInput, id: ElementId): AnyEl | null {
   const { kind, index } = parseId(id);
   if (kind === "holes") return null;
   return ((spec[LIST[kind]] as AnyEl[] | undefined) ?? [])[index] ?? null;
 }
 
-/** Aplica campos a um elemento (texto, forma, ícone ou desenho). */
+/** Applies fields to an element (text, shape, icon or drawing). */
 export function patchElement(spec: PlateSpecInput, id: ElementId, p: Record<string, unknown>): PlateSpecInput {
   const { kind, index } = parseId(id);
   if (kind === "holes") return spec;
@@ -456,8 +456,8 @@ export function patchElement(spec: PlateSpecInput, id: ElementId, p: Record<stri
 export type Align = "left" | "hcenter" | "right" | "top" | "vcenter" | "bottom" | "hdist" | "vdist";
 
 /**
- * Alinha os elementos. Com um só elemento, alinha à placa; com vários, à caixa da seleção.
- * Distribuir (3 ou mais) espaça os centros por igual entre o primeiro e o último.
+ * Aligns elements. With a single element, aligns to the sign; with several, to the selection box.
+ * Distribute (3 or more) spaces the centers evenly between the first and the last.
  */
 export function alignElements(spec: PlateSpecInput, ids: ElementId[], boxes: Map<ElementId, Box>, how: Align): PlateSpecInput {
   const items = ids.map((id) => ({ id, b: boxes.get(id) })).filter((x): x is { id: ElementId; b: Box } => !!x.b);
@@ -498,7 +498,7 @@ export function alignElements(spec: PlateSpecInput, ids: ElementId[], boxes: Map
 
 // ------------------------------------------------------------------ arc text
 
-/** Curvatura do texto em % de meia volta (−100 a 100) ↔ raio do arco em mm. */
+/** Text curvature in % of a half turn (−100 to 100) ↔ arc radius in mm. */
 export function bendOf(t: Text): number {
   if (!t.arc) return 0;
   const L = textWidth(t);

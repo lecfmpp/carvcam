@@ -2,8 +2,8 @@ import { parseLines, toSegments, type Segment } from "@gsender-next/cam-engine";
 import { useMemo, type ReactNode } from "react";
 
 /**
- * Área do bloco no palco, em escala: filhos posicionam-se em mm com origem no canto
- * inferior esquerdo (o zero do trabalho), igual à máquina.
+ * The stock area on the stage, to scale: children are placed in mm with the origin at the
+ * bottom-left corner (work zero), same as the machine.
  */
 export function Board(props: { width: number; height: number; scale: number; zoom?: number; label?: ReactNode; children?: ReactNode; showOrigin?: boolean }) {
   const s = props.scale;
@@ -26,14 +26,14 @@ export function Board(props: { width: number; height: number; scale: number; zoo
   );
 }
 
-/** Lê os movimentos de um G-code (memorizado). */
+/** Parses the moves of a G-code program (memoized). */
 export function useSegments(gcode: string | undefined) {
   return useMemo(() => (gcode ? toSegments(parseLines(gcode), { x: 0, y: 0, z: 10 }) : []), [gcode]);
 }
 
 /**
- * Percurso da fresa sobre o bloco: laranja onde corta. `played` (0–1) mostra só o trecho
- * já percorrido, para o "Play toolpath".
+ * Bit path over the stock: orange where it cuts. `played` (0–1) shows only the part
+ * already traveled, for "Play toolpath".
  */
 export function ToolpathOverlay(props: { segments: Segment[]; width: number; height: number; scale: number; played?: number; opacity?: number }) {
   const { segments, scale: s, height } = props;
@@ -42,7 +42,7 @@ export function ToolpathOverlay(props: { segments: Segment[]; width: number; hei
     const n = Math.floor(cut.length * (props.played ?? 1));
     let path = "";
     let last: { x: number; y: number } | null = null;
-    // Junta segmentos contínuos numa mesma polilinha; pula pontos a menos de 0,4 px.
+    // Join continuous segments into one polyline; skip points closer than 0.4 px.
     for (let i = 0; i < n; i++) {
       const g = cut[i];
       const a = { x: g.from.x * s, y: (height - g.from.y) * s };

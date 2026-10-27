@@ -28,10 +28,10 @@ export interface JobCtx {
   lettering: boolean;
 }
 
-// O último resultado sobrevive à troca de etapa (cada rota monta o Job de novo).
+// The last result survives a step change (each route mounts Job again).
 let cache: { key: string; result: GenerateResult | null; sim: SimGrid | null } | null = null;
 
-/** Etapas 2–4 do trabalho: Prepare, Position e Carve. */
+/** Job steps 2–4: Prepare, Position and Carve. */
 export default function Job({ step }: { step: JobStep }) {
   const design = useDesign((s) => s.design);
   const { machine, head, headId } = useActiveMachine();
@@ -43,12 +43,12 @@ export default function Job({ step }: { step: JobStep }) {
   const result = eng.result ?? fromCache?.result ?? null;
   const sim = eng.sim ?? fromCache?.sim ?? null;
 
-  // A cama simulada tem o tamanho da máquina ativa.
+  // The simulated bed matches the active machine's size.
   useEffect(() => {
     useMachine.getState().setBed({ x: machine.area[0], y: machine.area[1], z: machine.z });
   }, [machine]);
 
-  // Projeto mudou: o zero continua, mas a fresa e o router precisam ser conferidos de novo.
+  // Project changed: zero is kept, but the bit and router must be checked again.
   const rev = useDesign((s) => s.rev);
   const lastRev = useRef(rev);
   useEffect(() => {

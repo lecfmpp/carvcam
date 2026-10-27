@@ -19,11 +19,11 @@ const STEPS: [JobStep, string][] = [
 const FILL: Record<JobStep, number> = { create: 16, prepare: 40, position: 64, carve: 88 };
 
 /**
- * Topo do app. Variantes:
- * - "app": navegação da oficina (First cuts / My bits / Settings)
- * - "job": as 4 etapas Create → Carve, modo Simple/Pro
- * - "tool": trilha de navegação de uma ferramenta (ex.: Tools › Surface the bed)
- * - "onboarding": passos do primeiro uso (o conteúdo vem em `center`)
+ * App header. Variants:
+ * - "app": workshop navigation (First cuts / My bits / Settings)
+ * - "job": the 4 steps Create → Carve, Simple/Pro mode
+ * - "tool": breadcrumb for a tool (e.g. Tools › Surface the bed)
+ * - "onboarding": first-run steps (content comes in `center`)
  */
 export function TopBar(props: { variant: "app" | "job" | "tool" | "onboarding"; step?: JobStep; reachable?: JobStep[]; center?: ReactNode; right?: ReactNode; crumbs?: string[] }) {
   const nav = useNavigate();
@@ -122,7 +122,7 @@ function JobSteps({ step, reachable }: { step: JobStep; reachable: JobStep[] }) 
   );
 }
 
-/** Chip da máquina ativa; abre a troca de máquina. */
+/** Active machine chip; opens the machine switcher. */
 export function MachineChip() {
   const { machine, head } = useActiveMachine();
   const [open, setOpen] = useState(false);
@@ -210,7 +210,7 @@ function MachineSwitcher({ onClose }: { onClose(): void }) {
   );
 }
 
-/** Estado da máquina: sempre cor + forma + texto. */
+/** Machine status: always color + shape + text. */
 export function StatusPill() {
   const s = useMachine();
   const { machine } = useActiveMachine();
@@ -227,7 +227,7 @@ export function StatusPill() {
     done: ["pill--ready", "Done"],
   };
   const [cls, label] = map[s.status];
-  // Desconectada: o selo vira atalho para o assistente de conexão.
+  // Disconnected: the badge becomes a shortcut to the connection wizard.
   if (s.status === "disconnected")
     return (
       <button className={`pill pill--button ${cls}`} onClick={openConnect} title="Connect your machine">
@@ -243,7 +243,7 @@ export function StatusPill() {
   );
 }
 
-/** Parar: sempre visível com a máquina conectada. Atalhos: Esc para, Espaço pausa/retoma. */
+/** Stop: always visible while the machine is connected. Shortcuts: Esc stops, Space pauses/resumes. */
 export function StopButton() {
   const stop = useMachine((s) => s.stop);
   useEffect(() => {
@@ -275,7 +275,7 @@ export function StopButton() {
   );
 }
 
-/** Tela cheia (só no modo Painel): no gControl, o app ocupa a tela inteira, como um quiosque. */
+/** Full screen (Panel mode only): on gControl, the app fills the whole screen, like a kiosk. */
 function FullscreenButton() {
   const panel = usePanelMode();
   const [full, setFull] = useState(() => !!document.fullscreenElement);

@@ -3,7 +3,7 @@ import { create } from "zustand";
 import { bitById, type Preset } from "../../lib/catalog";
 import type { Design } from "../../state/design";
 
-/** Minutos legíveis: "28 min", "1 h 5 min", "<1 min". */
+/** Readable minutes: "28 min", "1 h 5 min", "<1 min". */
 export function fmtMin(min: number) {
   if (!isFinite(min)) return "—";
   if (min < 1) return "<1 min";
@@ -13,7 +13,7 @@ export function fmtMin(min: number) {
 
 export const rpmText = (n: number) => `${Math.round(n).toLocaleString("en-US")} RPM`;
 
-/** Etapa do fluxo que fica só na interface (o resto vem da máquina). */
+/** Flow state that lives only in the UI (the rest comes from the machine). */
 interface Flow {
   stockOk: boolean;
   zeroSet: boolean;
@@ -34,7 +34,7 @@ export const useFlow = create<Flow>()((set) => ({
   set: (p) => set(p),
 }));
 
-/** Nome da fresa para o número da ferramenta (T1 = principal, T2 = recorte). */
+/** Bit name for a tool number (T1 = main bit, T2 = cutout bit). */
 export function bitNameFor(design: Design, toolId: number) {
   const id = toolId === 2 && design.useBit2 && design.bit2 ? design.bit2 : design.bit;
   return bitById(id)?.name ?? `T${toolId}`;
@@ -43,12 +43,12 @@ export function bitNameFor(design: Design, toolId: number) {
 export interface OpGroup {
   label: string;
   tool: number;
-  /** Índices em result.operacoes (e em job.ops, que segue a mesma ordem). */
+  /** Indices into result.operations (and job.ops, which follows the same order). */
   raw: number[];
   sec: number;
 }
 
-/** Tempo (s) de cada operação, lido do próprio G-code e normalizado pelo tempo do verificador. */
+/** Time (s) of each operation, read from the G-code itself and scaled to the verifier's estimate. */
 export function opSeconds(result: GenerateResult): number[] {
   const lines = parseLines(result.gcode);
   const segs = toSegments(lines, { x: 0, y: 0, z: 10 });
@@ -70,7 +70,7 @@ export function opSeconds(result: GenerateResult): number[] {
   return out.map((t) => (t / sum) * total);
 }
 
-/** Agrupa as operações do motor em passos legíveis ("Drill 2 mounting holes"…). */
+/** Groups the engine's operations into readable steps ("Drill 2 mounting holes"…). */
 export function groupOps(result: GenerateResult, tabs: number, lettering: boolean): OpGroup[] {
   const secs = opSeconds(result);
   const groups: OpGroup[] = [];
@@ -79,7 +79,7 @@ export function groupOps(result: GenerateResult, tabs: number, lettering: boolea
   while (i < ops.length) {
     const o = ops[i];
     const same: number[] = [i];
-    // Junta operações vizinhas do mesmo tipo e da mesma fresa.
+    // Merge adjacent operations of the same type and bit.
     while (i + 1 < ops.length && ops[i + 1].type === o.type && ops[i + 1].tool === o.tool && o.type !== "profile") same.push(++i);
     const names = same.map((k) => elementName(ops[k].name));
     let label = "";
@@ -87,7 +87,7 @@ export function groupOps(result: GenerateResult, tabs: number, lettering: boolea
     else if (o.type === "relief") label = `Lower the background · ${fmtNum(o.depth)} mm`;
     else if (o.type === "cutout") label = "Cut through the letters";
     else if (o.type === "hole") {
-      const holes = same.filter((k) => /furo \d/i.test(ops[k].name)).length;
+      const holes = same.filter((k) => /\b(hole|furo) \d/i.test(ops[k].name)).length;
       const slots = same.length - holes;
       label = [holes ? `Drill ${holes} mounting hole${holes > 1 ? "s" : ""}` : "", slots ? "cut the hanging slot" : ""].filter(Boolean).join(", ");
       label = label.charAt(0).toUpperCase() + label.slice(1);
@@ -99,15 +99,26 @@ export function groupOps(result: GenerateResult, tabs: number, lettering: boolea
 }
 
 const ICON_EN: Record<string, string> = { heart: "heart", star: "star", house: "house", leaf: "leaf" };
-const SHAPE_EN: Record<string, string> = { "retângulo": "rectangle", "círculo": "circle", linha: "line" };
+// Old Portuguese shape names are kept so G-code made by earlier engine builds still reads well.
+const SHAPE_EN: Record<string, string> = {
+  rectangle: "rectangle",
+  circle: "circle",
+  line: "line",
+  polygon: "polygon",
+  star: "star",
+  curve: "curve",
+  "retângulo": "rectangle",
+  "círculo": "circle",
+  linha: "line",
+};
 
-/** "Gravação: texto 1 (LUNA)" → “LUNA”; "Gravação: ícone 2 (folha)" → the leaf. */
+/** "Engrave: text 1 (LUNA)" → “LUNA”; "Engrave: icon 2 (leaf)" → the leaf. */
 function elementName(name: string) {
-  const t = /texto \d+ \((.+)\)/.exec(name);
+  const t = /\b(?:text|texto) \d+ \((.+)\)/.exec(name);
   if (t) return `“${t[1]}”`;
-  const ic = /ícone \d+ \((\w+)\)/.exec(name);
+  const ic = /\b(?:icon|ícone) \d+ \((\w+)\)/.exec(name);
   if (ic) return `the ${ICON_EN[ic[1]] ?? ic[1]}`;
-  const sh = /(retângulo|círculo|linha) \d+/.exec(name);
+  const sh = /(rectangle|circle|line|polygon|star|curve|retângulo|círculo|linha) \d+/.exec(name);
   if (sh) return `the ${SHAPE_EN[sh[1]]}`;
   return "the details";
 }

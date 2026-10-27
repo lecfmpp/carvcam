@@ -1,6 +1,6 @@
 /**
- * Marca CarvCAM: ícone (fresa mergulhada na tábua, abrindo um canal, com dois cavacos) e a
- * palavra "Carv" (Geist 600) + "CAM" (Geist Mono 500). Cores: laranja #FF5B1F e grafite #111214.
+ * CarvCAM brand: icon (a bit plunged into a board, cutting a channel, with two chips) and the
+ * wordmark "Carv" (Geist 600) + "CAM" (Geist Mono 500). Colors: orange #FF5B1F and graphite #111214.
  */
 export function CarvIcon({ size = 28, bg = "#FF5B1F", ink = "#111214" }: { size?: number; bg?: string; ink?: string }) {
   return (

@@ -17,7 +17,7 @@ function Home() {
   const panel = usePanelMode();
   const spec = useDesign((s) => s.design.spec);
   const hasProject = (spec.texts?.length ?? 0) + (spec.shapes?.length ?? 0) + (spec.icons?.length ?? 0) + (spec.svgs?.length ?? 0) > 0;
-  // No gControl (preso à máquina), abre direto onde se trabalha: Posicionar.
+  // On gControl (attached to the machine), open straight where the work happens: Position.
   if (onboarded && panel && hasProject) return <Navigate to="/position" replace />;
   return <Navigate to={onboarded ? "/workshop" : "/workshop/onboarding"} replace />;
 }

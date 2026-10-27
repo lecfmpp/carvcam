@@ -14,13 +14,13 @@ const CATS: [ElementCategory | "all", string][] = [
   ["dividers", "Dividers"],
 ];
 
-// Na miniatura, o branco (que recorta) fica da cor do fundo do cartão.
+// In the thumbnail, white (which cuts away) takes the card's background color.
 const thumb = (svg: string) => `data:image/svg+xml;utf8,${encodeURIComponent(svg.replace(/fill="#fff"/g, 'fill="#F5F3EF"'))}`;
 
-/** Acrescenta um elemento da biblioteca no centro da peça, num tamanho que cabe nela. */
+/** Adds a library element at the center of the part, at a size that fits on it. */
 export function addLibraryElement(spec: PlateSpecInput, el: DesignElement): [PlateSpecInput, ElementId] | null {
   if (el.generate) {
-    // Moldura: desenhada no tamanho da peça (8 mm para dentro), sem afinar os traços.
+    // Frame: drawn at the part's size (8 mm inset), without thinning the strokes.
     const w = Math.max(30, spec.width - 16);
     const h = Math.max(30, spec.height - 16);
     const out = addSvg(spec, el.generate(w, h), el.name, spec.width / 2, spec.height / 2);
@@ -38,7 +38,7 @@ export function addLibraryElement(spec: PlateSpecInput, el: DesignElement): [Pla
   }
   const [next, id] = out;
   const v = next.svgs![next.svgs!.length - 1];
-  // Tamanho sugerido do elemento, limitado a 85% da peça (molduras ocupam quase tudo).
+  // Suggested element size, capped at 85% of the part (frames take up almost all of it).
   const vb = /viewBox="0 0 ([\d.]+) ([\d.]+)"/.exec(el.svg);
   const aspect = vb ? Number(vb[2]) / Number(vb[1]) : 1;
   const fit = Math.min(spec.width * 0.85, (spec.height * 0.85) / aspect);

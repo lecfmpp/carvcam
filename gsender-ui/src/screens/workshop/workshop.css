@@ -1,4 +1,4 @@
-/* Minha oficina: onboarding, First cuts, My bits, Settings. */
+/* My workshop: onboarding, First cuts, My bits, Settings. */
 .ws-main { flex: 1; min-height: 0; overflow: auto; }
 .ws-page { margin: 0 auto; padding: 44px 40px 40px; display: flex; flex-direction: column; gap: 24px; }
 .ws-page--narrow { max-width: 960px; }

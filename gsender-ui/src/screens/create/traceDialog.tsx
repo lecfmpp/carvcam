@@ -23,8 +23,8 @@ function regionBounds(r: Region) {
 }
 
 /**
- * Converte a imagem de decalque em vetor: limiar, inverter, suavizar e ignorar manchas, com
- * prévia ao vivo. O resultado entra como um desenho comum, exatamente em cima da imagem.
+ * Converts the tracing image to vectors: threshold, invert, smooth and ignore specks, with a
+ * live preview. The result comes in as a regular drawing, exactly on top of the image.
  */
 export function TraceDialog({ tracing, onClose, onAdded }: { tracing: TracingImage; onClose(): void; onAdded(id: ElementId): void }) {
   const patchSpec = useDesign((s) => s.patchSpec);
@@ -39,7 +39,7 @@ export function TraceDialog({ tracing, onClose, onAdded }: { tracing: TracingIma
     tracingPixels(tracing).then(setPx, () => toast("The tracing image could not be read."));
   }, [tracing]);
 
-  const k = px ? tracing.width / px.width : 1; // mm por pixel
+  const k = px ? tracing.width / px.width : 1; // mm per pixel
   useEffect(() => {
     if (!px) return;
     const t = setTimeout(() => {
@@ -69,7 +69,7 @@ export function TraceDialog({ tracing, onClose, onAdded }: { tracing: TracingIma
     onClose();
   };
 
-  // Portal: o painel lateral tem backdrop-filter, que prenderia o position: fixed dentro dele.
+  // Portal: the side panel has backdrop-filter, which would trap position: fixed inside it.
   return createPortal(
     <div className="create-modal" role="dialog" aria-modal="true" aria-label="Convert image to vector" onPointerDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className="create-modal__card">

@@ -7,15 +7,15 @@ export type View = "top" | "3d";
 export interface StageApi {
   view: View;
   zoom: number;
-  /** Incrementa quando a pessoa pede a volta de 360°. */
+  /** Bumped when the user asks for the 360° turn. */
   spin: number;
-  /** Tamanho útil do palco em px. */
+  /** Usable stage size in px. */
   size: { w: number; h: number };
 }
 
 /**
- * Palco à esquerda do painel: grade de pontos, alternância Top/3D, botão 360° e zoom.
- * O conteúdo é desenhado por `render`, que recebe vista, zoom e tamanho.
+ * Stage to the left of the panel: dot grid, Top/3D toggle, 360° button and zoom.
+ * Content is drawn by `render`, which receives view, zoom and size.
  */
 export function Stage(props: { caption?: ReactNode; tools?: ReactNode; overlay?: ReactNode; render(api: StageApi): ReactNode; defaultView?: View; noViewToggle?: boolean; bottomLeft?: ReactNode }) {
   const [view, setView] = useState<View>(props.defaultView ?? "top");
@@ -92,7 +92,7 @@ export function Stage(props: { caption?: ReactNode; tools?: ReactNode; overlay?:
   );
 }
 
-/** Escala (px por mm) para caber um objeto de w × h mm no palco, com folga. */
+/** Scale (px per mm) to fit a w × h mm object on the stage, with some margin. */
 export function fitScale(size: { w: number; h: number }, w: number, h: number, pad = { x: 200, y: 240 }) {
   return Math.max(0.05, Math.min((size.w - pad.x) / w, (size.h - pad.y) / h));
 }

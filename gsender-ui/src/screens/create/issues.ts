@@ -2,7 +2,7 @@ import type { Warning, GenerateResult, PlateSpecInput } from "@gsender-next/cam-
 import { BITS, type Bit } from "../../lib/catalog";
 import { applyCorrection, elementName, idOf, type ElementId } from "./elements";
 
-/** Ação de um cartão: muda a especificação, troca a fresa ou abre a loja. */
+/** A card's action: changes the spec, switches the bit or opens the store. */
 export type IssueAction =
   | { label: string; kind: "spec"; spec: PlateSpecInput }
   | { label: string; kind: "bit"; bit: string }
@@ -29,14 +29,14 @@ interface Ctx {
 
 const fmt = (n: number) => (Math.round(n * 10) / 10).toString();
 
-/** Fresa mais fina que a pessoa tem, para "Use 1/16″ bit". */
+/** The finest bit the user owns, for "Use 1/16″ bit". */
 function finerOwned(ctx: Ctx): Bit | undefined {
   const d = ctx.bit?.d ?? 3.175;
   return BITS.filter((b) => ctx.ownedBits.includes(b.id) && b.profile === "flat" && !b.notForSigns && b.d < d - 0.1).sort((a, b) => b.d - a.d)[0];
 }
 const finerInStore = (ctx: Ctx) => BITS.find((b) => b.profile === "flat" && b.d < (ctx.bit?.d ?? 3.175) - 0.1 && b.flute === "downcut");
 
-/** Converte os avisos do motor (pt-BR, com código estável) nos cartões em inglês da tela Create. */
+/** Turns the engine warnings (matched by their stable code) into the English cards on the Create screen. */
 export function buildIssues(result: GenerateResult | null, ctx: Ctx): UiIssue[] {
   if (!result) return [];
   const out = result.warnings.map((a, k) => toIssue(a, k, ctx));
@@ -129,7 +129,7 @@ function toIssue(a: Warning, k: number, ctx: Ctx): UiIssue {
     case "OUTSIDE_PART":
       return { ...base, title: `${q} goes past the edge of the sign`, detail: "Move it inside, or make the sign bigger.", alts: [] };
     case "LOOSE_ISLANDS":
-      return { ...base, title: `The middles of letters in ${q} will fall out`, detail: "Letters like O and A have centres that come loose when cut through. Raise or engrave them instead, or keep the loose pieces.", alts: [] };
+      return { ...base, title: `The middles of letters in ${q} will fall out`, detail: "Letters like O and A have centers that come loose when cut through. Raise or engrave them instead, or keep the loose pieces.", alts: [] };
     case "PART_LARGER_THAN_MACHINE":
       return { ...base, title: `The board is bigger than your ${ctx.machineName}`, detail: "Make the sign smaller or switch to a bigger machine.", alts: [] };
     case "DIFFERENT_DEPTHS":

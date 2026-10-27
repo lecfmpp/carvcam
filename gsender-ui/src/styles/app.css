@@ -201,7 +201,7 @@ input, select, textarea { font: inherit; color: inherit; }
 .tool-btn:hover { background: rgba(40, 41, 45, 0.9); }
 .stage__canvas { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
 
-/* ---------- Issues (erro / aviso / info) ---------- */
+/* ---------- Issues (error / warning / info) ---------- */
 .issue { border-radius: 12px; padding: 14px 16px; display: flex; gap: 12px; border: 1px solid; }
 .issue--error { border-color: rgba(242, 107, 94, 0.45); background: rgba(242, 107, 94, 0.07); }
 .issue--warning { border-color: rgba(242, 193, 78, 0.4); background: rgba(242, 193, 78, 0.06); }
@@ -232,9 +232,9 @@ input, select, textarea { font: inherit; color: inherit; }
 .menu-item:hover { background: rgba(255, 255, 255, 0.06); }
 .menu-item[aria-checked="true"] { background: rgba(255, 255, 255, 0.08); }
 
-/* ---------- Modo Painel (gControl: touch, 15,6″, de pé ao lado da máquina) ----------
-   O layout precisa caber em 1280×720 (Windows a 150%). Os controles principais crescem
-   para pelo menos 48–56 px, e nada importante depende de passar o mouse. */
+/* ---------- Panel mode (gControl: touch, 15.6″, standing next to the machine) ----------
+   The layout must fit 1280×720 (Windows at 150%). Main controls grow
+   to at least 48–56 px, and nothing important depends on hover. */
 :root[data-panel="1"] { --header-h: 68px; --panel-w: 420px; }
 :root[data-panel="1"] body { font-size: 15px; }
 :root[data-panel="1"] .app { min-height: 680px; min-width: 1200px; }
@@ -260,5 +260,5 @@ input, select, textarea { font: inherit; color: inherit; }
 :root[data-panel="1"] .issue__title { font-size: 15px; }
 :root[data-panel="1"] .stage__caption, :root[data-panel="1"] .muted.tiny { font-size: 13px; }
 :root[data-panel="1"] .kbd { display: none; }
-/* Toque: nada de seleção de texto acidental nem atraso de duplo toque. */
+/* Touch: no accidental text selection or double-tap delay. */
 :root[data-panel="1"] button, :root[data-panel="1"] .stage { touch-action: manipulation; -webkit-user-select: none; user-select: none; }

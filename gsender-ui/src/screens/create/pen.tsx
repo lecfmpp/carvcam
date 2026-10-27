@@ -2,13 +2,13 @@ import { curvePolyline } from "@gsender-next/cam-engine";
 import { useEffect, useRef, useState, type PointerEvent as RPointerEvent } from "react";
 import type { CurveNode } from "./elements";
 
-/** Conversão entre mm da peça e pixels do quadro. */
+/** Conversion between part mm and board pixels. */
 export interface Geom {
-  /** mm da peça → px dentro do quadro. */
+  /** Part mm → px inside the board. */
   toPx(x: number, y: number): { x: number; y: number };
-  /** Evento de ponteiro → mm da peça. */
+  /** Pointer event → part mm. */
   toMm(e: { clientX: number; clientY: number }): { x: number; y: number };
-  /** Quantos mm vale um pixel da tela agora (o quadro pode estar com zoom). */
+  /** How many mm one screen pixel is right now (the board may be zoomed). */
   mmPerPx(): number;
 }
 
@@ -16,9 +16,9 @@ const pathD = (geom: Geom, pts: { x: number; y: number }[], close: boolean) =>
   pts.length ? pts.map((p, i) => `${i ? "L" : "M"}${geom.toPx(p.x, p.y).x.toFixed(1)} ${geom.toPx(p.x, p.y).y.toFixed(1)}`).join(" ") + (close ? " Z" : "") : "";
 
 /**
- * Caneta: clique cria um nó de canto; clique e arraste cria um nó suave (alças simétricas).
- * Clicar no primeiro nó fecha a forma; Enter ou duplo clique termina uma linha aberta;
- * Backspace desfaz o último nó.
+ * Pen: click creates a corner node; click and drag creates a smooth node (symmetric handles).
+ * Clicking the first node closes the shape; Enter or double-click ends an open line;
+ * Backspace removes the last node.
  */
 export function PenLayer({ geom, onCommit }: { geom: Geom; onCommit(nodes: CurveNode[], closed: boolean): void }) {
   const [nodes, setNodes] = useState<CurveNode[]>([]);
@@ -55,13 +55,13 @@ export function PenLayer({ geom, onCommit }: { geom: Geom; onCommit(nodes: Curve
     const p = geom.toMm(e);
     const near = 10 * geom.mmPerPx();
     if (nodes.length >= 3 && Math.hypot(p.x - nodes[0].x, p.y - nodes[0].y) <= near) return finish(true);
-    // Segundo clique do duplo clique cai em cima do último nó: não duplica.
+    // The second click of a double-click lands on the last node: don't duplicate it.
     const last = nodes[nodes.length - 1];
     if (last && Math.hypot(p.x - last.x, p.y - last.y) <= near * 0.5) return;
     try {
       (e.currentTarget as Element).setPointerCapture(e.pointerId);
     } catch {
-      /* ponteiro sintético */
+      /* synthetic pointer */
     }
     drag.current = nodes.length;
     setNodes([...nodes, { x: p.x, y: p.y }]);
@@ -117,9 +117,9 @@ export function PenLayer({ geom, onCommit }: { geom: Geom; onCommit(nodes: Curve
 type Grab = { i: number; part: "node" | "in" | "out"; x0: number; y0: number; orig: CurveNode[] };
 
 /**
- * Edição dos nós de uma curva selecionada: arrastar um nó move o nó (as alças vão junto);
- * arrastar uma alça curva o trecho (a alça oposta acompanha, Alt solta); duplo clique num nó
- * alterna entre canto e suave.
+ * Editing the nodes of a selected curve: dragging a node moves it (handles come along);
+ * dragging a handle bends the segment (the opposite handle follows, Alt breaks it); double-click a node
+ * toggles corner/smooth.
  */
 export function CurveEditor({ geom, ox, oy, nodes, closed, onChange }: { geom: Geom; ox: number; oy: number; nodes: CurveNode[]; closed: boolean; onChange(n: CurveNode[]): void }) {
   const [live, setLive] = useState<CurveNode[] | null>(null);
@@ -132,7 +132,7 @@ export function CurveEditor({ geom, ox, oy, nodes, closed, onChange }: { geom: G
     try {
       (e.currentTarget as Element).setPointerCapture(e.pointerId);
     } catch {
-      /* ponteiro sintético */
+      /* synthetic pointer */
     }
     const p = geom.toMm(e);
     grab.current = { i, part, x0: p.x, y0: p.y, orig: nodes };
@@ -156,7 +156,7 @@ export function CurveEditor({ geom, ox, oy, nodes, closed, onChange }: { geom: G
       n[`${k}x`] = hx;
       n[`${k}y`] = hy;
       if (!e.altKey) {
-        // Mantém o nó suave: alça oposta na mesma direção, com o próprio comprimento.
+        // Keep the node smooth: opposite handle in the same direction, with its own length.
         const len = Math.hypot(g.orig[g.i][`${other}x`] ?? 0, g.orig[g.i][`${other}y`] ?? 0) || Math.hypot(hx, hy);
         const l = Math.hypot(hx, hy) || 1;
         n[`${other}x`] = (-hx / l) * len;

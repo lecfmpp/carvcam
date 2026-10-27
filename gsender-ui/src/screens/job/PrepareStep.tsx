@@ -19,7 +19,7 @@ const HINT: Record<Preset, string> = {
   detailed: "Slower, cleaner edges and crisper small letters.",
 };
 
-/** Tempo e parâmetros de cada velocidade (as que não estão selecionadas rodam sem simulação). */
+/** Time and parameters for each speed (unselected ones run without simulation). */
 function usePresetTimes(ctx: JobCtx) {
   const { design, machine, headId, preset, result } = ctx;
   const [other, setOther] = useState<Partial<Record<Preset, { sec: number; params: CutParams }>>>({});
@@ -54,7 +54,7 @@ export function PrepareStep({ ctx }: { ctx: JobCtx }) {
   const [playing, setPlaying] = useState(false);
   const [played, setPlayed] = useState(1);
 
-  // "Play toolpath": desenha o percurso em ~9 s.
+  // "Play toolpath": draws the path in ~9 s.
   useEffect(() => {
     if (!playing) return;
     const t0 = performance.now();
@@ -69,7 +69,7 @@ export function PrepareStep({ ctx }: { ctx: JobCtx }) {
     return () => cancelAnimationFrame(raf);
   }, [playing]);
 
-  // Segunda fresa: a mais fina grava os detalhes, a outra faz o resto.
+  // Second bit: the finer one engraves the details, the other does the rest.
   const second = useMemo(() => {
     const main = bitById(design.bit);
     if (!main) return null;
@@ -286,7 +286,7 @@ export function PrepareStep({ ctx }: { ctx: JobCtx }) {
 
 const fmtN = (n: number) => String(Math.round(n * 10) / 10);
 
-/** Salva o G-code verificado como .nc, para abrir no gSender atual ou levar num pendrive até o gControl. */
+/** Saves the verified G-code as .nc, to open in the current gSender or carry to gControl on a USB stick. */
 function downloadGcode(name: string, gcode: string) {
   const file = `${name.trim().replace(/[^\w\-]+/g, "-").replace(/^-|-$/g, "") || "gsender-job"}.nc`;
   const url = URL.createObjectURL(new Blob([gcode], { type: "text/plain" }));

@@ -3,9 +3,9 @@ import { PlateSpecSchema, type PlateSpecInput } from "@gsender-next/cam-engine";
 import type { AssistantContext, AssistantProvider, AssistantReply, ChatTurn } from "./types";
 
 /**
- * Assistente com o Claude, chamado direto do navegador com a chave que a pessoa colou.
- * Ele recebe a especificação atual e devolve a especificação inteira atualizada por uma
- * ferramenta; nunca envia nada para a máquina.
+ * Claude-powered assistant, called straight from the browser with the key the user pasted.
+ * It receives the current spec and returns the full updated spec through a tool call;
+ * it never sends anything to the machine.
  */
 const KEY = "gsender-anthropic-key";
 const MODEL = "claude-opus-5-5";
@@ -23,7 +23,7 @@ export function setClaudeKey(key: string) {
     if (key) localStorage.setItem(KEY, key.trim());
     else localStorage.removeItem(KEY);
   } catch {
-    /* armazenamento bloqueado: a chave vale só nesta sessão */
+    /* storage blocked: the key only lasts for this session */
   }
 }
 
@@ -32,7 +32,7 @@ const nullableNum = { type: ["number", "null"] } as const;
 const mode = { type: "string", enum: ["relief", "engrave", "cutout"] } as const;
 const obj = (properties: Record<string, unknown>) => ({ type: "object", additionalProperties: false, properties, required: Object.keys(properties) });
 
-/** Espelha PlateSpecSchema. Em modo estrito todo campo é obrigatório; x/y de texto aceitam null (posição automática). */
+/** Mirrors PlateSpecSchema. In strict mode every field is required; text x/y accept null (automatic position). */
 const SPEC_SCHEMA = obj({
   type: { type: "string", enum: ["plate", "lettering"], description: "plate = sign with a background; lettering = cut-out lettering" },
   width: { ...num, description: "Width in mm" },
@@ -48,8 +48,8 @@ const SPEC_SCHEMA = obj({
       size: { ...num, description: "Cap height in mm" },
       mode,
       depth: { ...num, description: "Depth in mm" },
-      x: { ...nullableNum, description: "Centre X from the left edge in mm, or null to auto-centre" },
-      y: { ...nullableNum, description: "Centre Y from the bottom edge in mm, or null to auto-stack" },
+      x: { ...nullableNum, description: "Center X from the left edge in mm, or null to auto-center" },
+      y: { ...nullableNum, description: "Center Y from the bottom edge in mm, or null to auto-stack" },
     }),
   },
   edge: obj({ type: { type: "string", enum: ["straight", "rounded", "chamfered"] }, radius: num }),
@@ -77,7 +77,7 @@ const RESPONSE_SCHEMA = obj({
 const SYSTEM = `You are the design assistant inside CarvCAM, the app that designs signs and drives a hobby CNC router (it works alongside gSender).
 You edit the design of a flat sign ("plate") or cut-out lettering ("lettering"). You cannot carve, move the machine or start a job: the person always does that themselves.
 When the person asks for a change, call the ${TOOL} tool once with the complete updated spec and a short reply. Keep every field you were not asked to change exactly as it is.
-Coordinates are millimetres from the bottom-left corner of the piece. Field values use the schema's identifiers (relief = raised, engrave = engraved, cutout = cut through).
+Coordinates are millimeters from the bottom-left corner of the piece. Field values use the schema's identifiers (relief = raised, engrave = engraved, cutout = cut through).
 Only flat 2.5D work is possible: text, the four icons, rectangles, circles, lines, holes and slots. If asked for a 3D carving, explain that briefly and offer the closest flat alternative instead of calling the tool.
 Prefer changes that fix the listed problems. If a request is unclear, answer with a short question instead of calling the tool.`;
 
@@ -89,7 +89,7 @@ function contextText(ctx: AssistantContext) {
   ].join("\n\n");
 }
 
-/** null → ausente, para o esquema do motor aplicar a posição automática. */
+/** null → absent, so the engine schema applies the automatic position. */
 function clean(spec: Record<string, unknown>, prev: PlateSpecInput): PlateSpecInput {
   const text = Array.isArray(spec.texts)
     ? (spec.texts as Record<string, unknown>[]).map(({ x, y, ...t }) => ({ ...t, ...(x == null ? {} : { x }), ...(y == null ? {} : { y }) }))
@@ -106,7 +106,7 @@ export function makeClaudeAssistant(apiKey: string): AssistantProvider {
         ...history.slice(-8).map((t) => ({ role: t.from === "user" ? ("user" as const) : ("assistant" as const), content: t.text })),
         { role: "user", content: `${contextText(ctx)}\n\nRequest: ${message}` },
       ];
-      // A conversa precisa começar pelo usuário.
+      // The conversation must start with a user turn.
       while (messages.length && messages[0].role !== "user") messages.shift();
       try {
         const res = await client.beta.messages.create({
