@@ -1,5 +1,8 @@
-/** Tutorial videos per instruction. Paste the YouTube link into `url` and the start time into `start` ("m:ss"). */
-export interface Video { title: string; url: string; start: string }
+/**
+ * Tutorial videos per instruction. Paste the YouTube link into `url`, the time the instruction starts
+ * into `start` ("m:ss") and, optionally, when it ends into `end`, so the player stops there.
+ */
+export interface Video { title: string; url: string; start: string; end?: string }
 
 export const VIDEOS: Record<string, Video> = {
   'create-design':      { title: 'Design a sign by chatting and editing', url: '', start: '0:00' },

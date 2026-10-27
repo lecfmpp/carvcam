@@ -65,11 +65,12 @@ export function VideoCard({ id }: { id: string }) {
   let sec = toSec(v.start);
   if (!sec) sec = Number(/[?&]t=(\d+)/.exec(v.url)?.[1] ?? 0);
   const ts = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`;
+  const end = v.end ? toSec(v.end) : 0;
   return (
     <div>
       <button
         className="video"
-        onClick={() => (yt ? setOpen(!open) : toast(`Add a YouTube link for "${id}" in src/lib/videos.ts`))}
+        onClick={() => (yt ? setOpen(!open) : toast("The video for this step is coming soon."))}
         aria-expanded={open}
       >
         <span className="video__thumb" style={yt ? { background: `center/cover no-repeat url(https://img.youtube.com/vi/${yt}/mqdefault.jpg)` } : undefined}>
@@ -80,13 +81,13 @@ export function VideoCard({ id }: { id: string }) {
         <span style={{ display: "flex", flexDirection: "column", gap: 2 }}>
           <span className="tiny muted">{open ? "Hide video" : "Watch how"}</span>
           <span style={{ font: "600 14px var(--font)" }}>{v.title}</span>
-          <span className="tiny muted">{yt ? `YouTube · starts at ${ts}` : "Video placeholder · add a YouTube link and start time"}</span>
+          <span className="tiny muted">{yt ? `YouTube · ${ts}${end > sec ? `–${v.end}` : ""}` : "Video coming soon"}</span>
         </span>
       </button>
       {open && yt ? (
         <iframe
           title={v.title}
-          src={`https://www.youtube-nocookie.com/embed/${yt}?start=${sec}&autoplay=1&rel=0`}
+          src={`https://www.youtube-nocookie.com/embed/${yt}?start=${sec}${end > sec ? `&end=${end}` : ""}&autoplay=1&rel=0`}
           style={{ width: "100%", aspectRatio: "16/9", border: 0, borderRadius: 12, marginTop: 8 }}
           allow="autoplay; encrypted-media; picture-in-picture"
           allowFullScreen
