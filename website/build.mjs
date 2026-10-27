@@ -9,6 +9,7 @@ import { comparisons, others, sienciRecs } from "./src/compare.mjs";
 import { docSections, docs } from "./src/docs.mjs";
 import { accountPages } from "./src/account.mjs";
 import { pricingPage } from "./src/pricing.mjs";
+import { legalPages } from "./src/legal.mjs";
 
 const PREVIEW = process.argv.includes("--preview");
 const OUT = new URL("./dist/", import.meta.url).pathname;
@@ -134,12 +135,12 @@ function footer() {
   return `<footer class="ftr"><div class="wrap">
 <div class="ftr__top">
 <div class="ftr__brand"><a class="logo" href="${href("/")}"><img src="${asset("/assets/carvcam-icon.svg")}" alt="" width="28" height="28"><span class="wordmark">Carv<span>CAM</span></span></a><p>Design, prepare and carve on your LongMill or AltMill. One app, start to finished piece.</p></div>
-${col("Product", [["How it works", "/#how"], ["Features", "/features/"], ["Download", "/download/"], ["Docs", "/docs/"], ["Quickstart", "/docs/quickstart/"], ["Best software for LongMill", "/best-cnc-software-for-longmill/"]])}
+${col("Product", [["How it works", "/#how"], ["Features", "/features/"], ["Download", "/download/"], ["Pricing", "/pricing/"], ["Docs", "/docs/"], ["Quickstart", "/docs/quickstart/"], ["Best software for LongMill", "/best-cnc-software-for-longmill/"]])}
 ${col("Machines", machines.map((m) => [m.name, `/machines/${m.slug}/`]))}
 ${col("Compare", comparisons.map((c) => [`CarvCAM vs ${c.name}`, `/compare/carvcam-vs-${c.slug}/`]))}
 ${col("Learn", howtos.slice(0, 4).map((h) => [h.short, `/learn/${h.slug}/`]))}
 </div>
-<div class="ftr__legal"><span>© 2026 CarvCAM</span><span>LongMill, AltMill, SuperLongBoard, AutoSpin and gSender are trademarks of Sienci Labs. Other names are trademarks of their owners. CarvCAM is an independent product.</span></div>
+<div class="ftr__legal"><span>© 2026 CarvCAM · <a href="${href("/privacy/")}">Privacy</a> · <a href="${href("/terms/")}">Terms</a></span><span>LongMill, AltMill, SuperLongBoard, AutoSpin and gSender are trademarks of Sienci Labs. Other names are trademarks of their owners. CarvCAM is an independent product.</span></div>
 </div></footer>`;
 }
 
@@ -823,6 +824,7 @@ comparePages();
 learnPages();
 docPages();
 pricingPage({ layout, at, href, asset, esc });
+legalPages({ layout, at, esc });
 accountPages({ layout, at, href, asset, esc });
 notFound();
 
