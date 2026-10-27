@@ -3,7 +3,7 @@
 Implementação do handoff do Claude Design ("Calm Precision") em React + TypeScript + Vite, sobre o motor de CAM em `../cam-engine`.
 
 ## Testar no seu computador
-Precisa só do [Node.js](https://nodejs.org) 18 ou mais novo (versão LTS). Na raiz do repositório:
+Precisa só do [Node.js](https://nodejs.org) 18 ou mais novo (versão LTS). Na pasta `carvcam/`:
 
 - **Windows:** clique duas vezes em `testar-carvcam.cmd`.
 - **Mac / Linux:** `./testar-carvcam.sh`
