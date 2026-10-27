@@ -48,7 +48,7 @@ describe("Sienci catalog", () => {
 });
 
 describe("generation with a Sienci machine", () => {
-  const plate = { width: 200, height: 100, thickness: 12, texts: [{ content: "Oi", size: 30, mode: "engrave" as const, depth: 2 }] };
+  const plate = { width: 200, height: 100, thickness: 12, texts: [{ content: "Hi", size: 30, mode: "engrave" as const, depth: 2 }] };
 
   it("Makita: warns about the 1/8″ collet and gives the dial position", () => {
     const r = generatePlate(plate, { fonts: f, sienci: { machine: "longmill-mk2-30x30", bit: "flat-1-8-upcut" } });
@@ -56,7 +56,7 @@ describe("generation with a Sienci machine", () => {
     expect(codes(r)).toContain("BIT_NEEDS_ACCESSORY");
     expect(r.manualAdjustments).toHaveLength(1);
     expect(r.manualAdjustments[0].dial).toBe(3);
-    expect(r.gcode).toContain("gire o dial do Makita RT0701 para 3");
+    expect(r.gcode).toContain("set the Makita RT0701 dial to 3");
   });
 
   it("AutoSpin: no accessory and no dial (speed from the G-code)", () => {
@@ -83,7 +83,7 @@ describe("generation with a Sienci machine", () => {
 
   it("compression bit: raises the stepdown to pass the upcut section", () => {
     const r = generatePlate(
-      { type: "lettering", width: 200, height: 80, thickness: 6, material: "plywood", texts: [{ content: "Oi", font: "pacifico", size: 40 }] },
+      { type: "lettering", width: 200, height: 80, thickness: 6, material: "plywood", texts: [{ content: "Hi", font: "pacifico", size: 40 }] },
       { fonts: f, sienci: { machine: "longmill-mk3-30x30", bit: "flat-1-8-compression", speed: "reduced" } },
     );
     expect(r.ok).toBe(true);
@@ -111,7 +111,7 @@ describe("starter projects", () => {
 
   it.each(machines)("%s: every project that fits generates approved G-code, with no errors", (m) => {
     for (const pm of projectsForMachine(m)) {
-      // A placa grande é lenta para gerar; basta testá-la numa máquina.
+      // The large sign is slow to generate; testing it on one machine is enough.
       if (!pm.fits || (pm.project.id === "address-sign" && m !== "altmill-4x4")) continue;
       const p = pm.project;
       const r = generatePlate(p.plate, { fonts: f, sienci: { machine: m, bit: p.bit, cutoutBit: p.cutoutBit, speed: p.speed } });

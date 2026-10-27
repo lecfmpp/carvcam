@@ -3,17 +3,17 @@ import { bounds, simplify, translate, union, type Pt, type Region } from "./geom
 import { InvalidSvg, type SvgDrawing } from "./svg.js";
 
 /**
- * Importador de DXF (ASCII): LINE, LWPOLYLINE e POLYLINE (com bulge), CIRCLE, ARC, ELLIPSE e
- * SPLINE (NURBS). Pedaços abertos que se encostam são emendados em contornos fechados; os
- * contornos fechados viram áreas (par-ímpar, então contornos dentro de contornos são furos).
- * O que sobra aberto vira um traço fino de 1 mm, para gravar.
+ * DXF (ASCII) importer: LINE, LWPOLYLINE and POLYLINE (with bulge), CIRCLE, ARC, ELLIPSE and
+ * SPLINE (NURBS). Open pieces whose ends touch are joined into closed outlines; closed
+ * outlines become areas (even-odd, so outlines inside outlines are holes).
+ * Whatever is left open becomes a thin 1 mm stroke, to engrave.
  *
- * Unidades pelo $INSUNITS do cabeçalho (sem unidade = mm). DXF já tem Y para cima.
+ * Units from the header's $INSUNITS (no unit = mm). DXF already has Y up.
  */
 
 const OPEN_PATH_WIDTH = 1; // mm
-const STEP = 0.25; // mm entre pontos em arcos e curvas
-/** Passo em unidades do desenho (STEP convertido pela unidade do arquivo); definido em parseDxf. */
+const STEP = 0.25; // mm between points on arcs and curves
+/** Step in drawing units (STEP converted by the file's unit); set in parseDxf. */
 let step = STEP;
 
 const INSUNITS_MM: Record<number, number> = { 0: 1, 1: 25.4, 2: 304.8, 4: 1, 5: 10, 6: 1000, 8: 0.0000254, 9: 0.0254, 10: 914.4 };
@@ -25,7 +25,7 @@ function pairs(text: string): Pair[] {
   const out: Pair[] = [];
   for (let i = 0; i + 1 < lines.length; i += 2) {
     const code = parseInt(lines[i].trim(), 10);
-    if (Number.isNaN(code)) throw new InvalidSvg("O arquivo DXF está corrompido ou não é ASCII (DXF binário não é suportado).");
+    if (Number.isNaN(code)) throw new InvalidSvg("The DXF file is corrupt or not ASCII (binary DXF is not supported).");
     out.push([code, lines[i + 1].trim()]);
   }
   return out;
@@ -36,7 +36,7 @@ interface Ent {
   g: Pair[];
 }
 
-/** Separa o arquivo em seções e entidades. */
+/** Splits the file into sections and entities. */
 function readEntities(ps: Pair[]): { ents: Ent[]; insunits: number } {
   let insunits = 0;
   const ents: Ent[] = [];
@@ -90,7 +90,7 @@ function arcPts(cx: number, cy: number, r: number, a0: number, a1: number): Pt[]
   return out;
 }
 
-/** Vértices com bulge (arco entre um vértice e o próximo; bulge = tan(ângulo/4)). */
+/** Vertices with bulge (arc between one vertex and the next; bulge = tan(angle/4)). */
 function bulgePath(v: { x: number; y: number; b: number }[], closed: boolean): Pt[] {
   const out: Pt[] = [];
   const n = v.length;
@@ -104,7 +104,7 @@ function bulgePath(v: { x: number; y: number; b: number }[], closed: boolean): P
     const chord = Math.hypot(b.x - a.x, b.y - a.y);
     if (chord < 1e-12) continue;
     const r = chord / (2 * Math.sin(Math.abs(theta) / 2));
-    // Centro: a partir do meio da corda, perpendicular, para o lado do sentido do arco.
+    // Center: from the middle of the chord, perpendicular, toward the side of the arc direction.
     const mx = (a.x + b.x) / 2;
     const my = (a.y + b.y) / 2;
     const h = r * Math.cos(theta / 2) * Math.sign(theta);
@@ -123,7 +123,7 @@ function bulgePath(v: { x: number; y: number; b: number }[], closed: boolean): P
   return out;
 }
 
-/** Avalia uma NURBS (de Boor) em pontos espaçados. */
+/** Evaluates a NURBS (de Boor) at evenly spaced points. */
 function nurbs(deg: number, knots: number[], ctrl: Pt[], w: number[]): Pt[] {
   const n = ctrl.length;
   if (n < 2 || knots.length !== n + deg + 1) return ctrl;
@@ -162,7 +162,7 @@ function pieces(ents: Ent[]): { pieces: Piece[]; ignored: Set<string> } {
   const ignored = new Set<string>();
   for (let i = 0; i < ents.length; i++) {
     const e = ents[i];
-    // Direção de extrusão (0,0,-1) espelha X no sistema do objeto (comum em arcos do AutoCAD).
+    // Extrusion direction (0,0,-1) mirrors X in the object coordinate system (common in AutoCAD arcs).
     const fx = num(e, 230, 1) < 0 ? -1 : 1;
     switch (e.type) {
       case "LINE":
@@ -229,7 +229,7 @@ function pieces(ents: Ent[]): { pieces: Piece[]; ignored: Set<string> } {
         let pts: Pt[];
         if (ctrl.length >= 2) pts = nurbs(deg, knots, ctrl, nums(e, 41));
         else {
-          // Só pontos de ajuste: liga os pontos (aproximação).
+          // Fit points only: connect the points (approximation).
           const fxs = nums(e, 11), fys = nums(e, 21);
           pts = fxs.map((x, k) => ({ x, y: fys[k] ?? 0 }));
         }
@@ -248,7 +248,7 @@ function pieces(ents: Ent[]): { pieces: Piece[]; ignored: Set<string> } {
 
 const dist = (a: Pt, b: Pt) => Math.hypot(b.x - a.x, b.y - a.y);
 
-/** Emenda pedaços abertos cujas pontas se encostam (tolerância em unidades do desenho). */
+/** Joins open pieces whose ends touch (tolerance in drawing units). */
 function chain(open: Pt[][], tol: number): { closed: Pt[][]; open: Pt[][] } {
   const rest = open.map((p) => [...p]);
   const closed: Pt[][] = [];
@@ -285,8 +285,8 @@ export function parseDxf(text: string): SvgDrawing & { openPaths: number } {
   step = STEP / u;
   const { pieces: ps, ignored } = pieces(ents);
   if (!ps.length) {
-    const extra = ignored.size ? ` Encontrei só: ${[...ignored].join(", ")}.` : "";
-    throw new InvalidSvg(`O DXF não tem linhas, arcos, círculos, polilinhas nem splines.${extra} Explode blocos e textos antes de exportar.`);
+    const extra = ignored.size ? ` Only found: ${[...ignored].join(", ")}.` : "";
+    throw new InvalidSvg(`The DXF has no lines, arcs, circles, polylines or splines.${extra} Explode blocks and text before exporting.`);
   }
   const scaled = ps.map((p) => ({ closed: p.closed, pts: p.pts.map((q) => ({ x: q.x * u, y: q.y * u })) }));
   const { closed: chained, open } = chain(
@@ -300,11 +300,11 @@ export function parseDxf(text: string): SvgDrawing & { openPaths: number } {
     reg = union(reg, strokes);
   }
   reg = simplify(reg, 0.005);
-  if (!reg.length) throw new InvalidSvg("O desenho do DXF ficou vazio.");
+  if (!reg.length) throw new InvalidSvg("The DXF drawing is empty.");
   const b = bounds(reg);
   const width = b.maxX - b.minX;
   const height = b.maxY - b.minY;
-  if (!(width > 0.01 && height > 0.01)) throw new InvalidSvg("O desenho do DXF é pequeno demais.");
+  if (!(width > 0.01 && height > 0.01)) throw new InvalidSvg("The DXF drawing is too small.");
   reg = translate(reg, -(b.minX + b.maxX) / 2, -(b.minY + b.maxY) / 2);
   return { region: reg, width, height, openPaths: open.length };
 }

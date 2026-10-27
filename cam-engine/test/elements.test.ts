@@ -38,7 +38,7 @@ describe("element library", () => {
       );
       expect(r.warnings.filter((a) => a.severity === "error")).toEqual([]);
       expect(r.ok).toBe(true);
-      // Só cantos vivos podem ficar sem cortar: nenhum traço mais fino que a fresa.
+      // Only sharp corners may be left uncut: no stroke thinner than the bit.
       const det = r.warnings.find((a) => a.code === "DETAIL_SMALLER_THAN_BIT");
       expect(Number(det?.data?.percent ?? 0)).toBeLessThan(2);
     });

@@ -1,26 +1,26 @@
 import type { Machine, MaterialId, Tool } from "./schema.js";
 
 /**
- * Presets conservadores para routers hobby. Valores de partida, não verdades absolutas:
- * a UI deve deixar o usuário ajustar e lembrar o ajuste por material.
+ * Conservative presets for hobby routers. Starting points, not absolute truths:
+ * the UI should let the user adjust them and remember the adjustment per material.
  */
 export interface MaterialPreset {
   name: string;
-  /** Avanço por dente (mm) para uma fresa de ~3 mm. */
+  /** Feed per tooth / chip load (mm) for a ~3 mm bit. */
   feedPerTooth: number;
-  /** Profundidade por passada, como fração do diâmetro. */
+  /** Stepdown (depth per pass), as a fraction of the diameter. */
   stepdownFraction: number;
-  /** Sobreposição lateral no pocket, como fração do diâmetro. */
+  /** Pocket stepover, as a fraction of the diameter. */
   stepoverFraction: number;
   rpm: number;
 }
 
 export const MATERIAL_PRESETS: Record<MaterialId, MaterialPreset> = {
   mdf: { name: "MDF", feedPerTooth: 0.05, stepdownFraction: 0.5, stepoverFraction: 0.4, rpm: 18000 },
-  plywood: { name: "Compensado", feedPerTooth: 0.045, stepdownFraction: 0.4, stepoverFraction: 0.4, rpm: 18000 },
-  softwood: { name: "Madeira macia (pinus)", feedPerTooth: 0.05, stepdownFraction: 0.5, stepoverFraction: 0.4, rpm: 18000 },
-  hardwood: { name: "Madeira dura", feedPerTooth: 0.035, stepdownFraction: 0.3, stepoverFraction: 0.35, rpm: 18000 },
-  acrylic: { name: "Acrílico", feedPerTooth: 0.05, stepdownFraction: 0.25, stepoverFraction: 0.35, rpm: 16000 },
+  plywood: { name: "Plywood", feedPerTooth: 0.045, stepdownFraction: 0.4, stepoverFraction: 0.4, rpm: 18000 },
+  softwood: { name: "Softwood (pine)", feedPerTooth: 0.05, stepdownFraction: 0.5, stepoverFraction: 0.4, rpm: 18000 },
+  hardwood: { name: "Hardwood", feedPerTooth: 0.035, stepdownFraction: 0.3, stepoverFraction: 0.35, rpm: 18000 },
+  acrylic: { name: "Acrylic", feedPerTooth: 0.05, stepdownFraction: 0.25, stepoverFraction: 0.35, rpm: 16000 },
 };
 
 export interface CutParams {
@@ -34,9 +34,9 @@ export interface CutParams {
 export function cutParams(material: MaterialId, tool: Tool, machine: Machine, overrides: Partial<CutParams> = {}): CutParams {
   const m = MATERIAL_PRESETS[material];
   const rpm = clamp(overrides.rpm ?? m.rpm, machine.rpmMin, machine.rpmMax);
-  // Fresas finas aguentam menos avanço por dente: escala com o diâmetro em relação a 1/8".
+  // Small bits take a lighter chip load: scale with the diameter relative to 1/8".
   const fz = m.feedPerTooth * clamp(tool.diameter / 3.175, 0.4, 2);
-  // Avanço = avanço por dente × canais × RPM (mesma fórmula da calculadora do rudra496/cnc).
+  // Feed rate = chip load × flutes × RPM (same formula as the rudra496/cnc calculator).
   const feed = Math.min(overrides.feed ?? fz * tool.flutes * rpm, machine.maxFeedXY);
   const plunge = Math.min(overrides.plunge ?? feed * 0.3, machine.maxFeedZ);
   const stepdown = overrides.stepdown ?? round2(tool.diameter * m.stepdownFraction);

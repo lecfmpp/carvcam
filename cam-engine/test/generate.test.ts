@@ -46,7 +46,7 @@ describe("spec", () => {
 
 describe("manufacturability checks", () => {
   it("text too large", () => {
-    expect(codes({ ...base, texts: [{ content: "Casa da Ana", size: 40 }] })).toContain("TEXT_DOES_NOT_FIT");
+    expect(codes({ ...base, texts: [{ content: "Ana's House", size: 40 }] })).toContain("TEXT_DOES_NOT_FIT");
   });
   it("depth that would go through the material", () => {
     expect(codes({ ...base, texts: [{ content: "A", size: 30, mode: "engrave", depth: 16 }] })).toContain("DEPTH_EXCEEDS");
@@ -86,7 +86,7 @@ describe("examples", () => {
     const r = generatePlate(ex.plate, { fonts: f, tool: ex.tool, machine: ex.machine });
     expect(r.ok).toBe(true);
     expect(r.operations).toHaveLength(1);
-    // Letras ligadas viram poucas peças (o pingo do "i" e o hífen ficam soltos), com vários miolos.
+    // Joined letters become a few pieces (the dot of the "i" and the hyphen stay separate), with several counters.
     const outers = r.layout.part.filter((p) => area1(p) > 0).length;
     const counters = r.layout.part.filter((p) => area1(p) < 0).length;
     expect(outers).toBeLessThan("Bem-vindos".length);
@@ -99,7 +99,7 @@ describe("examples", () => {
     expect(r.ok).toBe(true);
     const lines = r.gcode.split("\n");
     expect(lines.filter((l) => /^T\d M6$/.test(l))).toEqual(["T1 M6", "T2 M6"]);
-    expect(lines.indexOf("T2 M6")).toBeGreaterThan(lines.findIndex((l) => l.includes("Gravação")));
+    expect(lines.indexOf("T2 M6")).toBeGreaterThan(lines.findIndex((l) => l.includes("Engrave:")));
   });
 
   it("G-code only uses allowed commands and never G0 below Z0", () => {
@@ -143,18 +143,18 @@ describe("shapes and element references", () => {
   });
 
   it("links the warning to the element and offers the fix", () => {
-    const r = generatePlate({ ...base, texts: [{ content: "Casa da Ana", size: 40 }] }, { fonts: f, tool: longTool });
+    const r = generatePlate({ ...base, texts: [{ content: "Ana's House", size: 40 }] }, { fonts: f, tool: longTool });
     const a = r.warnings.find((x) => x.code === "TEXT_DOES_NOT_FIT")!;
     expect(a.element).toEqual({ type: "text", index: 0 });
     expect(a.fix?.field).toBe("size");
     expect(a.fix!.value).toBeLessThan(40);
-    const ok = generatePlate({ ...base, texts: [{ content: "Casa da Ana", size: a.fix!.value }] }, { fonts: f, tool: longTool });
+    const ok = generatePlate({ ...base, texts: [{ content: "Ana's House", size: a.fix!.value }] }, { fonts: f, tool: longTool });
     expect(ok.warnings.map((x) => x.code)).not.toContain("TEXT_DOES_NOT_FIT");
   });
 
   it("points at the relief element that leaves leftover material", () => {
     const r = generatePlate(
-      { ...base, texts: [{ content: "Casa da Ana", size: 16, mode: "relief" }] },
+      { ...base, texts: [{ content: "Ana's House", size: 16, mode: "relief" }] },
       { fonts: f, tool: longTool },
     );
     const a = r.warnings.find((x) => x.code === "DETAIL_SMALLER_THAN_BIT");

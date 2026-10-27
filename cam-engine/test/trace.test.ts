@@ -31,9 +31,9 @@ describe("traceMask", () => {
 
   it("drops small blobs and survives diagonal-only pixels", () => {
     const m = disk(60, 60, 30, 30, 15);
-    m[2 * 60 + 2] = 1; // mancha de 1 px
+    m[2 * 60 + 2] = 1; // 1 px speck
     m[50 * 60 + 50] = 1;
-    m[51 * 60 + 51] = 1; // dois pixels encostados pela diagonal
+    m[51 * 60 + 51] = 1; // two pixels touching diagonally
     const r = traceMask(m, 60, 60, { minBlob: 6 });
     expect(r).toHaveLength(1);
   });

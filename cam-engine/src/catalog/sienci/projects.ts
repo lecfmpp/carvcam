@@ -5,15 +5,15 @@ import { MACHINES, type MachineId } from "./machines.js";
 import type { Speed } from "./table.js";
 
 /**
- * Projetos prontos para testar a máquina e fazer os primeiros cortes. A ordem é a sugerida
- * para quem acabou de montar a máquina (depois de aplainar a mesa com o Surfacing do gSender).
+ * Ready-made projects to test the machine and make the first cuts. The order is the one suggested
+ * for someone who just assembled the machine (after surfacing the spoilboard with gSender's Surfacing tool).
  */
 export interface StarterProject {
   id: string;
   title: string;
   description: string;
   level: "first-cut" | "easy" | "intermediate";
-  /** O que a pessoa aprende fazendo. */
+  /** What the person learns by making it. */
   learn: string[];
   bit: string;
   cutoutBit?: string;
@@ -24,10 +24,10 @@ export interface StarterProject {
 export const PROJECTS: StarterProject[] = [
   {
     id: "depth-test",
-    title: "Teste de profundidade",
-    description: "Grava 1, 2 e 3 em profundidades de 1, 2 e 3 mm numa sobra de MDF. Sem recorte: nada se solta.",
+    title: "Depth test",
+    description: "Engraves 1, 2 and 3 at depths of 1, 2 and 3 mm on a scrap of MDF. No cutout: nothing comes loose.",
     level: "first-cut",
-    learn: ["Prender o material", "Zerar X, Y e Z", "Conferir a profundidade com um paquímetro"],
+    learn: ["Clamping the material", "Zeroing X, Y and Z", "Checking the depth with calipers"],
     bit: "flat-1-8-upcut",
     speed: "reduced",
     plate: {
@@ -41,10 +41,10 @@ export const PROJECTS: StarterProject[] = [
   },
   {
     id: "coaster",
-    title: "Porta-copos com inicial",
-    description: "Disco de 10 cm com uma letra gravada, recortado com abas. Lembra o porta-copos dos primeiros projetos da Sienci.",
+    title: "Coaster with an initial",
+    description: "A 10 cm disc with an engraved letter, cut out with tabs. A nod to the coaster from Sienci's first projects.",
     level: "first-cut",
-    learn: ["Recorte com abas", "Soltar a peça e lixar as abas"],
+    learn: ["Profile cut with tabs", "Freeing the part and sanding off the tabs"],
     bit: "flat-1-8-upcut",
     plate: {
       width: 100, height: 100, thickness: 6, material: "mdf",
@@ -54,24 +54,24 @@ export const PROJECTS: StarterProject[] = [
   },
   {
     id: "door-sign",
-    title: "Placa de porta em relevo",
-    description: "\"Casa da Ana\" em relevo de 3 mm, com moldura, cantos arredondados e dois furos para parafusar.",
+    title: "Raised door sign",
+    description: "\"Ana's House\" in 3 mm relief, with a frame, rounded corners and two screw holes.",
     level: "easy",
-    learn: ["Relevo (rebaixar o fundo)", "Furos de fixação", "Peça mais longa (~20 min)"],
+    learn: ["Relief (clearing the background)", "Mounting holes", "A longer job (~20 min)"],
     bit: "flat-1-8-upcut",
     plate: {
       width: 200, height: 100, thickness: 15, material: "mdf",
       edge: { type: "rounded", radius: 10 },
-      texts: [{ content: "Casa da Ana", size: 16, mode: "relief", depth: 3 }],
+      texts: [{ content: "Ana's House", size: 16, mode: "relief", depth: 3 }],
       holes: [{ x: 15, y: 85, diameter: 5 }, { x: 185, y: 85, diameter: 5 }],
     },
   },
   {
     id: "pet-plaque",
-    title: "Plaquinha de pet",
-    description: "Nome gravado com coração e folha, rasgo para pendurar. Usa duas fresas: 1/16″ para os detalhes e 1/8″ para o recorte.",
+    title: "Pet name plaque",
+    description: "Engraved name with a heart and a leaf, plus a hanging slot. Uses two bits: 1/16″ for the details and 1/8″ for the cutout.",
     level: "intermediate",
-    learn: ["Troca de fresa no meio do trabalho", "Rezerar o Z depois da troca"],
+    learn: ["Changing bits mid-job", "Re-zeroing Z after the bit change"],
     bit: "flat-1-16-downcut",
     cutoutBit: "flat-1-8-upcut",
     plate: {
@@ -79,7 +79,7 @@ export const PROJECTS: StarterProject[] = [
       edge: { type: "chamfered", radius: 8 },
       texts: [
         { content: "LUNA", font: "bebas-neue", size: 30, mode: "engrave", depth: 2 },
-        { content: "desde 2024", font: "archivo-black", size: 9, mode: "engrave", depth: 1.5 },
+        { content: "since 2024", font: "archivo-black", size: 9, mode: "engrave", depth: 1.5 },
       ],
       icons: [
         { id: "heart", x: 22, y: 70, size: 16, mode: "engrave", depth: 2 },
@@ -90,23 +90,23 @@ export const PROJECTS: StarterProject[] = [
   },
   {
     id: "welcome-sign",
-    title: "Letreiro \"Bem-vindos\"",
-    description: "Letras cursivas ligadas, recortadas de compensado com fresa de compressão (as duas faces ficam limpas).",
+    title: "\"Welcome\" lettering",
+    description: "Joined script letters cut out of plywood with a compression bit (both faces come out clean).",
     level: "intermediate",
-    learn: ["Letreiro recortado", "Fresa de compressão em compensado"],
+    learn: ["Cut-out lettering", "Compression bit in plywood"],
     bit: "flat-1-8-compression",
     speed: "regular",
     plate: {
       type: "lettering", width: 260, height: 110, thickness: 6, material: "plywood",
-      texts: [{ content: "Bem-vindos", font: "pacifico", size: 40 }],
+      texts: [{ content: "Welcome", font: "pacifico", size: 40 }],
     },
   },
   {
     id: "acrylic-keychain",
-    title: "Chaveiro de acrílico",
-    description: "Tag de acrílico com nome gravado em V e furo para a argola. Fresa de 1 canal para o acrílico não derreter.",
+    title: "Acrylic keychain",
+    description: "Acrylic tag with a V-carved name and a hole for the key ring. Single-flute bit so the acrylic does not melt.",
     level: "intermediate",
-    learn: ["Cortar plástico", "Gravação com fresa em V"],
+    learn: ["Cutting plastic", "Engraving with a V-bit"],
     bit: "vbit-30-1-8",
     cutoutBit: "flat-1-8-1flute",
     plate: {
@@ -118,10 +118,10 @@ export const PROJECTS: StarterProject[] = [
   },
   {
     id: "address-sign",
-    title: "Placa de endereço grande",
-    description: "Número em relevo numa placa de 90 × 30 cm, com fresa de 1/4″. Só cabe nas máquinas maiores.",
+    title: "Large address sign",
+    description: "Raised house number on a 90 × 30 cm sign, with a 1/4″ bit. Only fits the larger machines.",
     level: "intermediate",
-    learn: ["Peças grandes", "Fresa de 1/4″ para rebaixos rápidos"],
+    learn: ["Large parts", "1/4″ bit for fast pocketing"],
     bit: "flat-1-4-upcut",
     plate: {
       width: 900, height: 300, thickness: 19, material: "mdf",
@@ -136,13 +136,13 @@ export const PROJECTS: StarterProject[] = [
 export interface ProjectOnMachine {
   project: StarterProject;
   fits: boolean;
-  /** Acessórios necessários (ex.: pinça 1/8″ no Makita). */
+  /** Accessories needed (e.g. a 1/8″ collet in the Makita). */
   accessories: string[];
-  /** Motivo para não dar (bloco maior que a máquina, fresa que não prende…). */
+  /** Reasons it will not work (stock larger than the machine, a bit that does not fit…). */
   blockers: string[];
 }
 
-/** Lista os projetos com o que cada um precisa nesta máquina e cabeçote. */
+/** Lists the projects with what each one needs on this machine and head. */
 export function projectsForMachine(machine: MachineId, headId?: HeadId): ProjectOnMachine[] {
   const m = MACHINES[machine];
   const head = headId ?? m.defaultHead;
@@ -152,7 +152,7 @@ export function projectsForMachine(machine: MachineId, headId?: HeadId): Project
     const blockers: string[] = [];
     const accessories: string[] = [];
     if (p.width + margin > m.travel.x || p.height + margin > m.travel.y) {
-      blockers.push(`O bloco (${p.width + margin} × ${p.height + margin} mm) não cabe na ${m.name}.`);
+      blockers.push(`The stock (${p.width + margin} × ${p.height + margin} mm) does not fit on the ${m.name}.`);
     }
     for (const id of [project.bit, project.cutoutBit].filter(Boolean) as string[]) {
       const c = compatibility(BIT_BY_ID.get(id)!, head);

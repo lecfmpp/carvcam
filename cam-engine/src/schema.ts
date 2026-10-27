@@ -1,9 +1,9 @@
 import { z } from "zod";
 
 /**
- * Especificação de uma placa ou letreiro, no formato que o assistente de IA preenche.
- * Todas as medidas em milímetros. Origem do trabalho: canto inferior esquerdo do bloco,
- * Z0 na face de cima do material.
+ * Spec for a sign or cut-out lettering, in the format the AI assistant fills in.
+ * All measurements in millimeters. Work origin: bottom-left corner of the stock,
+ * Z0 on the top surface of the material.
  */
 
 export const FONT_IDS = ["archivo-black", "pacifico", "bebas-neue"] as const;
@@ -13,11 +13,11 @@ export const MATERIAL_IDS = ["mdf", "plywood", "softwood", "hardwood", "acrylic"
 export const ModeSchema = z.enum(["relief", "engrave", "cutout"]);
 
 /**
- * Ajustes que valem para qualquer elemento desenhado (texto, ícone, forma, desenho importado).
- * - offset: engrossa (+) ou afina (−) o contorno do elemento, em mm (offset de vetor).
- * - outline: acrescenta um anel em volta do elemento, a `distance` mm dele, com `width` mm.
- * - operation: "subtract" tira a área deste elemento dos outros que ele cobre (ele mesmo não é
- *   cortado); "mask" faz os outros elementos ficarem só com a parte dentro dele.
+ * Modifiers that apply to any drawn element (text, icon, shape, imported drawing).
+ * - offset: thickens (+) or thins (−) the element's outline, in mm (vector offset).
+ * - outline: adds a ring around the element, `distance` mm away from it and `width` mm wide.
+ * - operation: "subtract" removes this element's area from the others it covers (it is not
+ *   cut itself); "mask" keeps only the part of the other elements that lies inside it.
  */
 export const ModifiersShape = {
   offset: z.number().min(-20).max(30).default(0),
@@ -29,14 +29,14 @@ export const ModifiersShape = {
     .optional(),
   operation: z.enum(["normal", "subtract", "mask"]).default("normal"),
   /**
-   * Só para subtrair/mascara: elementos afetados. Omitido = todos os elementos normais.
-   * Lista vazia = nenhum.
+   * Subtract/mask only: the affected elements. Omitted = all normal elements.
+   * Empty list = none.
    */
   targets: z
     .array(z.object({ type: z.enum(["text", "icon", "shape", "svg"]), index: z.number().int().min(0) }))
     .max(80)
     .optional(),
-  /** Só para gravado: em vez de esvaziar a área, grava o contorno e linhas paralelas dentro. */
+  /** Engrave only: instead of clearing the area, engraves the outline plus parallel lines inside it. */
   hatch: z
     .object({
       spacing: z.number().min(0.3).max(30).default(2),
@@ -48,16 +48,16 @@ export const ModifiersShape = {
 export const TextSchema = z.object({
   content: z.string().min(1).max(60),
   font: z.enum(FONT_IDS).default("archivo-black"),
-  /** Altura das letras maiúsculas, em mm. */
+  /** Cap height of the letters, in mm. */
   size: z.number().positive().max(500),
   mode: ModeSchema.default("relief"),
   depth: z.number().positive().max(50).default(3),
-  /** Centro do texto. Se omitido, os textos são empilhados e centralizados na placa. */
+  /** Text center. If omitted, the texts are stacked and centered on the sign. */
   x: z.number().optional(),
   y: z.number().optional(),
   /**
-   * Texto em arco: raio da linha de base em mm. Positivo curva para cima, negativo para baixo.
-   * Omitido ou 0 = texto reto.
+   * Arched text: baseline radius in mm. Positive curves up, negative curves down.
+   * Omitted or 0 = straight text.
    */
   arc: z.number().min(-5000).max(5000).optional(),
   ...ModifiersShape,
@@ -74,8 +74,8 @@ export const IconSchema = z.object({
 });
 
 /**
- * Nó de uma curva livre (Bézier cúbica), relativo à origem da curva. As alças (entrada e
- * saída) são relativas ao próprio nó; sem alças, o nó é um canto.
+ * Node of a freeform curve (cubic Bézier), relative to the curve origin. The handles (in and
+ * out) are relative to the node itself; with no handles, the node is a corner.
  */
 export const CurvePointSchema = z.object({
   x: z.number(),
@@ -88,8 +88,8 @@ export const CurvePointSchema = z.object({
 export type CurvePoint = z.infer<typeof CurvePointSchema>;
 
 /**
- * Formas desenhadas na tela Criar. Retângulo, círculo, polígono e estrela são centrados em
- * (x, y); a linha vai de (x, y) a (x2, y2) com a espessura dada.
+ * Shapes drawn on the Create screen. Rectangle, circle, polygon and star are centered on
+ * (x, y); the line runs from (x, y) to (x2, y2) with the given thickness.
  */
 export const ShapeSchema = z.discriminatedUnion("type", [
   z.object({
@@ -116,7 +116,7 @@ export const ShapeSchema = z.discriminatedUnion("type", [
     type: z.literal("polygon"),
     x: z.number(),
     y: z.number(),
-    /** Diâmetro do círculo que passa pelos vértices. */
+    /** Diameter of the circle through the vertices. */
     diameter: z.number().positive().max(3000),
     sides: z.number().int().min(3).max(24).default(6),
     rotation: z.number().default(0),
@@ -128,10 +128,10 @@ export const ShapeSchema = z.discriminatedUnion("type", [
     type: z.literal("star"),
     x: z.number(),
     y: z.number(),
-    /** Diâmetro do círculo que passa pelas pontas. */
+    /** Diameter of the circle through the points. */
     diameter: z.number().positive().max(3000),
     points: z.number().int().min(3).max(24).default(5),
-    /** Raio interno como fração do externo. */
+    /** Inner radius as a fraction of the outer one. */
     inner: z.number().min(0.15).max(0.95).default(0.45),
     rotation: z.number().default(0),
     mode: ModeSchema.default("engrave"),
@@ -140,11 +140,11 @@ export const ShapeSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     type: z.literal("curve"),
-    /** Origem da curva: os pontos são relativos a (x, y); mover a curva muda só isso. */
+    /** Curve origin: the points are relative to (x, y); moving the curve only changes this. */
     x: z.number(),
     y: z.number(),
     nodes: z.array(CurvePointSchema).min(2).max(400),
-    /** Fechada vira área; aberta vira um traço com a espessura dada. */
+    /** Closed becomes an area; open becomes a stroke with the given thickness. */
     closed: z.boolean().default(true),
     thickness: z.number().positive().max(100).default(3.2),
     mode: ModeSchema.default("engrave"),
@@ -165,9 +165,9 @@ export const ShapeSchema = z.discriminatedUnion("type", [
 ]);
 
 /**
- * Desenho importado de um arquivo SVG ou DXF (o formato é detectado pelo conteúdo).
- * O texto do arquivo vai junto na especificação;
- * (x, y) é o centro e a largura define o tamanho (a altura segue a proporção do desenho).
+ * Drawing imported from an SVG or DXF file (the format is detected from the content).
+ * The file text travels with the spec;
+ * (x, y) is the center and the width sets the size (the height follows the drawing's aspect ratio).
  */
 export const SvgSchema = z.object({
   content: z.string().min(10).max(3_000_000),
@@ -191,7 +191,7 @@ export const SlotSchema = z.object({
   y: z.number(),
   length: z.number().positive().max(200),
   width: z.number().positive().max(50),
-  /** Ângulo em graus; 0 = horizontal. */
+  /** Angle in degrees; 0 = horizontal. */
   angle: z.number().default(0),
 });
 
@@ -208,16 +208,16 @@ export const PlateSpecSchema = z.object({
   material: z.enum(MATERIAL_IDS).default("mdf"),
   texts: z.array(TextSchema).max(6).default([]),
   edge: EdgeSchema.default({ type: "straight", radius: 0 }),
-  /** Largura da moldura que fica em pé ao redor do relevo. 0 = sem moldura. */
+  /** Width of the raised frame around the relief. 0 = no frame. */
   frame: z.number().min(0).default(6),
   icons: z.array(IconSchema).max(12).default([]),
   shapes: z.array(ShapeSchema).max(40).default([]),
   svgs: z.array(SvgSchema).max(8).default([]),
   holes: z.array(HoleSchema).max(12).default([]),
   slots: z.array(SlotSchema).max(4).default([]),
-  /** Recortar o contorno externo da peça (com abas de fixação). */
+  /** Profile cut the part's outer outline (with tabs). */
   outerCutout: z.boolean().default(true),
-  /** Sobra de material ao redor da peça, quando há recorte externo. */
+  /** Extra material around the part, when there is an outer cutout. */
   margin: z.number().min(0).default(10),
 });
 
@@ -234,24 +234,24 @@ export type MaterialId = (typeof MATERIAL_IDS)[number];
 
 export const ToolSchema = z.object({
   id: z.number().int().positive().default(1),
-  name: z.string().default("Fresa reta 1/8\""),
+  name: z.string().default("1/8\" straight bit"),
   type: z.enum(["straight", "vbit"]).default("straight"),
   diameter: z.number().positive().max(25).default(3.175),
-  /** Ângulo da ponta para V-bit, em graus. */
+  /** Tip angle for a V-bit, in degrees. */
   angle: z.number().positive().max(180).optional(),
   flutes: z.number().int().positive().max(6).default(2),
-  /** Comprimento útil de corte. */
+  /** Usable cutting length. */
   cutLength: z.number().positive().default(12),
 });
 export type Tool = z.infer<typeof ToolSchema>;
 export type ToolInput = z.input<typeof ToolSchema>;
 
 /**
- * Limites da máquina. Na integração com o gSender, preencha a partir dos parâmetros
- * de firmware ($110–$112 velocidades, $130–$132 curso) em vez de usar o padrão.
+ * Machine limits. When integrating with gSender, fill these from the firmware
+ * settings ($110–$112 max rates, $130–$132 travel) instead of using the defaults.
  */
 export const MachineSchema = z.object({
-  name: z.string().default("Genérica (conservadora)"),
+  name: z.string().default("Generic (conservative)"),
   travelX: z.number().positive().default(300),
   travelY: z.number().positive().default(300),
   travelZ: z.number().positive().default(60),
@@ -259,9 +259,9 @@ export const MachineSchema = z.object({
   maxFeedZ: z.number().positive().default(800),
   rpmMin: z.number().positive().default(10000),
   rpmMax: z.number().positive().default(30000),
-  /** Altura segura para deslocamentos entre operações. */
+  /** Safe height for moves between operations. */
   safeHeight: z.number().positive().default(10),
-  /** Altura de recuo dentro de uma operação. */
+  /** Retract height within an operation. */
   retractHeight: z.number().positive().default(3),
 });
 export type Machine = z.infer<typeof MachineSchema>;

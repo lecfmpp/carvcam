@@ -41,20 +41,20 @@ describe("parseSvg", () => {
   it("circle, arc and curves become outlines with the right area", () => {
     const c = parseSvg(`<svg viewBox="0 0 20 20" width="20mm" height="20mm"><circle cx="10" cy="10" r="10"/></svg>`);
     expect(area(c.region)).toBeCloseTo(Math.PI * 100, 0);
-    // Semicírculo com arco relativo e flags grudadas.
+    // Semicircle with a relative arc and glued-together flags.
     const a = parseSvg(`<svg viewBox="0 0 20 20" width="20mm" height="20mm"><path d="M0 10a10 10 0 01 20 0z"/></svg>`);
     expect(area(a.region)).toBeCloseTo((Math.PI * 100) / 2, 0);
     expect(a.height).toBeCloseTo(10, 1);
   });
 
   it("applies group transforms and Y up", () => {
-    // Retângulo largo no topo do SVG (Y pequeno) deve ficar em cima na peça.
+    // A wide rectangle at the top of the SVG (small Y) must end up at the top of the part.
     const d = parseSvg(
       `<svg viewBox="0 0 100 100" width="100mm" height="100mm"><g transform="translate(10 0) scale(2)"><rect x="0" y="0" width="10" height="5"/></g><rect x="0" y="90" width="5" height="10"/></svg>`,
     );
     expect(d.width).toBeCloseTo(30, 3);
     expect(d.height).toBeCloseTo(100, 3);
-    // O retângulo largo (20 × 10) está no topo: ponto do lado direito, em cima, é cheio.
+    // The wide rectangle (20 × 10) is at the top: a point on the right side, at the top, is filled.
     expect(pointInRegion(d.region, { x: 10, y: 45 })).toBe(true);
     expect(pointInRegion(d.region, { x: 10, y: -45 })).toBe(false);
   });
@@ -73,8 +73,8 @@ describe("parseSvg", () => {
   });
 
   it("rejects a file with no cuttable shapes", () => {
-    expect(() => parseSvg(`<svg viewBox="0 0 10 10"><text>oi</text></svg>`)).toThrow(InvalidSvg);
-    expect(() => parseSvg(`não é svg`)).toThrow(InvalidSvg);
+    expect(() => parseSvg(`<svg viewBox="0 0 10 10"><text>hi</text></svg>`)).toThrow(InvalidSvg);
+    expect(() => parseSvg(`not an svg`)).toThrow(InvalidSvg);
   });
 });
 

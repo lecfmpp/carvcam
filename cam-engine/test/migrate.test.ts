@@ -25,9 +25,20 @@ const legacy = {
   ferramenta: { id: 1, nome: "Fresa reta 1/8\" longa", diametro: 3.175, canais: 2, comprimentoCorte: 22 },
 };
 
+/**
+ * The current "anas-house" example with the user-typed text it had back in v0.1.0 (the sign
+ * content and the tool name were Portuguese then); everything else must match exactly.
+ */
+function expectedFromLegacy() {
+  const ex = example("anas-house");
+  ex.plate.texts[0].content = legacy.placa.texto[0].conteudo;
+  ex.tool.name = legacy.ferramenta.nome;
+  return ex;
+}
+
 describe("v0.1.0 data migration", () => {
   it("turns a legacy spec into the current one", () => {
-    expect(migrateLegacySpec(legacy)).toEqual(example("anas-house"));
+    expect(migrateLegacySpec(legacy)).toEqual(expectedFromLegacy());
   });
 
   it("is a no-op on current data", () => {
@@ -39,7 +50,7 @@ describe("v0.1.0 data migration", () => {
   it("migrated legacy spec produces the same G-code", async () => {
     const f = await fonts();
     const m = migrateLegacySpec<{ plate: unknown; tool: unknown }>(legacy);
-    const ex = example("anas-house");
+    const ex = expectedFromLegacy();
     const a = generatePlate(PlateSpecSchema.parse(m.plate), { fonts: f, tool: m.tool as never });
     const b = generatePlate(ex.plate, { fonts: f, tool: ex.tool });
     expect(a.gcode).toBe(b.gcode);

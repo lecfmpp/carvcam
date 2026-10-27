@@ -5,7 +5,7 @@ import { loadFonts } from "./fonts.js";
 
 const FONT_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "fonts");
 
-/** Carrega as fontes incluídas a partir do disco (Node, testes e CLI). */
+/** Loads the bundled fonts from disk (Node, tests and CLI). */
 export function loadFontsFromDisk() {
   return loadFonts(async (file) => {
     const buf = await readFile(join(FONT_DIR, file));

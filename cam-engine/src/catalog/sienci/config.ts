@@ -6,19 +6,19 @@ import { compatibility, BIT_BY_ID, toTool, type SienciBit } from "./bits.js";
 import { machineLimits, MACHINES, type MachineId } from "./machines.js";
 import { sienciParams, type Speed } from "./table.js";
 
-/** Mergulho máximo para descida reta (resources.sienci.com, "Feeds & Speeds - LongMill"). */
+/** Max plunge rate for a straight plunge (resources.sienci.com, "Feeds & Speeds - LongMill"). */
 export const MAX_STRAIGHT_PLUNGE = 300;
 
-/** O que o usuário escolhe na interface: máquina, router/spindle, fresas e velocidade. */
+/** What the user picks in the UI: machine, router/spindle, bits and speed. */
 export interface SienciConfig {
   machine: MachineId;
-  /** Padrão: o cabeçote padrão da máquina. */
+  /** Default: the machine's default head. */
   head?: HeadId;
-  /** Fresa principal (gravação e relevo), id do catálogo. */
+  /** Main bit (engraving and relief), catalog id. */
   bit: string;
-  /** Fresa para recortes e furos. Padrão: a principal. */
+  /** Bit for cutouts and holes. Default: the main bit. */
   cutoutBit?: string;
-  /** Padrão: a velocidade sugerida para a máquina. */
+  /** Default: the speed suggested for the machine. */
   speed?: Speed;
 }
 
@@ -36,12 +36,12 @@ export interface ResolvedConfig {
   cut?: Partial<CutParams>;
   cutoutCut?: Partial<CutParams>;
   warnings: Warning[];
-  /** Quando o router não é controlado pelo G-code (Makita), o usuário precisa girar o dial. */
+  /** When the router is not controlled by the G-code (Makita), the user has to turn the dial. */
   manualAdjustments: ManualAdjustment[];
   source: string;
 }
 
-/** Traduz a escolha do usuário em limites, ferramentas e parâmetros de corte para o motor. */
+/** Turns the user's choice into limits, tools and cutting parameters for the engine. */
 export function resolveSienci(cfg: SienciConfig, material: MaterialId): ResolvedConfig {
   const machine = MACHINES[cfg.machine];
   const headId = cfg.head ?? machine.defaultHead;
@@ -51,14 +51,14 @@ export function resolveSienci(cfg: SienciConfig, material: MaterialId): Resolved
   const manualAdjustments: ManualAdjustment[] = [];
 
   if (!machine.heads.includes(headId)) {
-    warnings.push({ code: "BIT_INCOMPATIBLE", severity: "error", message: `O ${head.name} não é uma opção para a ${machine.name}.` });
+    warnings.push({ code: "BIT_INCOMPATIBLE", severity: "error", message: `The ${head.name} is not an option for the ${machine.name}.` });
   }
 
   const bits: { f: SienciBit; toolNumber: number; role: string }[] = [];
   const main = findBit(cfg.bit, warnings);
-  if (main) bits.push({ f: main, toolNumber: 1, role: "principal" });
+  if (main) bits.push({ f: main, toolNumber: 1, role: "main" });
   const cutout = cfg.cutoutBit && cfg.cutoutBit !== cfg.bit ? findBit(cfg.cutoutBit, warnings) : undefined;
-  if (cutout) bits.push({ f: cutout, toolNumber: 2, role: "de recorte" });
+  if (cutout) bits.push({ f: cutout, toolNumber: 2, role: "cutout" });
 
   const params: Partial<CutParams>[] = [];
   for (const { f, toolNumber, role } of bits) {
@@ -66,7 +66,7 @@ export function resolveSienci(cfg: SienciConfig, material: MaterialId): Resolved
       warnings.push({
         code: "BIT_NOT_SUPPORTED",
         severity: "error",
-        message: `A fresa ${role} (${f.name}) não serve para placas e letreiros.`,
+        message: `The ${role} bit (${f.name}) is not suitable for signs and lettering.`,
         suggestion: f.bestFor,
       });
     }
@@ -76,7 +76,7 @@ export function resolveSienci(cfg: SienciConfig, material: MaterialId): Resolved
       warnings.push({
         code: "BIT_NEEDS_ACCESSORY",
         severity: "warning",
-        message: `Para usar a ${f.name} no ${head.name} você precisa de: ${c.accessory.name}.`,
+        message: `To use the ${f.name} in the ${head.name} you need: ${c.accessory.name}.`,
         data: { url: c.accessory.url },
       });
     }
@@ -86,7 +86,7 @@ export function resolveSienci(cfg: SienciConfig, material: MaterialId): Resolved
       warnings.push({
         code: "NO_SIENCI_TABLE",
         severity: "warning",
-        message: `A Sienci não publica parâmetros da ${f.name} para este material; usando valores conservadores calculados.`,
+        message: `Sienci does not publish parameters for the ${f.name} in this material; using calculated conservative values.`,
       });
       params.push({});
       continue;
@@ -99,19 +99,19 @@ export function resolveSienci(cfg: SienciConfig, material: MaterialId): Resolved
         warnings.push({
           code: "COMPRESSION_STEPDOWN",
           severity: "warning",
-          message: `Passada aumentada para ${fmt(minimum)} mm: numa fresa de compressão a primeira passada precisa passar dos ${fmt(f.compressionUpcut)} mm de corte para cima.`,
+          message: `Stepdown increased to ${fmt(minimum)} mm: with a compression bit the first pass has to go past the ${fmt(f.compressionUpcut)} mm upcut section.`,
         });
       } else {
         warnings.push({
           code: "COMPRESSION_STEPDOWN",
           severity: "warning",
-          message: `Com este material e velocidade a passada fica abaixo de ${fmt(f.compressionUpcut)} mm, e a fresa de compressão vai lascar a face de cima.`,
-          suggestion: "Use uma fresa downcut ou suba a velocidade da tabela.",
+          message: `With this material and speed the stepdown stays below ${fmt(f.compressionUpcut)} mm, and the compression bit will chip the top face.`,
+          suggestion: "Use a downcut bit or pick a faster table speed.",
         });
       }
     }
-    // O motor ainda desce reto (sem rampa). Fora de entalhe 3D, a Sienci recomenda
-    // mergulho de 100–300 mm/min, bem abaixo do valor da tabela.
+    // The engine still plunges straight down (no ramping). Outside 3D carving, Sienci recommends
+    // a plunge rate of 100–300 mm/min, well below the table value.
     const plunge = Math.min(t.plunge, MAX_STRAIGHT_PLUNGE);
     params.push({ rpm: t.rpm, feed: t.feed, plunge, stepdown, stepover: t.stepover });
 
@@ -122,7 +122,7 @@ export function resolveSienci(cfg: SienciConfig, material: MaterialId): Resolved
           tool: toolNumber,
           rpm: t.rpm,
           dial: d.position,
-          message: `Antes de cortar com a ${f.name}, gire o dial do ${head.name} para ${d.position} (${d.rpm.toLocaleString("pt-BR")} RPM).`,
+          message: `Before cutting with the ${f.name}, set the ${head.name} dial to ${d.position} (${d.rpm.toLocaleString("en-US")} RPM).`,
         });
       }
     }
@@ -136,12 +136,12 @@ export function resolveSienci(cfg: SienciConfig, material: MaterialId): Resolved
     cutoutCut: cutout ? params[1] : undefined,
     warnings,
     manualAdjustments,
-    source: `Tabela Sienci Labs, velocidade ${speed}`,
+    source: `Sienci Labs table, ${speed} speed`,
   };
 }
 
 function findBit(id: string, warnings: Warning[]): SienciBit | undefined {
   const f = BIT_BY_ID.get(id);
-  if (!f) warnings.push({ code: "BIT_INCOMPATIBLE", severity: "error", message: `Fresa "${id}" não está no catálogo Sienci.` });
+  if (!f) warnings.push({ code: "BIT_INCOMPATIBLE", severity: "error", message: `Bit "${id}" is not in the Sienci catalog.` });
   return f;
 }

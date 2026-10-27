@@ -3,7 +3,7 @@ import { parseSvg, InvalidSvg, type SvgDrawing } from "./svg.js";
 
 export type Format = "svg" | "dxf";
 
-/** Formato pelo conteúdo: SVG é XML; DXF começa com o par "0 / SECTION". */
+/** Detects the format from the content: SVG is XML; DXF starts with the "0 / SECTION" pair. */
 export function detectFormat(text: string): Format | null {
   const t = text.trimStart();
   if (t.startsWith("<") || /<svg[\s>]/i.test(t.slice(0, 4000))) return "svg";
@@ -13,12 +13,12 @@ export function detectFormat(text: string): Format | null {
 
 const cache = new Map<string, SvgDrawing & { openPaths?: number }>();
 
-/** Lê um desenho importado (SVG ou DXF). Lança InvalidSvg com mensagem para o usuário. */
+/** Reads an imported drawing (SVG or DXF). Throws InvalidSvg with a user-facing message. */
 export function parseDrawing(text: string): SvgDrawing & { openPaths?: number } {
   const hit = cache.get(text);
   if (hit) return hit;
   const f = detectFormat(text);
-  if (!f) throw new InvalidSvg("O arquivo não é SVG nem DXF.");
+  if (!f) throw new InvalidSvg("The file is neither SVG nor DXF.");
   const d = f === "svg" ? parseSvg(text) : parseDxf(text);
   if (cache.size > 16) cache.delete(cache.keys().next().value!);
   cache.set(text, d);

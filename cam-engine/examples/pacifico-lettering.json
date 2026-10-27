@@ -7,7 +7,7 @@
     "material": "plywood",
     "texts": [
       {
-        "content": "Bem-vindos",
+        "content": "Welcome",
         "font": "pacifico",
         "size": 40
       }
@@ -15,7 +15,7 @@
   },
   "tool": {
     "id": 1,
-    "name": "Fresa reta 1/8\"",
+    "name": "1/8\" straight bit",
     "diameter": 3.175,
     "flutes": 2,
     "cutLength": 12

@@ -2,9 +2,9 @@ import type { MachineInput } from "../../schema.js";
 import { HEADS, type HeadId } from "./heads.js";
 
 /**
- * Máquinas Sienci Labs. Curso e velocidades vêm dos padrões de firmware que o próprio gSender
- * aplica a cada perfil ($110–$112 e $130–$132, em
- * src/app/src/features/Config/assets/MachineDefaults/), não do material de marketing.
+ * Sienci Labs machines. Travel and max rates come from the firmware defaults that gSender itself
+ * applies to each profile ($110–$112 and $130–$132, in
+ * src/app/src/features/Config/assets/MachineDefaults/), not from marketing material.
  */
 export type MachineId =
   | "longmill-mk2-12x30"
@@ -22,14 +22,14 @@ export interface SienciMachine {
   version: string;
   size: string;
   name: string;
-  /** Curso útil (mm). */
+  /** Usable travel (mm). */
   travel: { x: number; y: number; z: number };
-  /** Velocidade máxima (mm/min). */
+  /** Max rate (mm/min). */
   maxFeed: { xy: number; z: number };
   controller: string;
   heads: HeadId[];
   defaultHead: HeadId;
-  /** Velocidade da tabela Sienci sugerida para quem está começando nesta máquina. */
+  /** Sienci table speed suggested for someone starting out on this machine. */
   defaultSpeed: "reduced" | "regular" | "maximum";
   notes: string[];
   url: string;
@@ -39,11 +39,11 @@ const LONGMILL_MK2 = {
   family: "LongMill" as const,
   version: "MK2",
   maxFeed: { xy: 4000, z: 3000 },
-  controller: "LongBoard (grbl) ou SuperLongBoard (grblHAL)",
+  controller: "LongBoard (grbl) or SuperLongBoard (grblHAL)",
   heads: ["makita-rt0701", "autospin-t1", "spindle-1-5kw-er20"] as HeadId[],
   defaultHead: "makita-rt0701" as HeadId,
   defaultSpeed: "regular" as const,
-  notes: ["O kit de spindle 1,5 kW exige a SuperLongBoard."],
+  notes: ["The 1.5 kW spindle kit requires the SuperLongBoard."],
   url: "https://resources.sienci.com/",
 };
 
@@ -55,7 +55,7 @@ const LONGMILL_MK3 = {
   heads: ["autospin-t1", "makita-rt0701", "spindle-1-5kw-er20"] as HeadId[],
   defaultHead: "autospin-t1" as HeadId,
   defaultSpeed: "regular" as const,
-  notes: ["O AutoSpin T1 vem no Beginner's Kit.", "Com spindle de 80 mm e coletor de pó, a área de corte diminui."],
+  notes: ["The AutoSpin T1 comes in the Beginner's Kit.", "With an 80 mm spindle and a dust shoe, the cutting area gets smaller."],
   url: "https://resources.sienci.com/view/lmk3-specifications/",
 };
 
@@ -67,7 +67,7 @@ const ALTMILL = {
   heads: ["spindle-2-2kw-er20", "spindle-1-5kw-er20"] as HeadId[],
   defaultHead: "spindle-2-2kw-er20" as HeadId,
   defaultSpeed: "maximum" as const,
-  notes: ["A tabela Sienci foi medida numa LongMill MK2; a AltMill, mais rígida, aguenta a velocidade máxima da tabela como ponto de partida."],
+  notes: ["The Sienci table was measured on a LongMill MK2; the stiffer AltMill handles the table's maximum speed as a starting point."],
   url: "https://sienci.com/product/altmill-2x4/",
 };
 
@@ -82,7 +82,7 @@ export const MACHINES: Record<MachineId, SienciMachine> = {
   "altmill-4x8": { ...ALTMILL, id: "altmill-4x8", size: "4×8", name: "AltMill 4×8", travel: { x: 1260, y: 2661, z: 220 } },
 };
 
-/** Limites da máquina no formato do motor de CAM, com a faixa de rotação do cabeçote escolhido. */
+/** Machine limits in the CAM engine's format, with the spindle speed range of the chosen head. */
 export function machineLimits(id: MachineId, headId?: HeadId): MachineInput {
   const m = MACHINES[id];
   const head = HEADS[headId ?? m.defaultHead];

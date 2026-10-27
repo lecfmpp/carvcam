@@ -16,36 +16,36 @@ type Mods = {
 };
 
 export interface CutElement {
-  /** Ex.: "texto 1 (Casa da Ana)", "ícone 2 (coração)". */
+  /** E.g. "text 1 (Ana's House)", "icon 2 (heart)". */
   label: string;
   ref?: ElementRef;
-  /** Só no fundo do relevo: os elementos em pé, para saber a qual deles um aviso se refere. */
+  /** Relief background only: the raised elements, to know which one a warning refers to. */
   items?: { ref: ElementRef; region: Region }[];
   region: Region;
   depth: number;
-  /** Gravação com hachura em vez de esvaziar a área. */
+  /** Engrave with hatch lines instead of clearing the whole area. */
   hatch?: { spacing: number; angle: number };
 }
 
-/** Tudo em coordenadas do bloco: X0 Y0 no canto inferior esquerdo, Z0 na face de cima. */
+/** Everything in stock coordinates: X0 Y0 at the bottom-left corner, Z0 on the top surface. */
 export interface Layout {
   stock: { width: number; height: number; thickness: number };
-  /** Contorno da peça final. */
+  /** Outline of the finished part. */
   part: Region;
   engraved: CutElement[];
-  /** Fundo a rebaixar ao redor dos elementos em relevo. */
+  /** Background to clear around the relief (raised) elements. */
   relief: CutElement | null;
-  /** Elementos vazados (estêncil) dentro da placa. */
+  /** Through-cut (stencil) elements inside the sign. */
   cutouts: CutElement[];
   holes: CutElement[];
-  /** Contorno externo a recortar (fresa por fora). Null quando não há recorte. */
+  /** Outer outline to profile cut (bit on the outside). Null when there is no cutout. */
   profile: CutElement | null;
   warnings: Warning[];
 }
 
 export type FontMap = Partial<Record<FontId, opentype.Font>>;
 
-const THROUGH = 0.3; // mm além da espessura nos cortes vazados (entra na mesa de sacrifício)
+const THROUGH = 0.3; // mm past the thickness on through cuts (goes into the spoilboard)
 
 export function buildLayout(spec: PlateSpec, fonts: FontMap, tool: Tool, cutTool: Tool, machine: Machine): Layout {
   const warnings: Warning[] = [];
@@ -57,20 +57,20 @@ export function buildLayout(spec: PlateSpec, fonts: FontMap, tool: Tool, cutTool
     warnings.push({
       code: "PART_LARGER_THAN_MACHINE",
       severity: "error",
-      message: `O bloco (${fmt(stock.width)} × ${fmt(stock.height)} mm) é maior que a área útil da máquina (${fmt(machine.travelX)} × ${fmt(machine.travelY)} mm).`,
-      suggestion: "Diminua a placa ou divida o projeto em partes.",
+      message: `The stock (${fmt(stock.width)} × ${fmt(stock.height)} mm) is larger than the machine's work area (${fmt(machine.travelX)} × ${fmt(machine.travelY)} mm).`,
+      suggestion: "Make the sign smaller or split the project into parts.",
     });
   }
   if (spec.thickness > cutTool.cutLength && (spec.outerCutout || spec.type === "lettering")) {
     warnings.push({
       code: "TOOL_TOO_SHORT",
       severity: "error",
-      message: `A fresa de recorte corta até ${fmt(cutTool.cutLength)} mm, mas o material tem ${fmt(spec.thickness)} mm.`,
-      suggestion: "Use uma fresa mais longa ou um material mais fino.",
+      message: `The cutout bit cuts up to ${fmt(cutTool.cutLength)} mm deep, but the material is ${fmt(spec.thickness)} mm thick.`,
+      suggestion: "Use a longer bit or thinner material.",
     });
   }
 
-  // ---- Elementos (texto e ícones) em coordenadas da peça ----
+  // ---- Elements (text and icons) in part coordinates ----
   type Placed = { label: string; region: Region; mode: Mode; depth: number; size: number; idx: number; type: "text" | "icon" | "shape" | "svg"; mods: Mods };
   let placed: Placed[] = [];
 
@@ -78,18 +78,18 @@ export function buildLayout(spec: PlateSpec, fonts: FontMap, tool: Tool, cutTool
   spec.texts.forEach((t, i) => {
     const font = fonts[t.font];
     if (!font) {
-      warnings.push({ code: "FONT_UNAVAILABLE", severity: "error", message: `A fonte "${t.font}" não foi carregada.` });
+      warnings.push({ code: "FONT_UNAVAILABLE", severity: "error", message: `The font "${t.font}" was not loaded.` });
       return;
     }
     const raw = textToRegion(font, t.content, t.size, t.arc || undefined);
     if (t.x !== undefined && t.y !== undefined) {
-      placed.push({ label: `texto ${i + 1} (${t.content})`, region: centerAt(raw, t.x, t.y), mode: t.mode, depth: t.depth, size: t.size, idx: i, type: "text", mods: t });
+      placed.push({ label: `text ${i + 1} (${t.content})`, region: centerAt(raw, t.x, t.y), mode: t.mode, depth: t.depth, size: t.size, idx: i, type: "text", mods: t });
     } else {
       autoTexts.push({ idx: i, region: raw, size: t.size });
     }
   });
 
-  // Empilha os textos sem posição, centralizados na placa, na ordem em que vieram.
+  // Stack the texts that have no position, centered on the sign, in the order they came.
   if (autoTexts.length) {
     const heights = autoTexts.map((a) => {
       const b = bounds(a.region);
@@ -101,13 +101,13 @@ export function buildLayout(spec: PlateSpec, fonts: FontMap, tool: Tool, cutTool
     autoTexts.forEach((a, k) => {
       const cy = top - heights[k] / 2;
       const t = spec.texts[a.idx];
-      placed.push({ label: `texto ${a.idx + 1} (${t.content})`, region: centerAt(a.region, spec.width / 2, cy), mode: t.mode, depth: t.depth, size: t.size, idx: a.idx, type: "text", mods: t });
+      placed.push({ label: `text ${a.idx + 1} (${t.content})`, region: centerAt(a.region, spec.width / 2, cy), mode: t.mode, depth: t.depth, size: t.size, idx: a.idx, type: "text", mods: t });
       top -= heights[k] + (gaps[k] ?? 0);
     });
   }
 
   spec.shapes.forEach((f, i) => {
-    const name = { rectangle: "retângulo", circle: "círculo", line: "line", polygon: "polígono", star: "star", curve: "curve" }[f.type];
+    const name = { rectangle: "rectangle", circle: "circle", line: "line", polygon: "polygon", star: "star", curve: "curve" }[f.type];
     if (f.type === "curve") {
       const region = curve(f.x, f.y, f.nodes, f.closed, f.thickness);
       const b = region.length ? bounds(region) : null;
@@ -130,37 +130,37 @@ export function buildLayout(spec: PlateSpec, fonts: FontMap, tool: Tool, cutTool
   });
 
   spec.svgs.forEach((sv, i) => {
-    const name = sv.name ? `desenho ${i + 1} (${sv.name})` : `desenho ${i + 1}`;
+    const name = sv.name ? `drawing ${i + 1} (${sv.name})` : `drawing ${i + 1}`;
     try {
       const d = parseDrawing(sv.content);
-      // "tamanho" do desenho é a largura: é o campo que a correção sugerida ajusta.
+      // A drawing's "size" is its width: that is the field the suggested fix adjusts.
       placed.push({ label: name, region: placeSvg(d, sv.x, sv.y, sv.width), mode: sv.mode, depth: sv.depth, size: sv.width, idx: i, type: "svg", mods: sv });
     } catch (e) {
       warnings.push({
         code: "INVALID_SVG",
         severity: "error",
-        message: `Não deu para ler ${name}: ${e instanceof InvalidSvg ? e.message : "arquivo inválido."}`,
-        suggestion: "Exporte de novo como SVG ou DXF simples (textos convertidos em curvas) ou apague este desenho.",
+        message: `Could not read ${name}: ${e instanceof InvalidSvg ? e.message : "invalid file."}`,
+        suggestion: "Export it again as a plain SVG or DXF (text converted to curves), or delete this drawing.",
         element: { type: "svg", index: i },
       });
     }
   });
 
   spec.icons.forEach((ic, i) => {
-    placed.push({ label: `ícone ${i + 1} (${ic.id})`, region: icon(ic.id, ic.x, ic.y, ic.size), mode: ic.mode, depth: ic.depth, size: ic.size, idx: i, type: "icon", mods: ic });
+    placed.push({ label: `icon ${i + 1} (${ic.id})`, region: icon(ic.id, ic.x, ic.y, ic.size), mode: ic.mode, depth: ic.depth, size: ic.size, idx: i, type: "icon", mods: ic });
   });
 
   placed = applyModifiers(placed, warnings);
 
   const toBlock = (r: Region) => translate(r, m, m);
 
-  // ---- Letreiro: as próprias letras são a peça ----
+  // ---- Cut-out lettering: the letters themselves are the part ----
   if (spec.type === "lettering") {
     const localPart = union(...placed.map((p) => p.region));
     const box = { width: spec.width, height: spec.height };
-    checkFit(localPart, box, "o letreiro", placed.map((p) => p.size), warnings);
+    checkFit(localPart, box, "the lettering", placed.map((p) => p.size), warnings);
     const part = toBlock(localPart);
-    if (area(part) <= 0) warnings.push({ code: "NOTHING_TO_CUT", severity: "error", message: "O letreiro não tem nenhuma letra ou ícone." });
+    if (area(part) <= 0) warnings.push({ code: "NOTHING_TO_CUT", severity: "error", message: "The lettering has no letters or icons." });
     return {
       stock,
       part,
@@ -168,12 +168,12 @@ export function buildLayout(spec: PlateSpec, fonts: FontMap, tool: Tool, cutTool
       relief: null,
       cutouts: [],
       holes: buildHoles(spec, cutTool, part, m, through, warnings),
-      profile: { label: "contorno do letreiro", region: part, depth: through },
+      profile: { label: "lettering outline", region: part, depth: through },
       warnings,
     };
   }
 
-  // ---- Placa ----
+  // ---- Sign ----
   const localPart = plateOutline(0, 0, spec.width, spec.height, spec.edge.type, spec.edge.radius);
   const part = toBlock(localPart);
   const hasRelief = placed.some((p) => p.mode === "relief");
@@ -186,8 +186,8 @@ export function buildLayout(spec: PlateSpec, fonts: FontMap, tool: Tool, cutTool
       warnings.push({
         code: "DEPTH_EXCEEDS",
         severity: "error",
-        message: `A profundidade de ${p.label} (${fmt(p.depth)} mm) atravessaria o material de ${fmt(spec.thickness)} mm.`,
-        suggestion: `Use no máximo ${fmt(spec.thickness * 0.6)} mm, ou escolha o modo "recorte".`,
+        message: `The depth of ${p.label} (${fmt(p.depth)} mm) would go through the ${fmt(spec.thickness)} mm material.`,
+        suggestion: `Use at most ${fmt(spec.thickness * 0.6)} mm, or choose "cutout" mode.`,
         element: ref,
         fix: { element: ref, field: "depth", value: Math.floor(spec.thickness * 0.6 * 10) / 10 },
       });
@@ -196,7 +196,7 @@ export function buildLayout(spec: PlateSpec, fonts: FontMap, tool: Tool, cutTool
       warnings.push({
         code: "TOOL_TOO_SHORT",
         severity: "error",
-        message: `A fresa corta até ${fmt(tool.cutLength)} mm de profundidade, e ${p.label} pede ${fmt(p.depth)} mm.`,
+        message: `The bit cuts up to ${fmt(tool.cutLength)} mm deep, and ${p.label} needs ${fmt(p.depth)} mm.`,
         element: ref,
       });
     }
@@ -204,8 +204,8 @@ export function buildLayout(spec: PlateSpec, fonts: FontMap, tool: Tool, cutTool
       warnings.push({
         code: "VBIT_ENGRAVE_ONLY",
         severity: "error",
-        message: `A fresa em V só faz gravação. ${p.label} está em modo "${p.mode}".`,
-        suggestion: "Troque para uma fresa reta ou mude o elemento para gravado.",
+        message: `A V-bit can only engrave. ${capitalize(p.label)} is in "${p.mode}" mode.`,
+        suggestion: "Switch to a straight bit or set the element to engrave.",
         element: ref,
       });
     }
@@ -224,20 +224,20 @@ export function buildLayout(spec: PlateSpec, fonts: FontMap, tool: Tool, cutTool
       warnings.push({
         code: "DIFFERENT_DEPTHS",
         severity: "warning",
-        message: `Os elementos em relevo pedem profundidades diferentes; todos vão usar ${fmt(depth)} mm, porque o fundo é um só.`,
+        message: `The relief elements ask for different depths; all of them will use ${fmt(depth)} mm, because there is only one background.`,
       });
     }
-    // Sem moldura, o fundo vai até a borda (e um pouco além, para não sobrar rebarba).
+    // Without a frame, the background runs to the edge (and a little past it, so no lip is left).
     const field = spec.frame > 0 ? inner : offset(localPart, cutTool.diameter / 2 + 0.5);
     const floor = difference(field, union(...reliefItems.map((p) => p.region)));
     relief = {
-      label: "fundo do relevo",
+      label: "the relief background",
       region: toBlock(floor),
       depth: depth,
       items: reliefItems.map((p) => ({ ref: { type: p.type, index: p.idx }, region: toBlock(p.region) })),
     };
 
-    // Gravado que cai no fundo rebaixado e é mais raso que ele simplesmente desaparece.
+    // An engraving that lands on the cleared background and is shallower than it simply disappears.
     for (const p of placed) {
       if (p.mode !== "engrave" || p.depth > depth) continue;
       const total = area(p.region);
@@ -249,8 +249,8 @@ export function buildLayout(spec: PlateSpec, fonts: FontMap, tool: Tool, cutTool
       warnings.push({
         code: "ENGRAVED_IN_FLOOR",
         severity: "warning",
-        message: `${capitalize(p.label)} está no fundo rebaixado (${fmt(depth)} mm); gravado a ${fmt(p.depth)} mm, não vai aparecer.`,
-        suggestion: `Coloque-o em cima de um elemento em relevo, deixe-o em relevo, ou grave mais fundo (${fmt(newDepth)} mm).`,
+        message: `${capitalize(p.label)} sits on the cleared background (${fmt(depth)} mm); engraved at ${fmt(p.depth)} mm, it will not show.`,
+        suggestion: `Place it on top of a relief element, make it relief, or engrave it deeper (${fmt(newDepth)} mm).`,
         element: ref,
         fix: newDepth < spec.thickness ? { element: ref, field: "depth", value: newDepth } : undefined,
       });
@@ -266,8 +266,8 @@ export function buildLayout(spec: PlateSpec, fonts: FontMap, tool: Tool, cutTool
         warnings.push({
           code: "LOOSE_ISLANDS",
           severity: "warning",
-          message: `${capitalize(p.label)} tem ${islands} miolo(s) (como o centro do "o") que vão se soltar no recorte.`,
-          suggestion: "Use uma fonte estêncil, ou deixe esse elemento em relevo ou gravado.",
+          message: `${capitalize(p.label)} has ${islands} island(s) (like the center of an "o") that will fall out when cut.`,
+          suggestion: "Use a stencil font, or set this element to relief or engrave.",
           element: { type: p.type, index: p.idx },
         });
       }
@@ -275,18 +275,18 @@ export function buildLayout(spec: PlateSpec, fonts: FontMap, tool: Tool, cutTool
     });
 
   const holes = buildHoles(spec, cutTool, part, m, through, warnings);
-  const profile = spec.outerCutout ? { label: "contorno da placa", region: part, depth: through } : null;
+  const profile = spec.outerCutout ? { label: "sign outline", region: part, depth: through } : null;
 
   if (!engraved.length && !relief && !cutouts.length && !holes.length && !profile) {
-    warnings.push({ code: "NOTHING_TO_CUT", severity: "error", message: "Não há nada para cortar nesta placa." });
+    warnings.push({ code: "NOTHING_TO_CUT", severity: "error", message: "There is nothing to cut on this sign." });
   }
 
   return { stock, part, engraved, relief, cutouts, holes, profile, warnings };
 }
 
 /**
- * Aplica os ajustes de cada elemento: deslocamento (offset), anel de contorno e as operações
- * entre elementos (subtrair / máscara). Elementos que subtraem ou mascaram não são cortados.
+ * Applies each element's modifiers: offset, outline ring and the operations between
+ * elements (subtract / mask). Elements that subtract or mask are not cut themselves.
  */
 function applyModifiers<P extends { label: string; region: Region; type: string; idx: number; mods: Mods }>(placed: P[], warnings: Warning[]): P[] {
   const shaped = placed.map((p) => {
@@ -302,8 +302,8 @@ function applyModifiers<P extends { label: string; region: Region; type: string;
       warnings.push({
         code: "ELEMENT_NOT_MACHINABLE",
         severity: "error",
-        message: `${capitalize(p.label)} sumiu depois de afinar ${fmt(-d)} mm.`,
-        suggestion: "Diminua o quanto o elemento é afinado.",
+        message: `${capitalize(p.label)} disappeared after being thinned by ${fmt(-d)} mm.`,
+        suggestion: "Thin the element less.",
         element: { type: p.type, index: p.idx } as ElementRef,
         fix: { element: { type: p.type, index: p.idx } as ElementRef, field: "offset", value: 0 },
       });
@@ -315,9 +315,9 @@ function applyModifiers<P extends { label: string; region: Region; type: string;
   const normal = shaped.filter((p) => (p.mods.operation ?? "normal") === "normal");
   if (!sub.length && !mask.length) return shaped;
   if (!normal.length) {
-    warnings.push({ code: "NOTHING_TO_CUT", severity: "error", message: "Só há elementos que subtraem ou mascaram; não sobra nada para cortar." });
+    warnings.push({ code: "NOTHING_TO_CUT", severity: "error", message: "There are only subtract or mask elements; nothing is left to cut." });
   }
-  // Sem lista de alvos, a operação vale para todos os elementos normais.
+  // Without a target list, the operation applies to every normal element.
   const hits = (op: P, target: P) => !op.mods.targets || op.mods.targets.some((a) => a.type === target.type && a.index === target.idx);
   return normal.map((p) => {
     let r = p.region;
@@ -336,38 +336,38 @@ function buildHoles(spec: PlateSpec, tool: Tool, part: Region, m: number, depth:
       warnings.push({
         code: "HOLE_SMALLER_THAN_BIT",
         severity: "error",
-        message: `O furo ${i + 1} tem ${fmt(f.diameter)} mm, menor que a fresa de ${fmt(tool.diameter, 2)} mm.`,
-        suggestion: `Aumente o furo para pelo menos ${fmt(tool.diameter, 2)} mm.`,
+        message: `Hole ${i + 1} is ${fmt(f.diameter)} mm, smaller than the ${fmt(tool.diameter, 2)} mm bit.`,
+        suggestion: `Make the hole at least ${fmt(tool.diameter, 2)} mm.`,
         element: { type: "hole", index: i },
         fix: { element: { type: "hole", index: i }, field: "diameter", value: Math.ceil(tool.diameter * 10) / 10 },
       });
       return;
     }
     const r = circle(f.x + m, f.y + m, f.diameter / 2);
-    checkInside(r, part, `o furo ${i + 1}`, warnings, { type: "hole", index: i });
-    out.push({ label: `furo ${i + 1}`, ref: { type: "hole", index: i }, region: r, depth: depth });
+    checkInside(r, part, `hole ${i + 1}`, warnings, { type: "hole", index: i });
+    out.push({ label: `hole ${i + 1}`, ref: { type: "hole", index: i }, region: r, depth: depth });
   });
   spec.slots.forEach((s, i) => {
     if (s.width < tool.diameter - 0.01) {
       warnings.push({
         code: "SLOT_SMALLER_THAN_BIT",
         severity: "error",
-        message: `O rasgo ${i + 1} tem ${fmt(s.width)} mm de largura, menor que a fresa de ${fmt(tool.diameter, 2)} mm.`,
+        message: `Slot ${i + 1} is ${fmt(s.width)} mm wide, narrower than the ${fmt(tool.diameter, 2)} mm bit.`,
         element: { type: "slot", index: i },
         fix: { element: { type: "slot", index: i }, field: "width", value: Math.ceil(tool.diameter * 10) / 10 },
       });
       return;
     }
     const r = slot(s.x + m, s.y + m, s.length, s.width, s.angle);
-    checkInside(r, part, `o rasgo ${i + 1}`, warnings, { type: "slot", index: i });
-    out.push({ label: `rasgo ${i + 1}`, ref: { type: "slot", index: i }, region: r, depth: depth });
+    checkInside(r, part, `slot ${i + 1}`, warnings, { type: "slot", index: i });
+    out.push({ label: `slot ${i + 1}`, ref: { type: "slot", index: i }, region: r, depth: depth });
   });
   return out;
 }
 
 function checkInside(r: Region, part: Region, label: string, warnings: Warning[], ref: ElementRef) {
   if (area(difference(r, part)) > 0.01) {
-    warnings.push({ code: "OUTSIDE_PART", severity: "error", message: `${capitalize(label)} sai para fora da peça.`, element: ref });
+    warnings.push({ code: "OUTSIDE_PART", severity: "error", message: `${capitalize(label)} goes outside the part.`, element: ref });
   }
 }
 
@@ -400,8 +400,8 @@ function checkFit(
     warnings.push({
       code: "TEXT_DOES_NOT_FIT",
       severity: "error",
-      message: `${capitalize(label)} não cabe na área disponível da placa.`,
-      suggestion: suggested > 0 ? `Reduza o tamanho para cerca de ${suggested} mm ou aumente a placa.` : "Aumente a placa.",
+      message: `${capitalize(label)} does not fit in the available area of the sign.`,
+      suggestion: suggested > 0 ? `Reduce the size to about ${suggested} mm or make the sign bigger.` : "Make the sign bigger.",
       data: { suggestedSize: suggested },
       element: ref,
       fix: ref && suggested > 0 && (ref.type === "text" || ref.type === "icon") ? { element: ref, field: "size", value: suggested } : ref && suggested > 0 && ref.type === "svg" ? { element: ref, field: "width", value: suggested } : undefined,

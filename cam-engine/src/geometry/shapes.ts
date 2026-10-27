@@ -2,7 +2,7 @@ import { EndType, inflatePathsD, JoinType } from "clipper2-ts";
 import type { IconId } from "../schema.js";
 import { bounds, union, type Pt, type Region } from "./clip.js";
 
-const ARC_STEP = 0.25; // mm entre pontos nos arcos
+const ARC_STEP = 0.25; // mm between points on arcs
 
 export function rect(x: number, y: number, w: number, h: number): Region {
   return [[{ x, y }, { x: x + w, y }, { x: x + w, y: y + h }, { x, y: y + h }]];
@@ -18,7 +18,7 @@ export function circle(cx: number, cy: number, r: number): Region {
   return [p];
 }
 
-/** Contorno da placa: retângulo com cantos retos, arredondados ou chanfrados. */
+/** Sign outline: rectangle with straight, rounded or chamfered corners. */
 export function plateOutline(x: number, y: number, w: number, h: number, type: "straight" | "rounded" | "chamfered", radius: number): Region {
   const r = Math.min(radius, w / 2, h / 2);
   if (type === "straight" || r <= 0) return rect(x, y, w, h);
@@ -46,8 +46,8 @@ export function plateOutline(x: number, y: number, w: number, h: number, type: "
 }
 
 /**
- * Polígono regular inscrito no círculo de raio r. Com rotação 0 o lado de baixo fica
- * horizontal (é o que se espera de um hexágono ou triângulo numa placa).
+ * Regular polygon inscribed in the circle of radius r. With rotation 0 the bottom side is
+ * horizontal (which is what you expect from a hexagon or triangle on a sign).
  */
 export function polygon(cx: number, cy: number, r: number, sides: number, rotationDeg = 0): Region {
   const n = Math.max(3, Math.round(sides));
@@ -60,7 +60,7 @@ export function polygon(cx: number, cy: number, r: number, sides: number, rotati
   return [p];
 }
 
-/** Estrela com `points` pontas; `inner` é o raio interno como fração do externo. */
+/** Star with `points` points; `inner` is the inner radius as a fraction of the outer one. */
 export function star(cx: number, cy: number, r: number, points: number, inner: number, rotationDeg = 0): Region {
   const n = Math.max(3, Math.round(points));
   const a0 = Math.PI / 2 + (rotationDeg * Math.PI) / 180;
@@ -74,8 +74,8 @@ export function star(cx: number, cy: number, r: number, points: number, inner: n
 }
 
 /**
- * Curva livre (Bézier cúbica por partes). Fechada: área (NonZero). Aberta: traço de `thickness`
- * com pontas redondas.
+ * Freeform curve (piecewise cubic Bézier). Closed: an area (NonZero). Open: a stroke of `thickness`
+ * with round ends.
  */
 export function curve(
   ox: number,
@@ -90,7 +90,7 @@ export function curve(
   return inflatePathsD([line], thickness / 2, JoinType.Round, EndType.Round, 2, 4, 0.02);
 }
 
-/** Pontos da curva achatada (mm absolutos), com passo de ~0,25 mm nas partes curvas. */
+/** Points of the flattened curve (absolute mm), with a ~0.25 mm step on the curved parts. */
 export function curvePolyline(
   ox: number,
   oy: number,
@@ -125,19 +125,19 @@ export function curvePolyline(
       });
     }
   }
-  // Fechada: o último ponto repete o primeiro; tira para o polígono não ter vértice duplicado.
+  // Closed: the last point repeats the first; drop it so the polygon has no duplicate vertex.
   if (closed && out.length > 1) out.pop();
   return out;
 }
 
-/** Traço reto de (x1, y1) a (x2, y2), com pontas arredondadas e a largura dada. */
+/** Straight stroke from (x1, y1) to (x2, y2), with round ends and the given width. */
 export function stroke(x1: number, y1: number, x2: number, y2: number, width: number): Region {
   const len = Math.hypot(x2 - x1, y2 - y1);
   const ang = (Math.atan2(y2 - y1, x2 - x1) * 180) / Math.PI;
   return slot((x1 + x2) / 2, (y1 + y2) / 2, len + width, width, ang);
 }
 
-/** Rasgo oblongo (estádio), usado para pendurar a placa num prego ou parafuso. */
+/** Oblong (stadium) slot, used to hang the sign on a nail or screw. */
 export function slot(cx: number, cy: number, length: number, width: number, angleDeg: number): Region {
   const r = width / 2;
   const half = Math.max(0, length / 2 - r);
@@ -155,7 +155,7 @@ export function slot(cx: number, cy: number, length: number, width: number, angl
   return [pts.map((p) => ({ x: cx + p.x * Math.cos(t) - p.y * Math.sin(t), y: cy + p.x * Math.sin(t) + p.y * Math.cos(t) }))];
 }
 
-/** Ícone centralizado em (cx, cy), cabendo num quadrado de lado `size`. */
+/** Icon centered on (cx, cy), fitting in a square of side `size`. */
 export function icon(id: IconId, cx: number, cy: number, size: number): Region {
   const raw = ICONS[id]();
   const b = bounds(raw);
@@ -192,7 +192,7 @@ const ICONS: Record<IconId, () => Region> = {
       { x: 0, y: 1 }, { x: -1, y: 0.2 }, { x: -0.8, y: 0.2 },
     ]]),
   leaf: () => {
-    // Lente formada por dois arcos, inclinada 45°, com um pequeno cabo.
+    // Lens made of two arcs, tilted 45°, with a small stem.
     const p: Pt[] = [];
     const R = 1;
     const half = Math.PI / 3;

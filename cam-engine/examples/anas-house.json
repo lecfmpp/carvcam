@@ -5,7 +5,7 @@
     "height": 100,
     "thickness": 15,
     "material": "mdf",
-    "texts": [{ "content": "Casa da Ana", "font": "archivo-black", "size": 16, "mode": "relief", "depth": 3 }],
+    "texts": [{ "content": "Ana's House", "font": "archivo-black", "size": 16, "mode": "relief", "depth": 3 }],
     "edge": { "type": "rounded", "radius": 10 },
     "frame": 6,
     "holes": [
@@ -13,5 +13,5 @@
       { "x": 185, "y": 85, "diameter": 5 }
     ]
   },
-  "tool": { "id": 1, "name": "Fresa reta 1/8\" longa", "diameter": 3.175, "flutes": 2, "cutLength": 22 }
+  "tool": { "id": 1, "name": "Long 1/8\" straight bit", "diameter": 3.175, "flutes": 2, "cutLength": 22 }
 }

@@ -16,11 +16,11 @@ import {
   type PathsD,
 } from "clipper2-ts";
 
-/** Região 2D em mm: contornos externos positivos (anti-horário), furos negativos. */
+/** 2D region in mm: outer contours positive (counterclockwise), holes negative. */
 export type Region = PathsD;
 export type Pt = { x: number; y: number };
 
-const PRECISION = 4; // casas decimais internas do Clipper (0,1 µm)
+const PRECISION = 4; // Clipper's internal decimal places (0.1 µm)
 const ARC_TOL = 0.02; // mm
 
 export function union(...regions: Region[]): Region {
@@ -40,15 +40,15 @@ export function intersection(a: Region, b: Region): Region {
   return intersectD(a, b, FillRule.NonZero, PRECISION);
 }
 
-/** Offset com cantos arredondados (é o que uma fresa cilíndrica faz). */
+/** Offset with rounded corners (which is what a cylindrical bit does). */
 export function offset(r: Region, delta: number): Region {
   if (r.length === 0) return [];
   return inflatePathsD(r, delta, JoinType.Round, EndType.Polygon, 2, PRECISION, ARC_TOL);
 }
 
 /**
- * Remove vértices redundantes (erro máximo `eps` mm). Os offsets geram arcos muito densos;
- * sem isso o G-code fica com centenas de milhares de micro-segmentos.
+ * Removes redundant vertices (maximum error `eps` mm). Offsets produce very dense arcs;
+ * without this the G-code ends up with hundreds of thousands of micro-segments.
  */
 export function simplify(r: Region, eps = 0.01): Region {
   if (r.length === 0) return r;
@@ -76,7 +76,7 @@ export function scale(r: Region, s: number): Region {
   return r.map((p) => p.map((q) => ({ x: q.x * s, y: q.y * s })));
 }
 
-/** Ponto dentro da região (respeita furos pela regra NonZero via orientação). */
+/** Point inside the region (honors holes via the NonZero rule through orientation). */
 export function pointInRegion(r: Region, pt: Pt): boolean {
   let winding = 0;
   for (const path of r) {
@@ -87,7 +87,7 @@ export function pointInRegion(r: Region, pt: Pt): boolean {
   return winding > 0;
 }
 
-/** Verifica, por amostragem, se o segmento a→b fica inteiro dentro da região. */
+/** Checks, by sampling, whether the segment a→b lies entirely inside the region. */
 export function segmentInside(r: Region, a: Pt, b: Pt, step = 0.2): boolean {
   const len = Math.hypot(b.x - a.x, b.y - a.y);
   const n = Math.max(1, Math.ceil(len / step));
@@ -109,11 +109,11 @@ export function perimeter(p: PathD): number {
 }
 
 /**
- * Área que a fresa de raio r não alcança dentro da região (cantos internos e detalhes finos).
- * É a diferença entre a região e sua "abertura morfológica" pelo disco da fresa.
+ * Area the bit of radius r cannot reach inside the region (inside corners and fine details).
+ * It is the difference between the region and its "morphological opening" by the bit's disc.
  */
 export function unreachable(r: Region, toolRadius: number): Region {
   const reach = offset(offset(r, -toolRadius), toolRadius);
-  // Pequena folga para não acusar a aproximação poligonal dos arcos.
+  // Small allowance so the polygonal approximation of arcs is not flagged.
   return offset(offset(difference(r, reach), -0.02), 0.02);
 }

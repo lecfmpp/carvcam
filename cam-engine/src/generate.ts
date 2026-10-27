@@ -20,18 +20,18 @@ import { verifyGcode, type VerifyResult } from "./verify.js";
 
 export interface GenerateOptions {
   fonts: FontMap;
-  /** Fresa principal (gravação e relevo). Padrão: reta de 1/8". */
+  /** Main bit (engraving and relief). Default: 1/8" straight bit. */
   tool?: ToolInput;
-  /** Fresa para furos e recortes. Padrão: a mesma da principal. */
+  /** Bit for holes and cutouts. Default: the same as the main bit. */
   cutoutTool?: ToolInput;
   machine?: MachineInput;
   cut?: Partial<CutParams>;
-  /** Parâmetros da fresa de recorte. Padrão: os mesmos de `cut`. */
+  /** Cutting parameters for the cutout bit. Default: the same as `cut`. */
   cutoutCut?: Partial<CutParams>;
   /**
-   * Máquina, cabeçote e fresas do catálogo Sienci Labs. Quando presente, substitui
-   * `machine`, `tool`, `cutoutTool`, `cut` e `cutoutCut` pelos dados do catálogo
-   * e pela tabela oficial de avanço e rotação.
+   * Machine, head and bits from the Sienci Labs catalog. When present, it replaces
+   * `machine`, `tool`, `cutoutTool`, `cut` and `cutoutCut` with the catalog data
+   * and the official feeds and speeds table.
    */
   sienci?: SienciConfig;
   direction?: Direction;
@@ -47,7 +47,7 @@ export interface OperationInfo {
 }
 
 export interface GenerateResult {
-  /** Verdadeiro quando não há erros e o G-code passou no verificador. */
+  /** True when there are no errors and the G-code passed the verifier. */
   ok: boolean;
   gcode: string;
   warnings: Warning[];
@@ -55,11 +55,11 @@ export interface GenerateResult {
   verification: VerifyResult | null;
   params: { main: CutParams; cutout: CutParams };
   tools: Tool[];
-  /** Ajustes que o usuário faz à mão antes de cortar (ex.: dial do Makita). */
+  /** Adjustments the user makes by hand before cutting (e.g. the Makita speed dial). */
   manualAdjustments: ManualAdjustment[];
-  /** De onde vieram os parâmetros de corte. */
+  /** Where the cutting parameters came from. */
   paramsSource: string;
-  /** Geometria em coordenadas do bloco, para a prévia 2D/3D da UI. */
+  /** Geometry in stock coordinates, for the UI's 2D/3D preview. */
   layout: Layout;
 }
 
@@ -71,7 +71,7 @@ export function generatePlate(input: PlateSpecInput, options: GenerateOptions): 
     : options;
   const tool = ToolSchema.parse(opts.tool ?? {});
   let cutTool = opts.cutoutTool ? ToolSchema.parse(opts.cutoutTool) : tool;
-  // Duas fresas precisam de números (T) diferentes para a troca de ferramenta funcionar.
+  // Two bits need different tool numbers (T) for the tool change to work.
   if (cutTool !== tool && cutTool.id === tool.id) cutTool = { ...cutTool, id: tool.id + 1 };
   const machine: Machine = MachineSchema.parse(opts.machine ?? {});
   const direction = opts.direction ?? "conventional";
@@ -82,7 +82,7 @@ export function generatePlate(input: PlateSpecInput, options: GenerateOptions): 
   const pCut = cutTool === tool ? pMain : cutParams(spec.material, cutTool, machine, opts.cutoutCut ?? opts.cut);
   const tools = cutTool.id === tool.id ? [tool] : [tool, cutTool];
   const manualAdjustments = sienci?.manualAdjustments ?? [];
-  const paramsSource = sienci?.source ?? "Cálculo genérico por avanço por dente";
+  const paramsSource = sienci?.source ?? "Generic chip-load calculation";
   const base = {
     ok: false,
     warnings,
@@ -101,7 +101,7 @@ export function generatePlate(input: PlateSpecInput, options: GenerateOptions): 
   const ops: PostOperation[] = [];
   const operations: OperationInfo[] = [];
 
-  // A posição da fresa continua de uma operação para a outra, para ordenar pelo mais próximo.
+  // The bit position carries over from one operation to the next, so cuts can be ordered nearest-first.
   let pos = { x: 0, y: 0 };
   const run = (name: string, type: OperationInfo["type"], t: Tool, p: CutParams, depth: number, body: (b: PathBuilder) => void) => {
     const b = new PathBuilder(feedsFor(p));
@@ -118,7 +118,7 @@ export function generatePlate(input: PlateSpecInput, options: GenerateOptions): 
   const rMain = tool.diameter / 2;
   const rCut = cutTool.diameter / 2;
 
-  // 1. Gravações (rasas, com a fresa principal).
+  // 1. Engravings (shallow, with the main bit).
   for (const g of layout.engraved) {
     if (g.hatch) {
       const h = g.hatch;
@@ -128,20 +128,20 @@ export function generatePlate(input: PlateSpecInput, options: GenerateOptions): 
         warnings.push({
           code: "HATCH_TOO_DENSE",
           severity: "warning",
-          message: `As linhas da hachura de ${g.label} ficam a ${fmt(h.spacing)} mm, menos que a largura do corte (${fmt(width)} mm); a área vai sair toda rebaixada.`,
-          suggestion: `Use pelo menos ${fmt(suggested)} mm entre as linhas.`,
+          message: `The hatch lines on ${g.label} are ${fmt(h.spacing)} mm apart, less than the cut width (${fmt(width)} mm); the whole area will come out cleared.`,
+          suggestion: `Use at least ${fmt(suggested)} mm between lines.`,
           element: g.ref,
           fix: g.ref ? { element: g.ref, field: "hatch.spacing", value: suggested } : undefined,
         });
       }
-      run(`Hachura: ${g.label}`, "engrave", tool, pMain, g.depth, (b) => {
+      run(`Hatch: ${g.label}`, "engrave", tool, pMain, g.depth, (b) => {
         hatch(b, g.region, { radius: tool.type === "vbit" ? 0 : rMain, depth: g.depth, stepdown: pMain.stepdown, spacing: h.spacing, angle: h.angle, direction });
       });
       continue;
     }
     if (tool.type === "vbit") {
       const half = ((tool.angle ?? 60) * Math.PI) / 360;
-      // Limite: o pedido, o comprimento de corte, a parte cônica da fresa e o material.
+      // Limit: the requested depth, the cutting length, the tapered part of the bit and the material.
       const max = Math.min(g.depth, tool.cutLength, rMain / Math.tan(half), spec.thickness - 0.5);
       run(`V-carve: ${g.label}`, "engrave", tool, pMain, max, (b) => {
         const res = vcarve(b, g.region, { halfAngle: half, maxDepth: max, stepdown: pMain.stepdown, direction });
@@ -149,8 +149,8 @@ export function generatePlate(input: PlateSpecInput, options: GenerateOptions): 
           warnings.push({
             code: "VCARVE_FLAT_BOTTOM",
             severity: "warning",
-            message: `Partes largas de ${g.label} passariam de ${fmt(max)} mm de profundidade; ali o fundo fica plano e é limpo com a fresa em V (mais demorado).`,
-            suggestion: max < g.depth ? "A fresa não desce mais que isso. Use uma fresa em V maior ou afine o desenho." : `Aumente a profundidade máxima para cerca de ${fmt(Math.min(tool.cutLength, spec.thickness * 0.6))} mm, ou afine o desenho.`,
+            message: `Wide parts of ${g.label} would go deeper than ${fmt(max)} mm; there the bottom is left flat and cleared with the V-bit (slower).`,
+            suggestion: max < g.depth ? "The bit cannot go any deeper. Use a larger V-bit or make the design thinner." : `Increase the max depth to about ${fmt(Math.min(tool.cutLength, spec.thickness * 0.6))} mm, or make the design thinner.`,
             data: { flatArea: Math.round(res.flatArea) },
             element: g.ref,
           });
@@ -159,24 +159,24 @@ export function generatePlate(input: PlateSpecInput, options: GenerateOptions): 
       continue;
     }
     checkDetail(g, rMain, tool, warnings, "engrave");
-    run(`Gravação: ${g.label}`, "engrave", tool, pMain, g.depth, (b) => {
+    run(`Engrave: ${g.label}`, "engrave", tool, pMain, g.depth, (b) => {
       pocket(b, g.region, { radius: rMain, stepover: pMain.stepover, depth: g.depth, stepdown: pMain.stepdown, direction });
     });
   }
 
-  // 2. Fundo do relevo.
+  // 2. Relief background.
   if (layout.relief) {
     const rel = layout.relief;
     checkDetail(rel, rMain, tool, warnings, "relief");
-    run("Rebaixo do fundo (relevo)", "relief", tool, pMain, rel.depth, (b) => {
+    run("Clear relief background", "relief", tool, pMain, rel.depth, (b) => {
       pocket(b, rel.region, { radius: rMain, stepover: pMain.stepover, depth: rel.depth, stepdown: pMain.stepdown, direction });
     });
   }
 
-  // 3. Vazados (estêncil), 4. furos e rasgos, 5. contorno externo: fresa de recorte.
+  // 3. Through cutouts (stencil), 4. holes and slots, 5. outer profile: cutout bit.
   for (const v of layout.cutouts) {
     checkDetail(v, rCut, cutTool, warnings, "cutout");
-    run(`Vazado: ${v.label}`, "cutout", cutTool, pCut, v.depth, (b) => {
+    run(`Cutout: ${v.label}`, "cutout", cutTool, pCut, v.depth, (b) => {
       profile(b, v.region, { radius: rCut, depth: v.depth, stepdown: pCut.stepdown, direction, side: "inside" });
     });
   }
@@ -184,7 +184,7 @@ export function generatePlate(input: PlateSpecInput, options: GenerateOptions): 
   for (const f of layout.holes) {
     const bb = bounds(f.region);
     const d = Math.min(bb.maxX - bb.minX, bb.maxY - bb.minY);
-    run(`Furo: ${f.label}`, "hole", cutTool, pCut, f.depth, (b) => {
+    run(`Hole: ${f.label}`, "hole", cutTool, pCut, f.depth, (b) => {
       if (d <= cutTool.diameter + 0.1) peck(b, { x: (bb.minX + bb.maxX) / 2, y: (bb.minY + bb.maxY) / 2 }, f.depth, pCut.stepdown);
       else pocket(b, f.region, { radius: rCut, stepover: pCut.stepover, depth: f.depth, stepdown: pCut.stepdown, direction });
     });
@@ -198,14 +198,14 @@ export function generatePlate(input: PlateSpecInput, options: GenerateOptions): 
       height: opts.tabs?.height ?? round1(Math.min(3, spec.thickness * 0.35)),
       thickness: spec.thickness,
     };
-    run(`Recorte: ${per.label}`, "profile", cutTool, pCut, per.depth, (b) => {
+    run(`Profile: ${per.label}`, "profile", cutTool, pCut, per.depth, (b) => {
       const res = profile(b, per.region, { radius: rCut, depth: per.depth, stepdown: pCut.stepdown, direction, side: "outside", tabs });
       if (res.outlinesWithoutTabs > 0) {
         warnings.push({
           code: "SMALL_PART_WITHOUT_TABS",
           severity: "warning",
-          message: `${res.outlinesWithoutTabs} peça(s) são pequenas demais para abas de fixação e vão se soltar no fim do corte.`,
-          suggestion: "Prenda essas partes com fita dupla-face antes de cortar, ou aumente o tamanho.",
+          message: `${res.outlinesWithoutTabs} part(s) are too small for tabs and will come loose at the end of the cut.`,
+          suggestion: "Hold those parts down with double-sided tape before cutting, or make them bigger.",
         });
       }
     });
@@ -216,7 +216,7 @@ export function generatePlate(input: PlateSpecInput, options: GenerateOptions): 
       title: opts.title ?? defaultTitle(spec.texts.map((t) => t.content)),
       stock: layout.stock,
       safeHeight: machine.safeHeight,
-      notes: [`Maquina: ${machine.name}`, `Parametros: ${paramsSource}`, ...manualAdjustments.map((a) => a.message)],
+      notes: [`Machine: ${machine.name}`, `Feeds and speeds: ${paramsSource}`, ...manualAdjustments.map((a) => a.message)],
     },
     ops,
   );
@@ -238,8 +238,8 @@ export function generatePlate(input: PlateSpecInput, options: GenerateOptions): 
 }
 
 /**
- * Avisa quando a fresa não alcança parte do desenho: traços mais finos que a fresa
- * (somem na gravação) ou vãos entre letras mais estreitos que ela (sobra material no relevo).
+ * Warns when the bit cannot reach part of the design: strokes thinner than the bit
+ * (they vanish when engraved) or gaps between letters narrower than it (material left in the relief).
  */
 function checkDetail(el: CutElement, r: number, tool: Tool, warnings: Warning[], mode: "engrave" | "relief" | "cutout") {
   const total = area(el.region);
@@ -248,8 +248,8 @@ function checkDetail(el: CutElement, r: number, tool: Tool, warnings: Warning[],
     warnings.push({
       code: "ELEMENT_NOT_MACHINABLE",
       severity: "error",
-      message: `Os traços de ${el.label} são mais finos que a fresa de ${fmt(tool.diameter, 2)} mm; nada seria cortado.`,
-      suggestion: "Aumente o tamanho, use uma fonte mais grossa ou uma fresa mais fina.",
+      message: `The strokes of ${el.label} are thinner than the ${fmt(tool.diameter, 2)} mm bit; nothing would be cut.`,
+      suggestion: "Make it bigger, use a bolder font or a smaller bit.",
       element: el.ref,
     });
     return;
@@ -258,19 +258,19 @@ function checkDetail(el: CutElement, r: number, tool: Tool, warnings: Warning[],
   const missedArea = area(missed);
   if (missedArea > 0.5) {
     const pct = (missedArea / total) * 100;
-    const where = mode === "relief" ? "vãos entre elementos" : "traços";
+    const where = mode === "relief" ? "gaps between elements" : "strokes";
     warnings.push({
       code: "DETAIL_SMALLER_THAN_BIT",
       severity: "warning",
-      message: `Alguns ${where} de ${el.label} são mais estreitos que a fresa de ${fmt(tool.diameter, 2)} mm; cerca de ${fmt(pct)}% dessa área não será cortada.`,
-      suggestion: mode === "relief" ? "Aumente o espaçamento ou o tamanho do texto, ou use uma fresa mais fina." : "Aumente o tamanho, use uma fonte mais grossa ou uma fresa mais fina.",
+      message: `Some ${where} in ${el.label} are narrower than the ${fmt(tool.diameter, 2)} mm bit; about ${fmt(pct)}% of that area will not be cut.`,
+      suggestion: mode === "relief" ? "Increase the spacing or the text size, or use a smaller bit." : "Make it bigger, use a bolder font or a smaller bit.",
       data: { areaMm2: Math.round(missedArea), percent: Math.round(pct * 10) / 10 },
       element: el.ref ?? nearestItem(el, missed, r),
     });
   }
 }
 
-/** No fundo do relevo, o elemento em pé que encosta na maior parte da área não cortada. */
+/** On the relief background, the raised element touching most of the uncut area. */
 function nearestItem(el: CutElement, missed: Region, r: number) {
   let best: { ref: CutElement["ref"]; a: number } = { ref: undefined, a: 0 };
   const near = offset(missed, r);
@@ -282,7 +282,7 @@ function nearestItem(el: CutElement, missed: Region, r: number) {
 }
 
 function defaultTitle(texts: string[]) {
-  return texts.length ? `Placa: ${texts.join(" / ")}` : "Placa";
+  return texts.length ? `Sign: ${texts.join(" / ")}` : "Sign";
 }
 
 const round1 = (v: number) => Math.round(v * 10) / 10;

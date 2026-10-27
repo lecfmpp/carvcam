@@ -4,7 +4,7 @@ import { detectFormat, parseDrawing } from "../src/drawing.js";
 import { parseDxf } from "../src/dxf.js";
 import { InvalidSvg } from "../src/svg.js";
 
-/** Monta um DXF ASCII mínimo a partir de entidades [tipo, [código, valor]...]. */
+/** Builds a minimal ASCII DXF from entities [type, [code, value]...]. */
 function dxf(ents: [string, [number, number | string][]][], insunits?: number) {
   const L: (string | number)[] = [];
   if (insunits !== undefined) L.push(0, "SECTION", 2, "HEADER", 9, "$INSUNITS", 70, insunits, 0, "ENDSEC");
@@ -31,7 +31,7 @@ describe("parseDxf", () => {
   });
 
   it("joins loose lines and arcs into a closed outline (stadium)", () => {
-    // Retângulo 40×20 com as pontas arredondadas por dois arcos; tudo em pedaços soltos.
+    // 40×20 rectangle with ends rounded by two arcs; all in loose pieces.
     const d = parseDxf(
       dxf([
         ["LINE", [[10, 10], [20, 0], [11, 50], [21, 0]]],
@@ -46,7 +46,7 @@ describe("parseDxf", () => {
   });
 
   it("bulge draws a half circle; inches become mm", () => {
-    // Do (0,0) ao (2,0) com bulge 1 = semicírculo de raio 1 polegada.
+    // From (0,0) to (2,0) with bulge 1 = semicircle of radius 1 inch.
     const d = parseDxf(dxf([["LWPOLYLINE", [[90, 2], [70, 1], [10, 0], [20, 0], [42, 1], [10, 2], [20, 0]]]], 1));
     expect(d.width).toBeCloseTo(50.8, 1);
     expect(d.height).toBeCloseTo(25.4, 1);
@@ -70,13 +70,13 @@ describe("parseDxf", () => {
     const d = parseDxf(dxf([["LINE", [[10, 0], [20, 0], [11, 30], [21, 0]]]]));
     expect(d.openPaths).toBe(1);
     expect(d.height).toBeCloseTo(1, 1);
-    expect(() => parseDxf(dxf([["TEXT", [[1, "oi"]]]]))).toThrow(InvalidSvg);
+    expect(() => parseDxf(dxf([["TEXT", [[1, "hi"]]]]))).toThrow(InvalidSvg);
   });
 
   it("detects the format from the content", () => {
     expect(detectFormat(dxf([square(0, 0, 5)]))).toBe("dxf");
     expect(detectFormat("<svg></svg>")).toBe("svg");
-    expect(detectFormat("olá")).toBeNull();
+    expect(detectFormat("hello")).toBeNull();
     expect(parseDrawing(dxf([square(0, 0, 5)])).width).toBeCloseTo(5, 3);
   });
 });

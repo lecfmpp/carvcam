@@ -12,18 +12,18 @@ export interface PocketOpts {
 }
 
 /**
- * Pocket por anéis concêntricos (offset). Usina cada componente por completo antes de ir
- * para o próximo; em cada nível começa pelo anel mais interno e vai abrindo para fora,
- * assim só o primeiro anel corta com a fresa inteira engajada.
- * Retorna false se a fresa não cabe em nenhum ponto da região.
+ * Pocket by concentric rings (offset). Machines each component completely before moving
+ * to the next; at each level it starts with the innermost ring and works outward,
+ * so only the first ring cuts with the full bit width engaged.
+ * Returns false if the bit does not fit anywhere in the region.
  */
 export function pocket(b: PathBuilder, region: Region, o: PocketOpts): boolean {
   const t0 = offset(region, -o.radius);
   if (area(t0) <= 0) return false;
 
   for (const comp of components(t0)) {
-    // Cada anel sai direto da região original (erosão por r + k·passo). Encadear offsets
-    // sobre o anel anterior multiplica os vértices dos arcos e deixa o cálculo lentíssimo.
+    // Each ring comes straight from the original region (erosion by r + k·stepover). Chaining offsets
+    // on the previous ring multiplies the arc vertices and makes the computation painfully slow.
     const source = intersection(region, offset(comp, o.radius + 0.01));
     const rings: { k: number; path: Pt[] }[] = [];
     for (let k = 0; k < 5000; k++) {
@@ -37,7 +37,7 @@ export function pocket(b: PathBuilder, region: Region, o: PocketOpts): boolean {
       const pending = [...rings];
       let first = true;
       while (pending.length) {
-        // Entre os anéis do nível mais interno ainda pendente, pega o mais próximo.
+        // Among the rings of the innermost level still pending, take the nearest one.
         const kMax = pending[0].k;
         let bi = 0;
         let bd = Infinity;
@@ -74,7 +74,7 @@ export interface ProfileOpts {
   depth: number;
   stepdown: number;
   direction: Direction;
-  /** Lado da fresa em relação à região: por fora (peça fica) ou por dentro (região sai). */
+  /** Side of the bit relative to the region: outside (the part stays) or inside (the region drops out). */
   side: "outside" | "inside";
   tabs?: { count: number; width: number; height: number; thickness: number };
 }
@@ -84,8 +84,8 @@ export interface ProfileResult {
 }
 
 /**
- * Contorno em passadas. Por fora: primeiro os miolos (furos da peça), depois o contorno
- * externo com abas de fixação nas passadas finais, para a peça não se soltar.
+ * Profile cut in passes. Outside: first the inner contours (holes in the part), then the outer
+ * outline with tabs on the final passes, so the part does not come loose.
  */
 export function profile(b: PathBuilder, region: Region, o: ProfileOpts): ProfileResult {
   const paths = simplify(offset(region, o.side === "outside" ? o.radius : -o.radius));
@@ -115,7 +115,7 @@ export function profile(b: PathBuilder, region: Region, o: ProfileOpts): Profile
   return { outlinesWithoutTabs };
 }
 
-/** Furo do tamanho exato da fresa: descidas em bicadas, subindo para limpar o cavaco. */
+/** Hole exactly the size of the bit: peck drilling, rising to clear the chips. */
 export function peck(b: PathBuilder, center: Pt, depth: number, stepdown: number) {
   b.travel(center);
   for (const z of depthLevels(depth, stepdown)) {
@@ -124,7 +124,7 @@ export function peck(b: PathBuilder, center: Pt, depth: number, stepdown: number
   }
 }
 
-/** Gravação com fresa em V seguindo o contorno, numa única profundidade. */
+/** V-bit engraving following the outline, at a single depth. */
 export function trace(b: PathBuilder, region: Region, depth: number, direction: Direction) {
   for (const raw of nearestOrder(simplify(region), b, () => 0)) {
     const path = rotateToNearest(orient(raw, direction, "pocket"), b);
@@ -137,33 +137,33 @@ export function trace(b: PathBuilder, region: Region, depth: number, direction: 
 }
 
 export interface VCarveOpts {
-  /** Metade do ângulo da ponta, em radianos. */
+  /** Half the tip angle, in radians. */
   halfAngle: number;
-  /** Profundidade máxima (limite do usuário, da fresa e do material). */
+  /** Maximum depth (limit from the user, the bit and the material). */
   maxDepth: number;
   stepdown: number;
   direction: Direction;
-  /** Distância entre anéis, em mm. */
+  /** Distance between rings, in mm. */
   step?: number;
 }
 
 export interface VCarveResult {
-  /** Área (mm²) que ficou com fundo plano por causa do limite de profundidade. */
+  /** Area (mm²) left with a flat bottom because of the depth limit. */
   flatArea: number;
 }
 
 /**
- * V-carve de verdade: a profundidade acompanha a largura do traço. Anéis de offset para dentro
- * a uma distância d da borda são cortados na profundidade d / tan(meio ângulo); assim o cone da
- * fresa encosta exatamente na borda e o fundo sobe até o eixo central de cada traço, como numa
- * gravação feita à mão. Onde a profundidade passaria do limite, o fundo fica plano e é limpo com
- * a própria fresa em V, em passes próximos.
+ * True V-carve: the depth follows the stroke width. Offset rings inward at a distance d
+ * from the edge are cut at depth d / tan(half angle); that way the bit's cone touches the
+ * edge exactly and the bottom rises to the center line of each stroke, as in hand
+ * carving. Where the depth would exceed the limit, the bottom is left flat and cleared with
+ * the V-bit itself, in closely spaced passes.
  */
 export function vcarve(b: PathBuilder, region: Region, o: VCarveOpts): VCarveResult {
   const tan = Math.tan(o.halfAngle);
   const step = o.step ?? 0.2;
   const dCap = o.maxDepth * tan;
-  // No fundo plano, passes próximos o bastante para a crista entre eles ficar com ~0,08 mm.
+  // On the flat bottom, passes close enough that the ridge between them is ~0.08 mm.
   const flatStep = Math.max(0.1, 2 * 0.08 * tan);
   let flatArea = 0;
 
@@ -181,8 +181,8 @@ export function vcarve(b: PathBuilder, region: Region, o: VCarveOpts): VCarveRes
     flatArea += Math.max(0, area(offset(comp, -dCap)));
     if (!rings.length) continue;
 
-    // Por nível de profundidade: cada anel desce no máximo até o nível atual, e só entra nos
-    // níveis em que ainda tem material a tirar.
+    // Per depth level: each ring goes down at most to the current level, and only enters the
+    // levels where it still has material to remove.
     const levels = depthLevels(o.maxDepth, o.stepdown);
     let prev = 0;
     for (const level of levels) {
@@ -226,19 +226,19 @@ function nearestRings<R extends { path: Pt[] }>(rings: R[], from: Pt): R[] {
 }
 
 export interface HatchOpts {
-  /** Raio efetivo da fresa na profundidade (0 para a ponta de uma fresa em V). */
+  /** Effective bit radius at the depth (0 for the tip of a V-bit). */
   radius: number;
   depth: number;
   stepdown: number;
   spacing: number;
-  /** Ângulo das linhas, em graus. */
+  /** Line angle, in degrees. */
   angle: number;
   direction: Direction;
 }
 
 /**
- * Gravação com hachura: contorno do elemento mais linhas paralelas dentro dele, em vez de
- * esvaziar a área toda. Fica com cara de textura e corta muito mais rápido.
+ * Hatch engraving: the element's outline plus parallel lines inside it, instead of
+ * clearing the whole area. It looks like a texture and cuts much faster.
  */
 export function hatch(b: PathBuilder, region: Region, o: HatchOpts): boolean {
   const inner = o.radius > 0 ? simplify(offset(region, -o.radius)) : simplify(region);
@@ -246,7 +246,7 @@ export function hatch(b: PathBuilder, region: Region, o: HatchOpts): boolean {
   const a = (o.angle * Math.PI) / 180;
   const c = Math.cos(a);
   const s = Math.sin(a);
-  // Gira a região para as linhas ficarem horizontais, corta e desgira.
+  // Rotate the region so the lines are horizontal, cut, and rotate back.
   const rot = inner.map((p) => p.map((q) => ({ x: q.x * c + q.y * s, y: -q.x * s + q.y * c })));
   const unrot = (q: Pt): Pt => ({ x: q.x * c - q.y * s, y: q.x * s + q.y * c });
   let y0 = Infinity;
@@ -285,7 +285,7 @@ export function hatch(b: PathBuilder, region: Region, o: HatchOpts): boolean {
       b.feed(path[0], z);
     }
     for (const [p, q] of segs) {
-      // Segmento seguinte começando perto do fim do anterior, dentro da região: segue sem subir.
+      // Next segment starting near the end of the previous one, inside the region: continue without lifting.
       if (Math.abs(b.z - z) < 1e-6 && dist(b, p) <= o.spacing * 1.6 && segmentInside(inner, b, p)) b.feed(p, z);
       else {
         b.travel(p);
@@ -301,9 +301,9 @@ export function hatch(b: PathBuilder, region: Region, o: HatchOpts): boolean {
 // ---------------------------------------------------------------------------
 
 /**
- * Orientação natural do Clipper: externos anti-horários, furos horários.
- * Com o spindle girando no sentido horário, essa orientação dá corte convencional
- * num pocket e corte concordante num perfil por fora.
+ * Clipper's natural orientation: outer contours counterclockwise, holes clockwise.
+ * With the spindle turning clockwise, this orientation gives conventional cutting
+ * in a pocket and climb cutting on an outside profile.
  */
 function orient(p: Pt[], direction: Direction, use: "pocket" | "profile"): Pt[] {
   const naturalIsConventional = use === "pocket";
@@ -311,13 +311,13 @@ function orient(p: Pt[], direction: Direction, use: "pocket" | "profile"): Pt[] 
   return keep ? p : [...p].reverse();
 }
 
-/** Separa uma região em componentes conexos (cada externo com seus furos). */
+/** Splits a region into connected components (each outer contour with its holes). */
 function components(r: Region): Region[] {
   const outers = r.filter((p) => pathArea(p) > 0);
   const holes = r.filter((p) => pathArea(p) < 0);
   const comps: Region[] = outers.map((o) => [o]);
   for (const h of holes) {
-    // Um furo pertence ao menor externo que o contém.
+    // A hole belongs to the smallest outer contour that contains it.
     let best = -1;
     let bestArea = Infinity;
     outers.forEach((o, i) => {
@@ -356,7 +356,7 @@ function nearestOrder(paths: Pt[][], from: Pt, group: (p: Pt[]) => number): Pt[]
 
 type Window = [number, number];
 
-/** Janelas (em comprimento de arco) onde a fresa sobe para deixar as abas. */
+/** Windows (in arc length) where the bit lifts to leave the tabs. */
 function tabWindows(path: Pt[], n: number, len: number): Window[] {
   const per = perimeter(path);
   const count = Math.min(n, Math.floor(per / (len * 2.5)));
@@ -374,7 +374,7 @@ function followWithTabs(b: PathBuilder, path: Pt[], z: number, tabTop: number, t
     const a = closed[i - 1];
     const c = closed[i];
     const seg = dist(a, c);
-    // Pontos de corte do segmento nas bordas das janelas.
+    // Points where the segment crosses the window edges.
     const cuts = [0, seg];
     for (const [w0, w1] of tabs) {
       for (const w of [w0, w1]) if (w > s && w < s + seg) cuts.push(w - s);

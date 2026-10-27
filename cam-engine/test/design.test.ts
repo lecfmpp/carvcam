@@ -17,7 +17,7 @@ const engraved = (r: ReturnType<typeof gen>) => r.layout.engraved;
 
 describe("new shapes", () => {
   it("hexagon and star have the expected area", () => {
-    // Hexágono regular de raio 10: 3√3/2 · r².
+    // Regular hexagon of radius 10: 3√3/2 · r².
     expect(area(polygon(0, 0, 10, 6))).toBeCloseTo((3 * Math.sqrt(3) * 100) / 2, 3);
     const s = star(0, 0, 10, 5, 0.5);
     const b = bounds(s);
@@ -51,7 +51,7 @@ describe("text on an arc", () => {
     const b = bounds(arc);
     expect(b.maxX - b.minX).toBeLessThan(straight.maxX - straight.minX);
     expect(b.maxY - b.minY).toBeGreaterThan(straight.maxY - straight.minY + 5);
-    // O topo do meio está perto de y = altura das letras; as pontas descem.
+    // The top of the middle is near y = letter height; the ends drop down.
     expect(b.minY).toBeLessThan(-5);
   });
 
@@ -75,7 +75,7 @@ describe("element adjustments", () => {
   it("outline adds a ring separate from the element", () => {
     const g = engraved(gen({ ...base, shapes: [{ type: "circle", x: 80, y: 50, diameter: 20, outline: { distance: 3, width: 2 } }] }))[0];
     expect(area(g.region)).toBeCloseTo(Math.PI * 100 + Math.PI * (15 * 15 - 13 * 13), 0);
-    expect(pointInRegion(g.region, { x: 80 + 11.5, y: 50 })).toBe(false); // vão entre o círculo e o anel
+    expect(pointInRegion(g.region, { x: 80 + 11.5, y: 50 })).toBe(false); // gap between the circle and the ring
     expect(pointInRegion(g.region, { x: 80 + 14, y: 50 })).toBe(true);
   });
 
@@ -114,7 +114,7 @@ describe("element adjustments", () => {
         shapes: [
           { type: "circle", x: 60, y: 50, diameter: 30 },
           { type: "circle", x: 100, y: 50, diameter: 30 },
-          // Faixa que cobre os dois, mas só corta o segundo.
+          // A band that covers both, but only cuts the second one.
           { type: "rectangle", x: 80, y: 50, width: 100, height: 6, operation: "subtract", targets: [{ type: "shape", index: 1 }] },
         ],
       }),
@@ -133,7 +133,7 @@ describe("element adjustments", () => {
         ],
       }),
     );
-    // Lista vazia: a máscara não afeta ninguém.
+    // Empty list: the mask affects nothing.
     expect(area(m[0].region)).toBeCloseTo(600, 0);
     expect(area(m[1].region)).toBeCloseTo(600, 0);
   });
@@ -143,7 +143,7 @@ describe("element adjustments", () => {
       width: 160,
       height: 100,
       thickness: 12,
-      texts: [{ content: "OI", size: 20, mode: "relief", depth: 3, x: 50, y: 50 }],
+      texts: [{ content: "HI", size: 20, mode: "relief", depth: 3, x: 50, y: 50 }],
       shapes: [{ type: "circle", x: 120, y: 50, diameter: 20, mode: "engrave", depth: 2 }],
     });
     const a = r.warnings.find((x) => x.code === "ENGRAVED_IN_FLOOR");

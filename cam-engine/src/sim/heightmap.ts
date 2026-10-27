@@ -2,9 +2,9 @@ import { parseLines, toSegments } from "../gcode.js";
 import type { Tool } from "../schema.js";
 
 /**
- * Simulação de remoção de material por mapa de alturas: o mesmo princípio do `carve.ts`
- * do rudra496/cnc (MIT), reescrito sem Three.js para rodar em testes, em worker ou no servidor.
- * Cada célula guarda a altura do material (0 = face de cima intacta, negativo = usinado).
+ * Material removal simulation with a heightmap: the same principle as `carve.ts`
+ * from rudra496/cnc (MIT), rewritten without Three.js to run in tests, in a worker or on the server.
+ * Each cell stores the material height (0 = untouched top surface, negative = machined).
  */
 export class Heightmap {
   readonly cols: number;
@@ -30,12 +30,12 @@ export class Heightmap {
     return this.h[j * this.cols + i];
   }
 
-  /** Carimba a fresa com a ponta em (x, y, z). */
+  /** Stamps the bit with its tip at (x, y, z). */
   stamp(x: number, y: number, z: number, tool: Tool) {
     if (z >= 0) return;
     const r = tool.diameter / 2;
     const vTan = tool.type === "vbit" ? Math.tan(((tool.angle ?? 60) * Math.PI) / 360) : 0;
-    // Uma V-bit só corta até o raio em que o cone sai do material.
+    // A V-bit only cuts out to the radius where the cone leaves the material.
     const reach = tool.type === "vbit" ? Math.min(r, -z * vTan) : r;
     const i0 = Math.max(0, Math.floor((x - reach - this.x0) / this.res));
     const i1 = Math.min(this.cols - 1, Math.ceil((x + reach - this.x0) / this.res));
@@ -56,12 +56,12 @@ export class Heightmap {
   }
 }
 
-/** Simula um G-code inteiro com uma fresa (ou uma por ferramenta T, se o mapa for dado). */
+/** Simulates a whole G-code file with one bit (or one per tool T, if the map is given). */
 export function simulate(gcode: string, tools: Tool[] | Tool, box: { x0: number; y0: number; width: number; height: number }, res = 0.25): Heightmap {
   const hm = new Heightmap(box.x0, box.y0, box.width, box.height, res);
   const list = Array.isArray(tools) ? tools : [tools];
   const lines = parseLines(gcode);
-  // Ferramenta ativa por linha (T#).
+  // Active tool per line (T#).
   const toolAt = new Map<number, Tool>();
   let active = list[0];
   for (const l of lines) {

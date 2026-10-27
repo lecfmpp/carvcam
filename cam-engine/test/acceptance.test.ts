@@ -7,10 +7,10 @@ import { ToolSchema } from "../src/schema.js";
 import { example, fonts, samplePoints } from "./helpers.js";
 
 /**
- * Critério de "pronto" da v1: "placa 20×10 cm, MDF 15 mm, 'Casa da Ana' em relevo de 3 mm,
- * borda arredondada, 2 furos" gera um G-code que passa no verificador e, simulado, produz a peça certa.
+ * v1 "done" criterion: "20×10 cm sign, 15 mm MDF, 'Ana's House' in 3 mm relief,
+ * rounded edge, 2 holes" generates G-code that passes the verifier and, when simulated, produces the right part.
  */
-describe("acceptance: Casa da Ana plate", () => {
+describe("acceptance: Ana's House sign", () => {
   let f: FontMap;
   let res: GenerateResult;
   let hm: Heightmap;
@@ -36,7 +36,7 @@ describe("acceptance: Casa da Ana plate", () => {
     const inner = offset(part, -6);
     const letters = difference(inner, relief!.region);
     const frame = difference(part, inner);
-    // 0,4 mm de folga para a discretização da simulação.
+    // 0.4 mm allowance for the simulation's discretization.
     for (const p of samplePoints(offset(letters, -0.4), 0.5)) expect(hm.at(p.x, p.y)).toBeGreaterThan(-0.01);
     for (const p of samplePoints(offset(frame, -0.4), 1)) expect(hm.at(p.x, p.y)).toBeGreaterThan(-0.01);
   });
@@ -52,11 +52,11 @@ describe("acceptance: Casa da Ana plate", () => {
 
   it("drills through the material and cuts out the outline with tabs", () => {
     for (const [x, y] of [[25, 95], [195, 95]]) expect(hm.at(x, y)).toBeLessThanOrEqual(-15);
-    // Caminho do centro da fresa no recorte: através do material, exceto nas 4 abas.
+    // Path of the bit center in the profile cut: through the material, except at the 4 tabs.
     const ring = difference(offset(res.layout.part, r + 0.3), offset(res.layout.part, r - 0.3));
     const pts = samplePoints(ring, 0.5);
     const cutThrough = pts.filter((p) => hm.at(p.x, p.y) <= -15).length / pts.length;
-    // Abas de 3 mm: a fresa sobe até Z-12 num material de 15 mm.
+    // 3 mm tabs: the bit rises to Z-12 in 15 mm material.
     const onTab = pts.filter((p) => Math.abs(hm.at(p.x, p.y) - -12) < 0.05).length;
     expect(cutThrough).toBeGreaterThan(0.8);
     expect(cutThrough).toBeLessThan(0.99);

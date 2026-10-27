@@ -2,18 +2,18 @@ import type { MaterialId } from "../../schema.js";
 import type { TableRow } from "./bits.js";
 
 /**
- * Tabela oficial de avanço e rotação da Sienci Labs ("Feeds and Speeds", versão imperial),
- * convertida para mm. Fonte: https://resources.sienci.com/view/cnc-feeds-speeds/
- * Medida numa LongMill MK2 (motores NEMA 23); serve como ponto de partida.
+ * Sienci Labs' official feeds and speeds table ("Feeds and Speeds", imperial version),
+ * converted to mm. Source: https://resources.sienci.com/view/cnc-feeds-speeds/
+ * Measured on a LongMill MK2 (NEMA 23 motors); use it as a starting point.
  *
- * Cada linha: [avanço pol/min, mergulho pol/min, sobreposição pol, passada em canal pol, passada em pocket pol, RPM]
+ * Each row: [feed rate in/min, plunge rate in/min, stepover in, slotting stepdown in, pocket stepdown in, RPM]
  */
 type Row = [number, number, number, number, number, number];
 
 export type Speed = "reduced" | "regular" | "maximum";
 export type MaterialGroup = "softwood" | "hardwood" | "plastic";
 
-/** Grupos da tabela Sienci para cada material do motor. */
+/** Sienci table groups for each engine material. */
 export const MATERIAL_GROUP: Record<MaterialId, MaterialGroup> = {
   mdf: "softwood",
   plywood: "softwood",
@@ -81,7 +81,7 @@ const T: Record<MaterialGroup, Table> = {
       "surfacing-22": [102, 51, 0.35, 0.016, 0.04, 17000],
     },
   },
-  // Plastics (Acrylic, PVC, HDPE, Acetal/Delrin). A tabela só traz fresas upcut.
+  // Plastics (Acrylic, PVC, HDPE, Acetal/Delrin). The table only lists upcut bits.
   plastic: {
     vbit: [44, 15, 0.07, 0.04, 0.09, 22000],
     reduced: {
@@ -113,12 +113,12 @@ export interface SienciParams {
   feed: number;
   plunge: number;
   stepover: number;
-  /** Passada em canal (fresa inteira engajada): usada em recortes e no primeiro anel do pocket. */
+  /** Slotting stepdown (full bit width engaged): used for cutouts and the first ring of a pocket. */
   slotStepdown: number;
   pocketStepdown: number;
 }
 
-/** Busca a linha da tabela, já em mm. Undefined quando a Sienci não publica valores para a combinação. */
+/** Looks up the table row, already in mm. Undefined when Sienci publishes no values for the combination. */
 export function sienciParams(tableRow: TableRow, material: MaterialId, speed: Speed): SienciParams | undefined {
   const group = T[MATERIAL_GROUP[material]];
   const l = tableRow === "vbit" ? group.vbit : group[speed][tableRow];

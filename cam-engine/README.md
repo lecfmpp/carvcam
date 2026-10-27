@@ -1,81 +1,82 @@
-# cam-engine: CAM 2.5D de placas e letreiros
+# cam-engine: 2.5D CAM for signs and cut-out lettering
 
-O motor que resolve "o gSender não cria nada". Ele recebe a especificação JSON que o assistente de IA preenche e devolve um **G-code GRBL já verificado**. Junto vêm avisos de fabricabilidade em português e a geometria para a prévia.
+The engine that fixes "gSender can't create anything". It takes the JSON spec the AI assistant fills in and returns **GRBL G-code that has already been verified**. Along with it come manufacturability warnings in plain English and the geometry for the preview.
 
 ```
-especificação JSON  →  layout 2D  →  toolpaths  →  G-code GRBL  →  verificador  →  (simulação)
-   (IA / UI)          (opentype.js     (pocket,      (pós-proc.)     (relê o texto
-                       + Clipper2)      perfil, abas)                 final)
+JSON spec  →  2D layout  →  toolpaths  →  GRBL G-code  →  verifier  →  (simulation)
+(AI / UI)    (opentype.js    (pocket,      (post-         (re-reads the
+              + Clipper2)     profile,      processor)     final text)
+                              tabs)
 ```
 
-Não depende de interface. Roda no Node (testes, CLI, servidor do gSender) e no navegador (worker).
+It has no UI dependency. It runs in Node (tests, CLI, gSender's server) and in the browser (worker).
 
-## O que já faz (v1)
+## What it does today (v1)
 
-| Peça | Como |
+| Feature | How |
 |---|---|
-| **Placa** com borda reta, arredondada ou chanfrada | contorno paramétrico |
-| **Texto** em relevo, gravado ou vazado (estêncil) | `opentype.js` → contornos → união NonZero |
-| **Letreiro recortado**, com letras soltas ou ligadas (cursiva) | união das letras + recorte por fora, recortando também os miolos |
-| **Ícones** (coração, estrela, casa, folha) | polígonos paramétricos |
-| **Furos e rasgos** para fixar ou pendurar | furo em bicadas quando o furo tem o diâmetro da fresa, senão pocket |
-| **Pocket** (relevo, gravação) | anéis concêntricos de offset do Clipper2, de dentro para fora, ficando no fundo entre anéis quando é seguro |
-| **Recorte externo com abas** | passadas em profundidade; a fresa sobe nas abas nas passadas finais |
-| **Duas fresas** (ex.: 1/16" grava, 1/8" recorta) | troca com `T# M6`, tratada pelo gSender |
-| **Parâmetros de corte** por material | RPM, avanço = avanço por dente × canais × RPM, mergulho, passada e sobreposição |
-| **Verificador** | só comandos permitidos, mm/absoluto, sem `$`, sem G0 dentro do material, limites de área/Z/avanço/RPM; tempo estimado |
-| **Simulação** por mapa de alturas | mesma ideia do `carve.ts` do rudra496/cnc, reescrita sem Three.js |
+| **Sign** with a straight, rounded or chamfered edge | parametric outline |
+| **Text** in relief, engraved or cut through (stencil) | `opentype.js` → outlines → NonZero union |
+| **Cut-out lettering**, with separate or joined (script) letters | union of the letters + outside profile cut, also cutting out the counters |
+| **Icons** (heart, star, house, leaf) | parametric polygons |
+| **Holes and slots** for mounting or hanging | peck drilling when the hole is the bit's diameter, otherwise a pocket |
+| **Pocket** (relief, engraving) | concentric Clipper2 offset rings, from the inside out, staying at depth between rings when it is safe |
+| **Outer profile cut with tabs** | depth passes; the bit lifts over the tabs on the final passes |
+| **Two bits** (e.g. 1/16" engraves, 1/8" cuts out) | tool change with `T# M6`, handled by gSender |
+| **Cutting parameters** per material | RPM, feed rate = chip load × flutes × RPM, plunge rate, stepdown and stepover |
+| **Verifier** | allowed commands only, mm/absolute, no `$`, no G0 inside the material, area/Z/feed/RPM limits; estimated time |
+| **Simulation** with a heightmap | same idea as `carve.ts` from rudra496/cnc, rewritten without Three.js |
 
-### Avisos de fabricabilidade
+### Manufacturability warnings
 
-Cada aviso tem um `code` estável (para a UI e a IA reagirem), uma `message` humana e uma `suggestion`. Exemplos:
+Every warning has a stable `code` (for the UI and the AI to react to), a human-readable `message` and a `suggestion`. Examples:
 
-- `TEXT_DOES_NOT_FIT`: traz o tamanho sugerido em `data.suggestedSize`.
-- `ELEMENT_NOT_MACHINABLE`: os traços são mais finos que a fresa e nada seria cortado.
-- `DETAIL_SMALLER_THAN_BIT`: informa o % da área que não será cortado.
+- `TEXT_DOES_NOT_FIT`: includes the suggested size in `data.suggestedSize`.
+- `ELEMENT_NOT_MACHINABLE`: the strokes are thinner than the bit and nothing would be cut.
+- `DETAIL_SMALLER_THAN_BIT`: reports the % of the area that will not be cut.
 - `DEPTH_EXCEEDS`, `TOOL_TOO_SHORT`, `HOLE_SMALLER_THAN_BIT`, `OUTSIDE_PART`, `LOOSE_ISLANDS`, `PART_LARGER_THAN_MACHINE`, `VBIT_ENGRAVE_ONLY`, `SMALL_PART_WITHOUT_TABS`.
 
-Com qualquer aviso de severidade `error`, `generatePlate` não devolve G-code (`ok: false`, `gcode: ""`).
+With any warning of severity `error`, `generatePlate` returns no G-code (`ok: false`, `gcode: ""`).
 
-## Catálogo Sienci Labs (`src/catalog/sienci/`)
+## Sienci Labs catalog (`src/catalog/sienci/`)
 
-A ferramenta é feita para as máquinas da Sienci. Com `sienci: { machine, head?, bit, cutoutBit?, speed? }`, o motor usa os dados reais em vez dos padrões genéricos:
+The tool is built for Sienci machines. With `sienci: { machine, head?, bit, cutoutBit?, speed? }`, the engine uses the real data instead of the generic defaults:
 
-| Arquivo | Conteúdo | Fonte |
+| File | Contents | Source |
 |---|---|---|
-| `machines.ts` | LongMill MK2 (12×30, 30×30, 48×30), MK3 (30×30, 48×30), AltMill (2×4, 4×4, 4×8): curso, velocidade máxima, cabeçotes possíveis e padrão | padrões de firmware do gSender ($110–$112, $130–$132) |
-| `heads.ts` | Makita RT0701 (dial manual 1–6), AutoSpin T1 (ER11, rotação por G-code), spindles 1,5/2,2 kW ER20 | páginas de produto e resources.sienci.com |
-| `bits.ts` | 15 fresas da loja (retas 1/16″, 1/8″, 1/4″, compressão, 1 canal, V-bits 30/60/90°, aplainar 22 mm, ball nose) com medidas e link; regra de compatibilidade haste × pinça | tabelas das páginas de produto em sienci.com |
-| `table.ts` | Tabela oficial de avanço e rotação (madeira macia/MDF, madeira dura, plásticos × reduzida/regular/máxima), convertida para mm | resources.sienci.com/view/cnc-feeds-speeds |
-| `projects.ts` | 7 projetos de primeiros cortes, com `projectsForMachine()` dizendo o que cabe e que acessórios faltam | — |
+| `machines.ts` | LongMill MK2 (12×30, 30×30, 48×30), MK3 (30×30, 48×30), AltMill (2×4, 4×4, 4×8): travel, max rate, supported heads and the default one | gSender's firmware defaults ($110–$112, $130–$132) |
+| `heads.ts` | Makita RT0701 (manual dial 1–6), AutoSpin T1 (ER11, speed from the G-code), 1.5/2.2 kW ER20 spindles | product pages and resources.sienci.com |
+| `bits.ts` | 15 bits from the store (1/16″, 1/8″, 1/4″ straight, compression, single flute, 30/60/90° V-bits, 22 mm surfacing, ball nose) with measurements and link; shank × collet compatibility rule | tables on the sienci.com product pages |
+| `table.ts` | Official feeds and speeds table (softwood/MDF, hardwood, plastics × reduced/regular/maximum), converted to mm | resources.sienci.com/view/cnc-feeds-speeds |
+| `projects.ts` | 7 first-cut projects, with `projectsForMachine()` telling what fits and which accessories are missing | — |
 
-O que muda na geração:
-- **Limites e velocidades reais:** curso e velocidade máxima da máquina; faixa de rotação do cabeçote.
-- **Parâmetros oficiais:** vêm da tabela Sienci. A passada é a de canal (conservadora) e o mergulho fica limitado a 300 mm/min, como a Sienci recomenda fora de entalhe 3D, porque o motor ainda desce reto.
-- **Compatibilidade de fresa:** `BIT_NEEDS_ACCESSORY` (ex.: 1/8″ no Makita), `BIT_INCOMPATIBLE`, `BIT_NOT_SUPPORTED` (aplainar e ball nose não servem para placas).
-- **Fresa de compressão:** a passada sobe para passar da parte upcut (`COMPRESSION_STEPDOWN`).
-- **Makita:** `manualAdjustments` traz a posição do dial ("gire o dial para 3"), que também vai no cabeçalho do G-code.
+What changes in generation:
+- **Real limits and speeds:** the machine's travel and max rate; the head's spindle speed range.
+- **Official parameters:** taken from the Sienci table. The stepdown is the slotting one (conservative) and the plunge rate is capped at 300 mm/min, as Sienci recommends outside 3D carving, because the engine still plunges straight down.
+- **Bit compatibility:** `BIT_NEEDS_ACCESSORY` (e.g. 1/8″ in the Makita), `BIT_INCOMPATIBLE`, `BIT_NOT_SUPPORTED` (surfacing and ball nose bits are not for signs).
+- **Compression bit:** the stepdown goes up to get past the upcut section (`COMPRESSION_STEPDOWN`).
+- **Makita:** `manualAdjustments` gives the dial setting ("set the dial to 3"), which also goes in the G-code header.
 
-Os 7 projetos geram G-code aprovado em todas as máquinas em que cabem. A placa de endereço de 90 cm só entra nas 48×30 e nas AltMill.
+All 7 projects generate approved G-code on every machine they fit. The 90 cm address sign only fits the 48×30 machines and the AltMills.
 
-Dados do catálogo consultados em out/2026. Preços ficam de fora porque mudam.
+Catalog data checked in Oct 2026. Prices are left out because they change.
 
-## Simulações dos exemplos
+## Example simulations
 
 | `anas-house.json` | `pacifico-lettering.json` | `engraved-icons-plate.json` |
 |---|---|---|
-| ![Placa Casa da Ana](docs/sim-anas-house.png) | ![Letreiro Bem-vindos](docs/sim-pacifico-lettering.png) | ![Placa LUNA](docs/sim-engraved-plate.png) |
-| Relevo de 3 mm, moldura, 2 furos, recorte com 4 abas | Cursiva ligada recortada, com miolos e abas | Gravação com 1/16", rasgo e recorte com 1/8", cantos chanfrados |
+| ![Ana's House sign](docs/sim-anas-house.png) | ![Welcome lettering](docs/sim-pacifico-lettering.png) | ![LUNA sign](docs/sim-engraved-plate.png) |
+| 3 mm relief, frame, 2 holes, profile cut with 4 tabs | Joined script lettering cut out, with counters and tabs | Engraved with a 1/16", slot and profile cut with a 1/8", chamfered corners |
 
-Cores: bege = face intacta; marrom = rebaixado; preto = atravessou.
+Colors: beige = untouched surface; brown = cleared; black = cut through.
 
-## Uso
+## Usage
 
 ```bash
 npm install
-npm test                      # 53 testes, incluindo o critério de aceite da v1 e os projetos Sienci
-npm run generate -- examples/anas-house.json saida.nc
-npm run render -- saida.nc saida.png 220 120 15 examples/anas-house.json
+npm test                      # 136 tests, including the v1 acceptance criterion and the Sienci projects
+npm run generate -- examples/anas-house.json output.nc
+npm run render -- output.nc output.png 220 120 15 examples/anas-house.json
 ```
 
 ```ts
@@ -85,37 +86,37 @@ const fonts = await loadFonts((file) => fetch(`/fonts/${file}`).then((r) => r.ar
 const res = generatePlate(
   {
     width: 200, height: 100, thickness: 15, material: "mdf",
-    texts: [{ content: "Casa da Ana", size: 16, mode: "relief", depth: 3 }],
+    texts: [{ content: "Ana's House", size: 16, mode: "relief", depth: 3 }],
     edge: { type: "rounded", radius: 10 },
     holes: [{ x: 15, y: 85, diameter: 5 }, { x: 185, y: 85, diameter: 5 }],
   },
   { fonts, tool: { diameter: 3.175, cutLength: 22 } },
 );
 
-res.warnings;     // mostrar na UI
-res.layout;       // geometria para a prévia
-res.verification; // tempo estimado, extensão, problemas
-if (res.ok) await fetch("/api/gcode", { method: "POST", body: res.gcode }); // envio pelo servidor do gSender
+res.warnings;     // show in the UI
+res.layout;       // geometry for the preview
+res.verification; // estimated time, extent, problems
+if (res.ok) await fetch("/api/gcode", { method: "POST", body: res.gcode }); // send through gSender's server
 ```
 
-**Origem do trabalho:** X0 Y0 no canto inferior esquerdo do bloco e Z0 na face de cima. Quando há recorte externo, o bloco é a placa mais `margin` (10 mm) de cada lado.
+**Work origin:** X0 Y0 at the bottom-left corner of the stock and Z0 on the top surface. When there is an outer cutout, the stock is the sign plus `margin` (10 mm) on each side.
 
-## Decisões e limites conhecidos
+## Decisions and known limits
 
-- **Clipper2 via `clipper2-ts`:** o pacote `clipper2-js` (1.2.4) devolvia offsets negativos errados (o polígono crescia em vez de encolher), então foi descartado.
-- **Anéis do pocket:** cada anel sai direto da região original (erosão por r + k·passo). Encadear offsets fazia os vértices explodirem (188 mil pontos e 110 s na placa de exemplo; agora 1,5 s).
-- **Mergulho reto:** a fresa desce em avanço de mergulho, sem rampa ou hélice. Isso exige fresa de topo que corta no centro. Rampa fica para a v1.1.
-- **V-bit:** só grava seguindo o contorno. V-carve de verdade (profundidade variável) fica para depois.
-- **Presets de material:** são valores conservadores de partida. A UI deve permitir ajuste e lembrar o ajuste por material.
-- **Limites da máquina:** o padrão é genérico (300 × 300 mm). Na integração, preencha `machine` com os parâmetros do firmware lidos pelo gSender ($110–$112 velocidades, $130–$132 curso).
-- **Ainda não testado numa máquina real.** A validação até aqui é o verificador mais a simulação.
+- **Clipper2 via `clipper2-ts`:** the `clipper2-js` package (1.2.4) returned wrong negative offsets (the polygon grew instead of shrinking), so it was dropped.
+- **Pocket rings:** each ring comes straight from the original region (erosion by r + k·stepover). Chaining offsets made the vertex count explode (188 thousand points and 110 s on the example sign; now 1.5 s).
+- **Straight plunge:** the bit plunges at the plunge rate, with no ramp or helix. This requires a center-cutting end mill. Ramping is planned for v1.1.
+- **V-bit:** V-carving with variable depth (the depth follows the stroke width); where it would go past the max depth, the bottom is left flat and cleared with the V-bit.
+- **Material presets:** these are conservative starting values. The UI should allow adjusting them and remember the adjustment per material.
+- **Machine limits:** the default is generic (300 × 300 mm). When integrating, fill `machine` with the firmware settings read by gSender ($110–$112 max rates, $130–$132 travel).
+- **Not yet tested on a real machine.** Validation so far is the verifier plus the simulation.
 
-## O que veio do rudra496/cnc
+## What came from rudra496/cnc
 
-Nenhum arquivo foi copiado. Foram aproveitadas duas ideias (licença MIT):
-- a simulação de remoção de material por mapa de alturas (`src/sim/heightmap.ts`, em 0,25 mm em vez da grade 120×120);
-- a fórmula de avanço da calculadora (`src/materials.ts`).
+No files were copied. Two ideas were reused (MIT license):
+- the material removal simulation with a heightmap (`src/sim/heightmap.ts`, at 0.25 mm instead of the 120×120 grid);
+- the feed rate formula from the calculator (`src/materials.ts`).
 
-## Fontes incluídas
+## Bundled fonts
 
-Archivo Black, Pacifico e Bebas Neue, todas sob SIL Open Font License (licenças em `fonts/*/OFL.txt`).
+Archivo Black, Pacifico and Bebas Neue, all under the SIL Open Font License (licenses in `fonts/*/OFL.txt`).

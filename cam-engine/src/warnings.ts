@@ -1,10 +1,10 @@
-/** Elemento da especificação ao qual o aviso se refere (índice dentro da lista do tipo). */
+/** The spec element a warning refers to (index within that type's list). */
 export interface ElementRef {
   type: "text" | "icon" | "shape" | "svg" | "hole" | "slot";
   index: number;
 }
 
-/** Correção que a interface pode aplicar com um clique ("Aplicar sugestão"). */
+/** A fix the UI can apply with one click ("Apply suggestion"). */
 export interface Fix {
   element: ElementRef;
   field: string;
@@ -12,8 +12,8 @@ export interface Fix {
 }
 
 /**
- * Avisos com código estável (para a UI e a IA reagirem) e mensagem humana em pt-BR
- * (para mostrar direto ao usuário).
+ * Warnings carry a stable code (for the UI and the assistant to react to) and a human-readable
+ * English message (to show straight to the user).
  */
 export interface Warning {
   code:
@@ -51,4 +51,4 @@ export interface Warning {
 
 export const hasErrors = (warnings: Warning[]) => warnings.some((a) => a.severity === "error");
 
-export const fmt = (n: number, d = 1) => n.toFixed(d).replace(/\.0+$/, "").replace(".", ",");
+export const fmt = (n: number, d = 1) => n.toFixed(d).replace(/\.0+$/, "");

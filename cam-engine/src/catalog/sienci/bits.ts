@@ -2,8 +2,8 @@ import type { ToolInput } from "../../schema.js";
 import { HEADS, SHANK_1_4, SHANK_1_8, type Accessory, type HeadId } from "./heads.js";
 
 /**
- * Fresas vendidas pela Sienci Labs, com as medidas das tabelas das páginas de produto
- * (consultadas em out/2026). Preços ficam de fora porque mudam; a UI busca na loja.
+ * Bits sold by Sienci Labs, with the measurements from the tables on their product pages
+ * (checked Oct 2026). Prices are left out because they change; the UI looks them up in the store.
  */
 export type TableRow = "1/16-straight" | "1/8-straight" | "1/8-1flute" | "1/4-straight" | "1/4-1flute" | "vbit" | "surfacing-22";
 
@@ -18,11 +18,11 @@ export interface SienciBit {
   flutes: number;
   cutLength: number;
   angle?: number;
-  /** Fresa de compressão: comprimento da parte upcut (a primeira passada precisa passar dele). */
+  /** Compression bit: length of the upcut section (the first pass has to go past it). */
   compressionUpcut?: number;
-  /** Linha da tabela oficial de avanço e rotação da Sienci usada para esta fresa. */
+  /** Row of Sienci's official feeds and speeds table used for this bit. */
   tableRow: TableRow | null;
-  /** Se o motor de placas e letreiros (v1) sabe usar esta fresa. */
+  /** Whether the sign and lettering engine (v1) knows how to use this bit. */
   supportedInV1: boolean;
   bestFor: string;
 }
@@ -34,7 +34,7 @@ export const BITS: SienciBit[] = [
     url: "https://sienci.com/product/1-16-flat-downcut-end-mill/",
     type: "straight", cut: "downcut", diameter: 1.5875, shank: SHANK_1_8, flutes: 2, cutLength: 8,
     tableRow: "1/16-straight", supportedInV1: true,
-    bestFor: "Detalhes finos e letras pequenas, com acabamento limpo na face de cima.",
+    bestFor: "Fine details and small lettering, with a clean finish on the top face.",
   },
   {
     id: "flat-1-16-upcut",
@@ -42,7 +42,7 @@ export const BITS: SienciBit[] = [
     url: "https://sienci.com/product/1-16-flat-upcut-end-mill/",
     type: "straight", cut: "upcut", diameter: 1.5875, shank: SHANK_1_8, flutes: 2, cutLength: 8,
     tableRow: "1/16-straight", supportedInV1: true,
-    bestFor: "Detalhes finos; tira bem o cavaco.",
+    bestFor: "Fine details; clears chips well.",
   },
   {
     id: "flat-1-8-downcut",
@@ -50,7 +50,7 @@ export const BITS: SienciBit[] = [
     url: "https://sienci.com/product/1-8-flat-downcut_end-mill_3-10pc_pack/",
     type: "straight", cut: "downcut", diameter: SHANK_1_8, shank: SHANK_1_8, flutes: 2, cutLength: 15,
     tableRow: "1/8-straight", supportedInV1: true,
-    bestFor: "Relevo e gravação em compensado e MDF sem lascar a face de cima.",
+    bestFor: "Relief and engraving in plywood and MDF without chipping the top face.",
   },
   {
     id: "flat-1-8-upcut",
@@ -58,7 +58,7 @@ export const BITS: SienciBit[] = [
     url: "https://sienci.com/product/1-8-flat-upcut-end-mill_3pcs_or10pcs/",
     type: "straight", cut: "upcut", diameter: SHANK_1_8, shank: SHANK_1_8, flutes: 2, cutLength: 17,
     tableRow: "1/8-straight", supportedInV1: true,
-    bestFor: "A fresa de uso geral: letras, formas e recortes de projetos pequenos.",
+    bestFor: "The general-purpose bit: lettering, shapes and cutouts on small projects.",
   },
   {
     id: "flat-1-8-1flute",
@@ -66,7 +66,7 @@ export const BITS: SienciBit[] = [
     url: "https://sienci.com/product/1-8-singleflute_upcut_endmill_2pcs/",
     type: "straight", cut: "upcut", diameter: SHANK_1_8, shank: SHANK_1_8, flutes: 1, cutLength: 12,
     tableRow: "1/8-1flute", supportedInV1: true,
-    bestFor: "Acrílico e outros plásticos (não derrete) e alumínio.",
+    bestFor: "Acrylic and other plastics (no melting) and aluminum.",
   },
   {
     id: "flat-1-8-compression",
@@ -74,7 +74,7 @@ export const BITS: SienciBit[] = [
     url: "https://sienci.com/product/1-8_flat_compression_end-mill_2pcs/",
     type: "straight", cut: "compression", diameter: SHANK_1_8, shank: SHANK_1_8, flutes: 2, cutLength: 13, compressionUpcut: 3,
     tableRow: "1/8-straight", supportedInV1: true,
-    bestFor: "Recortes em compensado e pinus com as duas faces limpas. A primeira passada precisa passar de 3 mm.",
+    bestFor: "Cutouts in plywood and pine with both faces clean. The first pass has to go deeper than 3 mm.",
   },
   {
     id: "flat-1-4-upcut",
@@ -82,7 +82,7 @@ export const BITS: SienciBit[] = [
     url: "https://sienci.com/product/1-4-flat-upcut-endmill/",
     type: "straight", cut: "upcut", diameter: SHANK_1_4, shank: SHANK_1_4, flutes: 2, cutLength: 25.4,
     tableRow: "1/4-straight", supportedInV1: true,
-    bestFor: "Recortes e rebaixos grandes; mais rápida e mais robusta que a 1/8″.",
+    bestFor: "Cutouts and large pockets; faster and sturdier than the 1/8″.",
   },
   {
     id: "flat-1-4-downcut",
@@ -90,7 +90,7 @@ export const BITS: SienciBit[] = [
     url: "https://sienci.com/product/1-4-1-1-4_flat-downcut-end-mill/",
     type: "straight", cut: "downcut", diameter: SHANK_1_4, shank: SHANK_1_4, flutes: 2, cutLength: 25.4,
     tableRow: "1/4-straight", supportedInV1: true,
-    bestFor: "Rebaixos grandes em compensado sem lascar a face de cima.",
+    bestFor: "Large pockets in plywood without chipping the top face.",
   },
   {
     id: "flat-1-4-1flute",
@@ -98,7 +98,7 @@ export const BITS: SienciBit[] = [
     url: "https://sienci.com/product/1-4-single-flute-end-mill/",
     type: "straight", cut: "upcut", diameter: SHANK_1_4, shank: SHANK_1_4, flutes: 1, cutLength: 19.05,
     tableRow: "1/4-1flute", supportedInV1: true,
-    bestFor: "Plásticos e alumínio em peças maiores.",
+    bestFor: "Plastics and aluminum on larger parts.",
   },
   {
     id: "flat-1-4-compression",
@@ -106,7 +106,7 @@ export const BITS: SienciBit[] = [
     url: "https://sienci.com/product/1-4-flat-compression-end-mill/",
     type: "straight", cut: "compression", diameter: SHANK_1_4, shank: SHANK_1_4, flutes: 2, cutLength: 25, compressionUpcut: 4,
     tableRow: "1/4-straight", supportedInV1: true,
-    bestFor: "Recortes em compensado com as duas faces limpas. A primeira passada precisa passar de 4 mm.",
+    bestFor: "Cutouts in plywood with both faces clean. The first pass has to go deeper than 4 mm.",
   },
   {
     id: "vbit-30-1-8",
@@ -114,7 +114,7 @@ export const BITS: SienciBit[] = [
     url: "https://sienci.com/product/30-degree_engraving_vbit_4-10pc_pack/",
     type: "vbit", cut: "straight", diameter: SHANK_1_8, shank: SHANK_1_8, flutes: 1, cutLength: 11, angle: 30,
     tableRow: "vbit", supportedInV1: true,
-    bestFor: "Gravação de textos finos e contornos.",
+    bestFor: "Engraving fine text and outlines.",
   },
   {
     id: "vbit-60-15mm",
@@ -122,7 +122,7 @@ export const BITS: SienciBit[] = [
     url: "https://sienci.com/product/15mm_60-degree-v-bit/",
     type: "vbit", cut: "straight", diameter: 15, shank: SHANK_1_4, flutes: 2, cutLength: 17, angle: 60,
     tableRow: "vbit", supportedInV1: true,
-    bestFor: "Letreiros e gravação em V; vem no Starter End Mill Set.",
+    bestFor: "Signs and V-carving; comes in the Starter End Mill Set.",
   },
   {
     id: "vbit-90-15mm",
@@ -130,7 +130,7 @@ export const BITS: SienciBit[] = [
     url: "https://sienci.com/product/15mm_90-degree-1_4-v-bit/",
     type: "vbit", cut: "straight", diameter: 15, shank: SHANK_1_4, flutes: 2, cutLength: 12.7, angle: 90,
     tableRow: "vbit", supportedInV1: true,
-    bestFor: "Gravação em V mais larga e chanfros.",
+    bestFor: "Wider V-carving and chamfers.",
   },
   {
     id: "surfacing-22mm",
@@ -138,7 +138,7 @@ export const BITS: SienciBit[] = [
     url: "https://sienci.com/product/22mm-surfacing-bit/",
     type: "surfacing", cut: "straight", diameter: 22, shank: SHANK_1_4, flutes: 2, cutLength: 12,
     tableRow: "surfacing-22", supportedInV1: false,
-    bestFor: "Aplainar a mesa de sacrifício (ferramenta Surfacing do gSender). Não serve para placas.",
+    bestFor: "Surfacing the spoilboard (gSender's Surfacing tool). Not for signs.",
   },
   {
     id: "ball-1-4",
@@ -146,13 +146,13 @@ export const BITS: SienciBit[] = [
     url: "https://sienci.com/product/1-4-ballnose-upcut-end-mill/",
     type: "ball", cut: "upcut", diameter: SHANK_1_4, shank: SHANK_1_4, flutes: 2, cutLength: 25.4,
     tableRow: null, supportedInV1: false,
-    bestFor: "Relevos 3D e entalhes arredondados (fora do escopo da v1).",
+    bestFor: "3D reliefs and rounded carving (out of scope for v1).",
   },
 ];
 
 export const BIT_BY_ID = new Map(BITS.map((f) => [f.id, f]));
 
-/** Fresas que vêm no Starter End Mill Set (incluído no Beginner's Kit). */
+/** Bits included in the Starter End Mill Set (part of the Beginner's Kit). */
 export const STARTER_SET = ["flat-1-4-upcut", "flat-1-8-upcut", "flat-1-8-1flute", "vbit-60-15mm", "surfacing-22mm"];
 
 export type Compatibility =
@@ -160,16 +160,16 @@ export type Compatibility =
   | { status: "with-accessory"; accessory: Accessory }
   | { status: "incompatible"; reason: string };
 
-/** Se a fresa cabe no router/spindle, e se precisa comprar pinça ou adaptador. */
+/** Whether the bit fits the router/spindle, and whether a collet or adapter must be bought. */
 export function compatibility(bit: SienciBit, headId: HeadId): Compatibility {
   const head = HEADS[headId];
   if (head.shanks.some((h) => Math.abs(h - bit.shank) < 0.01)) return { status: "compatible" };
   const ac = head.shanksWithAccessory.find((h) => Math.abs(h.shank - bit.shank) < 0.01);
   if (ac) return { status: "with-accessory", accessory: ac.accessory };
-  return { status: "incompatible", reason: `O ${head.name} não prende hastes de ${fmtInch(bit.shank)}.` };
+  return { status: "incompatible", reason: `The ${head.name} cannot hold ${fmtInch(bit.shank)} shanks.` };
 }
 
-/** Converte para o formato de ferramenta do motor de CAM. */
+/** Converts to the CAM engine's tool format. */
 export function toTool(bit: SienciBit, toolNumber: number): ToolInput {
   return {
     id: toolNumber,

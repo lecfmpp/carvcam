@@ -3,7 +3,7 @@ import { area, bounds } from "../src/geometry/clip.js";
 import { curve } from "../src/geometry/shapes.js";
 import { generatePlate } from "../src/generate.js";
 
-const K = 0.5523; // alça de Bézier que aproxima um quarto de círculo
+const K = 0.5523; // Bézier handle length that approximates a quarter circle
 const circleNodes = (r: number) => [
   { x: r, y: 0, ix: 0, iy: -r * K, ox: 0, oy: r * K },
   { x: 0, y: r, ix: r * K, iy: 0, ox: -r * K, oy: 0 },

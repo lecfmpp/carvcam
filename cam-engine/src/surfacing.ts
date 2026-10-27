@@ -9,21 +9,21 @@ import { MachineSchema, ToolSchema, type MachineInput, type Tool, type ToolInput
 import { verifyGcode, type VerifyResult } from "./verify.js";
 
 /**
- * Aplainamento da mesa de sacrifício: varredura em zigue-zague ao longo de X, avançando em Y.
- * Origem do trabalho: canto frontal esquerdo da área, Z0 na face atual da mesa.
- * O centro da fresa percorre a área inteira [0, largura] × [0, altura].
+ * Spoilboard surfacing: zigzag passes along X, stepping over in Y.
+ * Work origin: front-left corner of the area, Z0 on the current spoilboard surface.
+ * The bit center covers the whole area [0, width] × [0, height].
  */
 export interface SurfacingInput {
   width: number;
   height: number;
-  /** Quanto tirar da mesa (mm). */
+  /** How much to take off the spoilboard (mm). */
   depth: number;
   stepdown?: number;
   stepover?: number;
   tool?: ToolInput;
   machine?: MachineInput;
   cut?: Partial<CutParams>;
-  /** Preenche máquina, fresa (22 mm) e parâmetros a partir do catálogo Sienci. */
+  /** Fills in machine, bit (22 mm) and parameters from the Sienci catalog. */
   sienci?: { machine: MachineId; head?: HeadId; speed?: Speed };
 }
 
@@ -35,7 +35,7 @@ export interface SurfacingResult {
   tool: Tool;
   params: CutParams;
   verification: VerifyResult;
-  /** Posição do dial quando o router é ajustado à mão (Makita). */
+  /** Dial setting when the router speed is set by hand (Makita). */
   dial?: { position: number; rpm: number };
 }
 
@@ -85,10 +85,10 @@ export function generateSurfacing(input: SurfacingInput): SurfacingResult {
   }
   b.safe();
 
-  const notes = dial ? [`Makita: gire o dial para ${dial.position} ${dial.rpm} RPM antes de ligar`] : [];
+  const notes = dial ? [`Makita: set the dial to ${dial.position}, about ${dial.rpm} RPM, before switching on`] : [];
   const gcode = postGrbl(
-    { title: "Aplainar a mesa", stock: { width: W, height: H, thickness: input.depth }, safeHeight: machine.safeHeight, notes },
-    [{ name: "Aplainamento", tool: tool, rpm: p.rpm, moves: b.moves }],
+    { title: "Surface the spoilboard", stock: { width: W, height: H, thickness: input.depth }, safeHeight: machine.safeHeight, notes },
+    [{ name: "Surfacing", tool: tool, rpm: p.rpm, moves: b.moves }],
   );
   const verification = verifyGcode(gcode, {
     xMin: -1,

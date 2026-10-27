@@ -5,13 +5,13 @@ import { ToolSchema, type ToolInput } from "../src/schema.js";
 import { simulate } from "../src/sim/heightmap.js";
 
 /**
- * Simula um G-code e salva uma imagem vista de cima (PNG), colorida pela profundidade.
- * Uso: npm run render -- <arquivo.nc> <saida.png> <largura> <altura> <espessura> [exemplo.json]
- * O exemplo.json (opcional) informa as fresas; sem ele, usa a reta de 1/8".
+ * Simulates a G-code file and saves a top-down image (PNG), colored by depth.
+ * Usage: npm run render -- <file.nc> <output.png> <width> <height> <thickness> [example.json]
+ * The example.json (optional) provides the bits; without it, the 1/8" straight bit is used.
  */
 const [gfile, out, W, H, T, exampleFile] = process.argv.slice(2);
 if (!gfile || !out || !W || !H || !T) {
-  console.error("Uso: npm run render -- <arquivo.nc> <saida.png> <largura> <altura> <espessura> [exemplo.json]");
+  console.error("Usage: npm run render -- <file.nc> <output.png> <width> <height> <thickness> [example.json]");
   process.exit(2);
 }
 const ex = exampleFile ? migrateLegacySpec<any>(JSON.parse(readFileSync(exampleFile, "utf8"))) : {};
@@ -26,8 +26,8 @@ for (let j = 0; j < h; j++) {
   for (let i = 0; i < w; i++) {
     const v = hm.h[(h - 1 - j) * w + i];
     let rgb: [number, number, number];
-    if (v <= -thick + 0.01) rgb = [30, 30, 40]; // atravessou
-    else if (v > -0.01) rgb = [230, 190, 140]; // face intacta
+    if (v <= -thick + 0.01) rgb = [30, 30, 40]; // cut through
+    else if (v > -0.01) rgb = [230, 190, 140]; // untouched surface
     else {
       const t = -v / thick;
       rgb = [200 - 150 * t, 150 - 100 * t, 100 - 60 * t].map(Math.round) as [number, number, number];
@@ -60,4 +60,4 @@ ihdr.writeUInt32BE(h, 4);
 ihdr[8] = 8;
 ihdr[9] = 2;
 writeFileSync(out, Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk("IHDR", ihdr), chunk("IDAT", deflateSync(raw)), chunk("IEND", Buffer.alloc(0))]));
-console.error(`Imagem salva em ${out}`);
+console.error(`Image saved to ${out}`);

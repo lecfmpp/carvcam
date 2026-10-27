@@ -16,8 +16,8 @@ export interface Feeds {
 }
 
 /**
- * Monta a sequência de movimentos garantindo as regras de segurança por construção:
- * deslocamento rápido (G0) só acima da face do material, e descida sempre em avanço controlado.
+ * Builds the sequence of moves, enforcing the safety rules by construction:
+ * rapid moves (G0) only above the material surface, and plunges always at a controlled feed rate.
  */
 export class PathBuilder {
   readonly moves: Move[] = [];
@@ -38,11 +38,11 @@ export class PathBuilder {
   }
 
   rapidZ(z: number) {
-    if (z < 0) throw new Error("G0 abaixo da face do material não é permitido");
+    if (z < 0) throw new Error("G0 below the material surface is not allowed");
     this.push({ g: 0, x: this.x, y: this.y, z });
   }
 
-  /** Sobe até a altura de recuo (dentro da operação). */
+  /** Rises to the retract height (within the operation). */
   retract() {
     if (this.z < this.feeds.retractHeight) this.rapidZ(this.feeds.retractHeight);
   }
@@ -51,7 +51,7 @@ export class PathBuilder {
     if (this.z < this.feeds.safeHeight) this.rapidZ(this.feeds.safeHeight);
   }
 
-  /** Vai até (x, y) pelo alto. */
+  /** Moves to (x, y) at height. */
   travel(p: Pt) {
     if (Math.abs(p.x - this.x) < 1e-9 && Math.abs(p.y - this.y) < 1e-9) return;
     this.retract();
@@ -59,7 +59,7 @@ export class PathBuilder {
   }
 
   /**
-   * Desce até z: rápido só até 0,5 mm acima da face do material, depois em avanço de mergulho.
+   * Plunges to z: rapid only down to 0.5 mm above the material surface, then at the plunge rate.
    */
   plunge(z: number) {
     if (this.z > 0.5) this.rapidZ(0.5);
@@ -76,13 +76,13 @@ export class PathBuilder {
   }
 }
 
-/** Níveis de profundidade, do mais raso ao final, com passadas iguais. */
+/** Depth levels, from the shallowest to the final one, with equal passes. */
 export function depthLevels(depth: number, stepdown: number): number[] {
   const n = Math.max(1, Math.ceil(depth / stepdown - 1e-9));
   return Array.from({ length: n }, (_, i) => -round4((depth * (i + 1)) / n));
 }
 
-/** Gira o contorno fechado para começar no vértice mais próximo de `from`. */
+/** Rotates the closed outline to start at the vertex closest to `from`. */
 export function rotateToNearest(path: Pt[], from: Pt): Pt[] {
   let best = 0;
   let bd = Infinity;
