@@ -1,0 +1,185 @@
+# Instaladores do CarvCAM (Electron), no mesmo formato do CI do gSender:
+#   Windows: NSIS (.exe) · Linux: AppImage e .deb (x64) · Raspberry Pi: AppImage e .deb (arm64, armv7l)
+#   Mac: .dmg (Intel e Apple Silicon)
+# Em todo push na branch e em PRs: gera os instaladores sem assinatura e guarda como artefatos.
+# Numa tag v1.2.3: gera, assina (se os segredos existirem), publica na Release do GitHub (de onde o
+# app instalado baixa as atualizações) e sobe também cópias com nome fixo, que o site usa:
+#   https://github.com/lecfmpp/carvcam/releases/latest/download/CarvCAM-Windows-64Bit.exe
+#   .../CarvCAM-Linux-x86_64.AppImage · .../CarvCAM-Linux-amd64.deb
+#   .../CarvCAM-Linux-arm64.AppImage · .../CarvCAM-Linux-arm64.deb · .../CarvCAM-Linux-armv7l.AppImage · .../CarvCAM-Linux-armhf.deb
+#   .../CarvCAM-Mac-arm64.dmg · .../CarvCAM-Mac-x64.dmg
+name: Installers
+
+on:
+  push:
+    tags: ["v*"]
+    branches: [main, feat/windows-installer]
+  pull_request:
+    paths: ["desktop/**", "gsender-ui/**", "cam-engine/**", ".github/workflows/installers.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        shell: bash
+        run: |
+          (cd cam-engine && npm ci)
+          (cd gsender-ui && npm ci)
+          (cd desktop && npm ci)
+      - name: Test the machine protocol
+        shell: bash
+        run: cd gsender-ui && npx vitest run
+      - name: Version from the tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: cd desktop && npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version --allow-same-version
+      - name: Build (and sign on tags)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WIN_PUBLISHER_NAME: ${{ secrets.WIN_PUBLISHER_NAME }}
+          # Escolha um serviço de assinatura (veja docs/assinatura-de-codigo.md).
+          WIN_SIGN_PROVIDER: ${{ startsWith(github.ref, 'refs/tags/v') && secrets.WIN_SIGN_PROVIDER || '' }}
+          # Azure Artifact Signing
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_SIGNING_ENDPOINT: ${{ startsWith(github.ref, 'refs/tags/v') && secrets.AZURE_SIGNING_ENDPOINT || '' }}
+          AZURE_SIGNING_ACCOUNT: ${{ secrets.AZURE_SIGNING_ACCOUNT }}
+          AZURE_SIGNING_PROFILE: ${{ secrets.AZURE_SIGNING_PROFILE }}
+          # SSL.com eSigner
+          ESIGNER_USERNAME: ${{ secrets.ESIGNER_USERNAME }}
+          ESIGNER_PASSWORD: ${{ secrets.ESIGNER_PASSWORD }}
+          ESIGNER_CREDENTIAL_ID: ${{ secrets.ESIGNER_CREDENTIAL_ID }}
+          ESIGNER_TOTP_SECRET: ${{ secrets.ESIGNER_TOTP_SECRET }}
+          CODESIGNTOOL_DIR: ${{ github.workspace }}\CodeSignTool
+        run: |
+          if [ "$WIN_SIGN_PROVIDER" = "sslcom" ]; then
+            curl -sSL -o cst.zip https://www.ssl.com/download/codesigntool-for-windows/
+            mkdir -p CodeSignTool && unzip -q cst.zip -d CodeSignTool
+          fi
+          cd desktop
+          PUBLISH=never
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then PUBLISH=always; fi
+          npm run dist:win -- --publish "$PUBLISH"
+      - name: Fixed-name copy for the website
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd desktop/release
+          cp CarvCAM-*-Windows-64Bit.exe CarvCAM-Windows-64Bit.exe
+          gh release upload "$GITHUB_REF_NAME" CarvCAM-Windows-64Bit.exe --clobber
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CarvCAM-Windows
+          path: |
+            desktop/release/*.exe
+            desktop/release/latest.yml
+          retention-days: 14
+
+  # Linux depois do Windows: na tag, o primeiro job cria a Release e os outros só acrescentam arquivos.
+  build-linux:
+    needs: build-windows
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: |
+          (cd cam-engine && npm ci)
+          (cd gsender-ui && npm ci)
+          (cd desktop && npm ci)
+      - name: Version from the tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: cd desktop && npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version --allow-same-version
+      - name: Build Linux (PC) and Raspberry Pi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LINUX_ARCHS: x64,arm64,armv7l
+        run: |
+          cd desktop
+          PUBLISH=never
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then PUBLISH=always; fi
+          npm run dist:linux -- --publish "$PUBLISH"
+      - name: Fixed-name copies for the website
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd desktop/release
+          for f in CarvCAM-*-Linux-*; do
+            fixed=$(echo "$f" | sed -E 's/^CarvCAM-[0-9][^-]*-Linux-/CarvCAM-Linux-/')
+            cp "$f" "$fixed"
+            gh release upload "$GITHUB_REF_NAME" "$fixed" --clobber
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CarvCAM-Linux
+          path: |
+            desktop/release/*.AppImage
+            desktop/release/*.deb
+            desktop/release/latest-linux*.yml
+          retention-days: 14
+
+  build-mac:
+    needs: build-windows
+    runs-on: macos-latest
+    env:
+      HAS_MAC_CERT: ${{ secrets.MAC_CERT_P12_BASE64 != '' && 'true' || 'false' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: |
+          (cd cam-engine && npm ci)
+          (cd gsender-ui && npm ci)
+          (cd desktop && npm ci)
+      - name: Version from the tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: cd desktop && npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version --allow-same-version
+      - name: Build Mac (signed and notarized when the Apple secrets exist)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_LINK: ${{ secrets.MAC_CERT_P12_BASE64 }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ env.HAS_MAC_CERT }}
+        run: |
+          cd desktop
+          # Sem certificado da Apple o .dmg sai sem assinatura e só como artefato (não vai para a Release).
+          PUBLISH=never
+          if [[ "$GITHUB_REF" == refs/tags/v* && "$HAS_MAC_CERT" == "true" ]]; then PUBLISH=always; fi
+          npm run dist:mac -- --publish "$PUBLISH"
+      - name: Fixed-name copies for the website
+        if: startsWith(github.ref, 'refs/tags/v') && env.HAS_MAC_CERT == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd desktop/release
+          for f in CarvCAM-*-Mac-*.dmg; do
+            fixed=$(echo "$f" | sed -E 's/^CarvCAM-[0-9][^-]*-Mac-/CarvCAM-Mac-/')
+            cp "$f" "$fixed"
+            gh release upload "$GITHUB_REF_NAME" "$fixed" --clobber
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CarvCAM-Mac
+          path: desktop/release/*.dmg
+          retention-days: 14

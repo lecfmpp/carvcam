@@ -14,6 +14,9 @@ de Node.js nem de nada além do instalador.
 | Atualização | electron-updater + Releases do GitHub | Igual (`lecfmpp/carvcam`) |
 | Assinatura | DigiCert KeyLocker no CI | DigiCert, SSL.com eSigner ou Azure (`build/sign.cjs`) |
 | Nome do arquivo | `gSender-1.6.4-Windows-64Bit.exe` | `CarvCAM-0.1.0-Windows-64Bit.exe` |
+| Linux | AppImage e .deb | AppImage e .deb, com regra udev para a USB (sem grupo dialout) |
+| Raspberry Pi | arm64 e armv7l | arm64 e armv7l (AppImage e .deb) |
+| Mac | .dmg assinado e notarizado | .dmg (Intel e Apple Silicon); assinatura com os segredos da Apple |
 
 ## Como funciona
 `main.mjs` sobe o bridge em `127.0.0.1:8765`, serve o app compilado em `http://127.0.0.1:4173`
@@ -26,10 +29,14 @@ cd desktop
 npm install
 npm start            # compila o gsender-ui e abre o app
 npm run dist:win     # gera release/CarvCAM-<versão>-Windows-64Bit.exe
+npm run dist:linux   # AppImage e .deb (LINUX_ARCHS=x64,arm64,armv7l para incluir o Raspberry Pi)
+npm run dist:mac     # .dmg (só num Mac)
 ```
 No Linux, o `dist:win` precisa do Wine (o NSIS gera o desinstalador com ele). O caminho normal é
-o GitHub Actions (`.github/workflows/windows-installer.yml`), que roda no Windows: cada push gera
-o instalador como artefato, e uma tag `v*` publica na Release, assinado se os segredos existirem.
+o GitHub Actions (`.github/workflows/installers.yml`), que roda no Windows: cada push gera
+os instaladores como artefatos, e uma tag `v*` publica na Release, assinado se os segredos existirem,
+com cópias de nome fixo (`CarvCAM-Windows-64Bit.exe`, `CarvCAM-Linux-x86_64.AppImage`...) para os
+links do site em `releases/latest/download/`.
 
 ## Assinatura
 Ver [docs/assinatura-de-codigo.md](../docs/assinatura-de-codigo.md).

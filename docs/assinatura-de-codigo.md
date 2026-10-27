@@ -60,7 +60,7 @@ documento pessoal e assina pela nuvem, direto no GitHub Actions.
    (o código do autenticador, em texto) para assinatura automática.
 4. Cadastre no GitHub: `WIN_SIGN_PROVIDER` = `sslcom`, `ESIGNER_USERNAME`, `ESIGNER_PASSWORD`,
    `ESIGNER_CREDENTIAL_ID`, `ESIGNER_TOTP_SECRET` e `WIN_PUBLISHER_NAME`.
-5. Confira o link de download do CodeSignTool no workflow (`.github/workflows/windows-installer.yml`)
+5. Confira o link de download do CodeSignTool no workflow (`.github/workflows/installers.yml`)
    com a página atual da SSL.com.
 
 ### 2c. DigiCert KeyLocker (igual ao gSender)

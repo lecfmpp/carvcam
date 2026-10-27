@@ -9,7 +9,6 @@ module.exports = {
   appId: "com.carvcam.app",
   productName: "CarvCAM",
   copyright: "Copyright © 2026 CarvCAM",
-  artifactName: "${productName}-${version}-Windows-64Bit.${ext}",
   asar: true,
   asarUnpack: ["**/*.node"],
   files: ["main.mjs", "app/**", "bridge/**", "package.json", "LICENSE"],
@@ -18,6 +17,7 @@ module.exports = {
   npmRebuild: false, // o serialport usa N-API (binários prontos para win32-x64, sem compilar)
   win: {
     target: [{ target: "nsis", arch: ["x64"] }],
+    artifactName: "${productName}-${version}-Windows-64Bit.${ext}",
     icon: "build/icon.ico",
     ...(azure
       ? {
@@ -29,6 +29,31 @@ module.exports = {
           },
         }
       : { signtoolOptions: { sign: "./build/sign.cjs", ...(process.env.WIN_PUBLISHER_NAME ? { publisherName: process.env.WIN_PUBLISHER_NAME } : {}) } }),
+  },
+  // Linux como o gSender: AppImage e .deb. x64 para PCs; arm64 e armv7l para o Raspberry Pi.
+  linux: {
+    target: [
+      { target: "AppImage", arch: (process.env.LINUX_ARCHS || "x64").split(",") },
+      { target: "deb", arch: (process.env.LINUX_ARCHS || "x64").split(",") },
+    ],
+    artifactName: "${productName}-${version}-Linux-${arch}.${ext}",
+    icon: "build/icon.png",
+    category: "Graphics",
+    synopsis: "Design, prepare and carve on your LongMill or AltMill",
+    maintainer: "CarvCAM",
+    executableName: "carvcam",
+    desktop: { Name: "CarvCAM", StartupWMClass: "CarvCAM", Keywords: "CNC;router;LongMill;AltMill;gcode;" },
+  },
+  // .deb instala uma regra udev para a controladora USB funcionar sem entrar no grupo dialout.
+  deb: { afterInstall: "build/linux-after-install.sh", afterRemove: "build/linux-after-remove.sh" },
+  mac: {
+    target: [{ target: "dmg", arch: ["x64", "arm64"] }],
+    artifactName: "${productName}-${version}-Mac-${arch}.${ext}",
+    icon: "build/icon.png",
+    category: "public.app-category.productivity",
+    hardenedRuntime: true,
+    entitlements: "build/entitlements.mac.plist",
+    entitlementsInherit: "build/entitlements.mac.plist",
   },
   nsis: {
     oneClick: false,

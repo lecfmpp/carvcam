@@ -12,6 +12,8 @@
     "prepare-app": "node scripts/prepare.mjs",
     "start": "npm run prepare-app && electron .",
     "dist:win": "npm run prepare-app && electron-builder --win --x64 --config electron-builder.config.cjs",
+    "dist:linux": "npm run prepare-app && electron-builder --linux --config electron-builder.config.cjs",
+    "dist:mac": "npm run prepare-app && electron-builder --mac --config electron-builder.config.cjs",
     "dist:dir": "npm run prepare-app && electron-builder --win --x64 --dir --config electron-builder.config.cjs"
   },
   "dependencies": {
