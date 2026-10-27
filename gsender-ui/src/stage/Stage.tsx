@@ -1,6 +1,7 @@
 import { Minus, Plus, RotateCw } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Seg } from "../components/ui";
+import { CanvasTools } from "./Rulers";
 
 export type View = "top" | "3d";
 
@@ -17,7 +18,7 @@ export interface StageApi {
  * Stage to the left of the panel: dot grid, Top/3D toggle, 360° button and zoom.
  * Content is drawn by `render`, which receives view, zoom and size.
  */
-export function Stage(props: { caption?: ReactNode; tools?: ReactNode; overlay?: ReactNode; render(api: StageApi): ReactNode; defaultView?: View; noViewToggle?: boolean; bottomLeft?: ReactNode }) {
+export function Stage(props: { caption?: ReactNode; tools?: ReactNode; overlay?: ReactNode; render(api: StageApi): ReactNode; defaultView?: View; noViewToggle?: boolean; bottomLeft?: ReactNode; /** Show the Rulers toggle and snapping grid popover (top view only). */ canvasTools?: boolean }) {
   const [view, setView] = useState<View>(props.defaultView ?? "top");
   const [zoom, setZoom] = useState(1);
   const [spin, setSpin] = useState(0);
@@ -61,6 +62,7 @@ export function Stage(props: { caption?: ReactNode; tools?: ReactNode; overlay?:
           />
         )}
         {props.tools}
+        {props.canvasTools && view === "top" ? <CanvasTools /> : null}
         {props.noViewToggle ? null : (
           <button
             className="tool-btn"

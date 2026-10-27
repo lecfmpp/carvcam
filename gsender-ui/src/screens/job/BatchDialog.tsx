@@ -8,6 +8,9 @@ import { engineOptions, runBatch, runEngine } from "../../engine/useEngine";
 import type { BatchDone } from "../../engine/protocol";
 import { fillRow, mapPlaceholders, okTime, sampleCsv, unusedColumns } from "../../lib/batch";
 import { materialById } from "../../lib/catalog";
+import { useDesign } from "../../state/design";
+import { applyCorrection } from "../create/elements";
+import type { BatchRow } from "../../lib/batch";
 import { toast } from "../../state/ui";
 import { ToolpathOverlay, useSegments } from "../../stage/Board";
 import { CostPanel } from "./CostPanel";
@@ -120,6 +123,27 @@ export function BatchDialog({ ctx, onClose }: { ctx: JobCtx; onClose(): void }) 
   };
 
   const busy = !!progress;
+  const textRef = useRef<HTMLTextAreaElement>(null);
+
+  /** A failed row's way out: the engine's fix applied to the template (every row gets it). */
+  const fixFor = (r: BatchRow) => {
+    if (!r.fix) return null;
+    const f = r.fix;
+    const cur = (design.spec as unknown as Record<string, Record<string, unknown>[] | undefined>)[`${f.element.type}s`]?.[f.element.index]?.[f.field];
+    const what = f.field === "size" ? `Make that text ${f.value} mm for every row` : f.field === "width" ? `Make it ${f.value} mm wide for every row` : `Set ${f.field} to ${f.value} for every row`;
+    return { label: typeof cur === "number" && cur === f.value ? null : what, spec: applyCorrection(design.spec, f.element, f.field, f.value) };
+  };
+  /** Selects the row's line in the CSV so the user can shorten or correct it. */
+  const editRow = (r: BatchRow) => {
+    const ta = textRef.current;
+    if (!ta) return;
+    const lines = text.split(/\r?\n/);
+    const line = r.index + 1;
+    const start = lines.slice(0, line).reduce((n, l) => n + l.length + 1, 0);
+    ta.focus();
+    ta.setSelectionRange(start, start + (lines[line]?.length ?? 0));
+    ta.scrollIntoView({ block: "center", behavior: "smooth" });
+  };
   const okRows = out?.rows.filter((r) => r.ok) ?? [];
 
   return (
@@ -200,6 +224,7 @@ export function BatchDialog({ ctx, onClose }: { ctx: JobCtx; onClose(): void }) 
           <input ref={fileRef} type="file" accept=".csv,.tsv,.txt,text/csv" hidden onChange={(e) => onFile(e.target.files?.[0])} />
         </div>
         <textarea
+          ref={textRef}
           className="batch-text mono"
           value={text}
           spellCheck={false}
@@ -282,6 +307,30 @@ export function BatchDialog({ ctx, onClose }: { ctx: JobCtx; onClose(): void }) 
                 <span className="batch-item__main">
                   <span className="batch-item__file mono">{r.ok ? r.fileName : Object.values(r.row).join(" · ")}</span>
                   {r.message ? <span className={r.ok ? "batch-item__msg" : "batch-item__msg batch-item__msg--bad"}>{r.message}</span> : null}
+                  {!r.ok ? (
+                    <span className="batch-item__fix">
+                      {(() => {
+                        const f = fixFor(r);
+                        return f?.label ? (
+                          <button
+                            className="btn btn--light btn--sm"
+                            onClick={() => {
+                              useDesign.getState().patchSpec(() => f.spec);
+                              toast("Template updated. Generate again to redo the failed rows.");
+                            }}
+                          >
+                            {f.label}
+                          </button>
+                        ) : null;
+                      })()}
+                      <button className="btn btn--outline btn--sm" onClick={() => editRow(r)}>
+                        Edit this row
+                      </button>
+                      <button className="btn btn--outline btn--sm" onClick={() => nav("/create")}>
+                        Open the design
+                      </button>
+                    </span>
+                  ) : null}
                 </span>
                 <span className="job-op__time">{r.ok ? fmtMin(r.timeSec / 60) : "—"}</span>
               </div>

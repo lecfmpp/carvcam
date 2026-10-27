@@ -214,7 +214,7 @@ export function generatePlate(input: PlateSpecInput, options: GenerateOptions): 
             severity: "warning",
             message: `Wide parts of ${g.label} would go deeper than ${fmt(max)} mm; there the bottom is left flat and cleared with the V-bit (slower).`,
             suggestion: max < g.depth ? "The bit cannot go any deeper. Use a larger V-bit or make the design thinner." : `Increase the max depth to about ${fmt(Math.min(tool.cutLength, spec.thickness * 0.6))} mm, or make the design thinner.`,
-            data: { flatArea: Math.round(res.flatArea) },
+            data: { flatArea: Math.round(res.flatArea), limitedByBit: max < g.depth, maxDepth: max, suggestedDepth: Math.round(Math.min(tool.cutLength, spec.thickness * 0.6) * 10) / 10 },
             element: g.ref,
           });
         }
@@ -346,6 +346,7 @@ function checkDetail(el: CutElement, r: number, tool: Tool, warnings: Warning[],
       message: `The strokes of ${el.label} are thinner than the ${fmt(tool.diameter, 2)} mm bit; nothing would be cut.`,
       suggestion: "Make it bigger, use a bolder font or a smaller bit.",
       element: el.ref,
+      data: { bitDiameter: tool.diameter, role: mode === "cutout" ? "cutout" : "main" },
     });
     return;
   }
@@ -359,7 +360,7 @@ function checkDetail(el: CutElement, r: number, tool: Tool, warnings: Warning[],
       severity: "warning",
       message: `Some ${where} in ${el.label} are narrower than the ${fmt(tool.diameter, 2)} mm bit; about ${fmt(pct)}% of that area will not be cut.`,
       suggestion: mode === "relief" ? "Increase the spacing or the text size, or use a smaller bit." : "Make it bigger, use a bolder font or a smaller bit.",
-      data: { areaMm2: Math.round(missedArea), percent: Math.round(pct * 10) / 10 },
+      data: { areaMm2: Math.round(missedArea), percent: Math.round(pct * 10) / 10, bitDiameter: tool.diameter, role: mode === "cutout" ? "cutout" : "main" },
       element: el.ref ?? nearestItem(el, missed, r),
     });
   }

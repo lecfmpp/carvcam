@@ -76,13 +76,49 @@ interface DesignState {
   setKeepOut(zones: KeepOutZone[]): void;
   /** Saves cost inputs without counting as a design change (no regeneration, checklist kept). */
   setJobCost(c: JobCost): void;
+  /** Earlier versions of the design (this session only, newest last), for "Undo last change". */
+  past: Design[];
+  undo(): boolean;
+  /** Last design the engine accepted without errors (this session only). */
+  lastGood: Design | null;
+  markGood(d: Design): void;
+  restoreLastGood(): boolean;
 }
+
+const MAX_UNDO = 50;
 
 export const useDesign = create<DesignState>()(
   persist(
-    (set, get) => ({
+    (rawSet, get) => {
+      // Every design change keeps the version before it, so the user can always step back.
+      // Rapid changes (dragging, typing) count as one step.
+      let lastPush = 0;
+      const set = (p: { design: Design; rev: number }) => {
+        const now = Date.now();
+        const merge = now - lastPush < 600 && get().past.length > 0;
+        lastPush = now;
+        rawSet(merge ? p : { ...p, past: [...get().past, get().design].slice(-MAX_UNDO) });
+      };
+      return {
       design: BLANK,
       rev: 0,
+      past: [],
+      lastGood: null,
+      undo: () => {
+        const past = get().past;
+        if (!past.length) return false;
+        rawSet({ design: past[past.length - 1], past: past.slice(0, -1), rev: get().rev + 1 });
+        return true;
+      },
+      markGood: (d) => {
+        if (get().lastGood !== d) rawSet({ lastGood: d });
+      },
+      restoreLastGood: () => {
+        const g = get().lastGood;
+        if (!g || g === get().design) return false;
+        set({ design: g, rev: get().rev + 1 });
+        return true;
+      },
       setDesign: (design) => set({ design, rev: get().rev + 1 }),
       patch: (p) => set({ design: { ...get().design, ...p }, rev: get().rev + 1 }),
       patchSpec: (fn) => set({ design: { ...get().design, spec: fn(structuredClone(get().design.spec)) }, rev: get().rev + 1 }),
@@ -113,11 +149,14 @@ export const useDesign = create<DesignState>()(
         set({ design: { ...d, material: m.id, spec: { ...d.spec, material: m.engine, thickness: t } }, rev: get().rev + 1 });
       },
       setKeepOut: (zones) => set({ design: { ...get().design, keepOut: zones }, rev: get().rev + 1 }),
-      setJobCost: (c) => set({ design: { ...get().design, jobCost: c } }),
-    }),
+      setJobCost: (c) => rawSet({ design: { ...get().design, jobCost: c } }),
+    };
+    },
     {
       name: "gsender-design",
       version: 3,
+      // Undo history and the last good design live only in this session.
+      partialize: (s) => ({ design: s.design, rev: s.rev }) as DesignState,
       // v1 (0.1.0) stored the spec with Portuguese field names. v3 adds keep-out zones and job costs
       // (both optional, so older designs load as they are).
       migrate: (persisted, version) => {

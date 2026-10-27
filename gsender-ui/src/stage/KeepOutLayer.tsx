@@ -1,6 +1,8 @@
 import type { KeepOutZone } from "@gsender-next/cam-engine";
 import { useRef, useState, type PointerEvent as RPointerEvent } from "react";
 import { moveZone, rectFromDrag, resizeZone, MIN_ZONE, type Bounds, type Handle } from "../screens/job/zones";
+import { SnapGuides, useSnapGrid } from "./Rulers";
+import { rectTargets, snapPoint, snapRect, SNAP_PX, type Guide, type Rect } from "./snap";
 
 /**
  * Clamps and keep-out zones drawn as hatched red rectangles over a top view.
@@ -20,6 +22,10 @@ export function KeepOutLayer(props: {
   onSelect?(i: number | null): void;
   onChange?(zones: KeepOutZone[]): void;
   onDrawn?(rect: { x: number; y: number; width: number; height: number }): void;
+  /** Board size (mm): its edges and center lines become snap targets while editing. */
+  board?: { width: number; height: number };
+  /** Stage zoom, so guide lines stay 1 px thin. */
+  zoom?: number;
 }) {
   const { scale: s, origin = { x: 0, y: 0 } } = props;
   const ref = useRef<HTMLDivElement>(null);
@@ -35,6 +41,16 @@ export function KeepOutLayer(props: {
     if (liveRef.current) props.onChange?.(liveRef.current);
     liveRef.current = null;
     setLive(null);
+    setGuides([]);
+  };
+  // Snapping while editing: invisible grid, board edges/centers and the other zones (Alt = free).
+  const grid = useSnapGrid();
+  const [guides, setGuides] = useState<Guide[]>([]);
+  const snapOpts = (skip: number | null) => {
+    const r = ref.current!.getBoundingClientRect();
+    const rects: Rect[] = props.zones.filter((_, k) => k !== skip);
+    if (props.board) rects.unshift({ x: 0, y: 0, ...props.board });
+    return { grid, targets: rectTargets(rects), tol: (SNAP_PX * props.frame.width) / r.width };
   };
   const [draft, setDraft] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const editable = !!props.onChange;
@@ -47,14 +63,15 @@ export function KeepOutLayer(props: {
     return { x: (e.clientX - r.left) / k - origin.x, y: (r.bottom - e.clientY) / k - origin.y };
   };
 
-  const drag = (e: RPointerEvent, onMove: (p: { x: number; y: number }) => void, onUp?: (p: { x: number; y: number }) => void) => {
+  type Pt = { x: number; y: number };
+  const drag = (e: RPointerEvent, onMove: (p: Pt, free: boolean) => void, onUp?: (p: Pt, free: boolean) => void) => {
     e.preventDefault();
     e.stopPropagation();
-    const move = (ev: PointerEvent) => onMove(toMm(ev));
+    const move = (ev: PointerEvent) => onMove(toMm(ev), ev.altKey);
     const up = (ev: PointerEvent) => {
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
-      onUp?.(toMm(ev));
+      onUp?.(toMm(ev), ev.altKey);
     };
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
@@ -66,24 +83,60 @@ export function KeepOutLayer(props: {
     const start = toMm(e);
     const z0 = zones[i];
     const base = props.zones;
-    drag(e, (p) => update(base.map((z, k) => (k === i ? moveZone(z0, p.x - start.x, p.y - start.y, bounds) : z))), commit);
+    const opts = snapOpts(i);
+    drag(
+      e,
+      (p, free) => {
+        let dx = p.x - start.x;
+        let dy = p.y - start.y;
+        if (!free) {
+          const r = snapRect({ x: z0.x + dx, y: z0.y + dy, width: z0.width, height: z0.height }, opts);
+          dx = r.rect.x - z0.x;
+          dy = r.rect.y - z0.y;
+          setGuides(r.guides);
+        } else setGuides([]);
+        update(base.map((z, k) => (k === i ? moveZone(z0, dx, dy, bounds) : z)));
+      },
+      commit,
+    );
+  };
+  /** Pointer snapped for corners (resizing, drawing). */
+  const snapAt = (p: Pt, free: boolean, opts: ReturnType<typeof snapOpts>) => {
+    if (free) {
+      setGuides([]);
+      return p;
+    }
+    const r = snapPoint(p, opts);
+    setGuides(r.guides);
+    return r;
   };
 
   const startResize = (e: RPointerEvent, i: number, h: Handle) => {
     const z0 = props.zones[i];
     const base = props.zones;
-    drag(e, (p) => update(base.map((z, k) => (k === i ? resizeZone(z0, h, p.x, p.y, bounds) : z))), commit);
+    const opts = snapOpts(i);
+    drag(
+      e,
+      (p, free) => {
+        const q = snapAt(p, free, opts);
+        update(base.map((z, k) => (k === i ? resizeZone(z0, h, q.x, q.y, bounds) : z)));
+      },
+      commit,
+    );
   };
 
   const startDraw = (e: RPointerEvent) => {
     if (!props.drawing || e.button !== 0) return;
-    const a = toMm(e);
+    const opts = snapOpts(null);
+    const a = snapAt(toMm(e), e.altKey, opts);
     drag(
       e,
-      (p) => setDraft(rectFromDrag(a, p, bounds)),
-      (p) => {
+      (p, free) => setDraft(rectFromDrag(a, snapAt(p, free, opts), bounds)),
+      (p, free) => {
+        const q = snapAt(p, free, opts);
         setDraft(null);
-        const r = rectFromDrag(a, p, bounds);
+        setGuides([]);
+        const r = rectFromDrag(a, q, bounds);
         if (r.width >= MIN_ZONE && r.height >= MIN_ZONE) props.onDrawn?.(r);
       },
     );
@@ -124,6 +177,7 @@ export function KeepOutLayer(props: {
         );
       })}
       {draft ? <div className="ko-zone ko-zone--draft" style={box(draft)} /> : null}
+      <SnapGuides guides={guides} width={props.frame.width} height={props.frame.height} scale={s} zoom={props.zoom ?? 1} origin={origin} />
     </div>
   );
 }

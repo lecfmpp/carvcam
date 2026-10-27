@@ -2,7 +2,7 @@ import type { GenerateOptions, GenerateResult, PlateSpecInput } from "@gsender-n
 import { useEffect, useRef, useState } from "react";
 import { PRESET_TO_SPEED, type Preset } from "../lib/catalog";
 import { isPanelMode } from "../lib/panel";
-import type { Design } from "../state/design";
+import { useDesign, type Design } from "../state/design";
 import { useActiveMachine } from "../state/workshop";
 import type { BatchDone, BatchRequest, EngineRequest, EngineResponse, SimGrid, WorkerMessage } from "./protocol";
 
@@ -86,6 +86,8 @@ export interface EngineState {
   result: GenerateResult | null;
   sim: SimGrid | null;
   error: string | null;
+  /** Last result that arrived, kept for the preview when the engine throws (never used to carve). */
+  prev: GenerateResult | null;
 }
 
 /**
@@ -95,7 +97,7 @@ export interface EngineState {
 export function useEngine(design: Design, opts: { simulate?: boolean; delay?: number; preset?: Preset } = {}): EngineState {
   const { machine, headId } = useActiveMachine();
   const preset = opts.preset ?? design.preset ?? machine.preset;
-  const [state, setState] = useState<EngineState>({ busy: true, result: null, sim: null, error: null });
+  const [state, setState] = useState<EngineState>({ busy: true, result: null, sim: null, error: null, prev: null });
   const latest = useRef(0);
   const key = engineKey(design, machine.id, headId, preset);
 
@@ -105,7 +107,13 @@ export function useEngine(design: Design, opts: { simulate?: boolean; delay?: nu
     const t = setTimeout(() => {
       runEngine(design.spec, engineOptions(design, machine.id, headId, preset), opts.simulate ?? true).then((r) => {
         if (ticket !== latest.current) return;
-        setState({ busy: false, result: r.result, sim: r.sim, error: r.ok ? null : (r.error ?? "Engine error") });
+        if (r.ok && r.result?.ok) useDesign.getState().markGood(design);
+        setState((s) =>
+          r.ok
+            ? { busy: false, result: r.result, sim: r.sim, error: null, prev: r.result }
+            : // The engine threw: no result for this design (nothing to carve), but the last preview stays.
+              { busy: false, result: null, sim: s.sim, error: r.error ?? "Engine error", prev: s.result ?? s.prev },
+        );
       });
     }, opts.delay ?? 250);
     return () => clearTimeout(t);

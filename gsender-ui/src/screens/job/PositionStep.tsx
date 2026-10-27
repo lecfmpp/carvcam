@@ -10,6 +10,7 @@ import { useWorkshop } from "../../state/workshop";
 import { Board, LayoutOverlay, ToolpathOverlay, useSegments } from "../../stage/Board";
 import { KeepOutLayer } from "../../stage/KeepOutLayer";
 import { fitScale, Stage } from "../../stage/Stage";
+import { StageRulers } from "../../stage/Rulers";
 import type { JobCtx } from "./Job";
 import { useFlow } from "./jobUtil";
 import { KeepOutPanel } from "./KeepOutPanel";
@@ -77,6 +78,8 @@ export function PositionStep({ ctx }: { ctx: JobCtx }) {
     setProbing(false);
     flow.set({ probeOpen: false });
   };
+  const openManualZ = () => flow.set({ manualZOpen: true, probeOpen: false, jogStep: 0.1 });
+  const closeManualZ = () => flow.set({ manualZOpen: false, jogStep: 1 });
 
   let primary: { label: string; click(): void; enabled: boolean } = { label: "", click: () => {}, enabled: false };
   let hint = "";
@@ -85,17 +88,33 @@ export function PositionStep({ ctx }: { ctx: JobCtx }) {
   if (sub === "stock") primary = { label: "My board is clamped", click: () => flow.set({ stockOk: true }), enabled: true };
   if (sub === "zero") {
     if (flow.probeOpen) primary = { label: probing ? "Measuring…" : "Measure height", click: measure, enabled: !probing && m.status === "idle" };
-    else {
+    else if (flow.manualZOpen) {
       primary = {
-        label: "Set zero here",
+        label: "Set Z zero here",
+        click: () => {
+          void m.setWorkZero(["z"]);
+          closeManualZ();
+          toast("Z zero set by hand. Lift the bit a little before moving to the corner.");
+        },
+        enabled: m.status === "idle",
+      };
+      hint = "Lower the bit until it just pinches the paper, then set Z.";
+    } else {
+      // Z can come from the touch plate, the paper method, or be set together with X/Y right here.
+      primary = {
+        label: m.zMeasured ? "Set zero here" : "Set X, Y and Z here",
         click: () => {
           if (!atCorner) toast("Zero set where the bit is now. The sign will be carved from this point.");
-          m.setWorkZero(["x", "y"]);
+          void m.setWorkZero(m.zMeasured ? ["x", "y"] : ["x", "y", "z"]);
           flow.set({ zeroSet: true });
         },
-        enabled: m.zMeasured,
+        enabled: m.status === "idle",
       };
-      hint = m.zMeasured ? (atCorner ? "The bit is on the corner." : "Click the board corner on the preview to move there.") : "Measure the tool height first.";
+      hint = m.zMeasured
+        ? atCorner
+          ? "The bit is on the corner."
+          : "Click the board corner on the preview to move there."
+        : "Z isn't set yet: use one of the two options below, or lower the bit onto the corner's top face and set all three here.";
     }
   }
   if (sub === "done") primary = { label: "Continue to Carve →", click: () => nav("/carve"), enabled: !!result?.ok };
@@ -106,11 +125,12 @@ export function PositionStep({ ctx }: { ctx: JobCtx }) {
     ["connect", "Connect", `${machineName(machine)} over USB`],
     ["home", "Find machine home", "So the machine knows where it is"],
     ["stock", "Place your board", `At least ${stockW} × ${stockH} mm`],
-    ["zero", "Set work zero", "Bottom-left corner, top face"],
+    ["zero", "Set work zero", "Bottom-left corner · Z with the touch plate or by hand"],
   ];
   const order: Sub[] = ["connect", "home", "stock", "zero", "done"];
   const ci = order.indexOf(sub);
   const video = sub === "zero" && flow.probeOpen ? "position-probe" : `position-${sub === "done" ? "zero" : sub}`;
+  const zStatus = !m.zMeasured ? "Not set yet" : m.zeroMethod === "manual" ? "Set by hand · paper method" : "Measured with the touch plate";
   const wp = workPos(m);
   const showStock = flow.stockOk || sub === "stock" || zones.length > 0 || drawing;
   const bounds = zoneBounds(stock);
@@ -119,8 +139,10 @@ export function PositionStep({ ctx }: { ctx: JobCtx }) {
     setZoneSel(i);
     if (i != null) setView("board");
   };
-  const zoneLayer = (scale: number, frame: { width: number; height: number }, origin: { x: number; y: number }) => (
+  const zoneLayer = (scale: number, frame: { width: number; height: number }, origin: { x: number; y: number }, zoom: number) => (
     <KeepOutLayer
+      board={stock}
+      zoom={zoom}
       zones={zones}
       scale={scale}
       frame={frame}
@@ -146,6 +168,7 @@ export function PositionStep({ ctx }: { ctx: JobCtx }) {
     <>
       <Stage
         noViewToggle
+        canvasTools={view === "board"}
         tools={
           <Seg<"bed" | "board">
             label="View"
@@ -180,9 +203,10 @@ export function PositionStep({ ctx }: { ctx: JobCtx }) {
                   <Board width={stock.width} height={stock.height} scale={s} label={`X0 Y0 at the bottom-left corner`}>
                     <div className={`job-face ${mat.grain ? "job-face--grain" : ""}`} style={{ background: mat.face }} />
                     {segs.length ? <ToolpathOverlay segments={segs} width={stock.width} height={stock.height} scale={s} opacity={0.6} /> : result ? <LayoutOverlay layout={result.layout} scale={s} /> : null}
+                    <StageRulers width={stock.width} height={stock.height} scale={s} zoom={api.zoom} min={{ x: -BOARD_PAD, y: -BOARD_PAD }} max={{ x: stock.width + BOARD_PAD, y: stock.height + BOARD_PAD }} />
                   </Board>
                 </div>
-                {zoneLayer(s, { width: fw, height: fh }, { x: BOARD_PAD, y: BOARD_PAD })}
+                {zoneLayer(s, { width: fw, height: fh }, { x: BOARD_PAD, y: BOARD_PAD }, api.zoom)}
               </div>
             );
           }
@@ -220,7 +244,7 @@ export function PositionStep({ ctx }: { ctx: JobCtx }) {
                     </div>
                   </>
                 ) : null}
-                {showStock ? zoneLayer(s, { width: machine.area[0], height: machine.area[1] }, STOCK_AT) : null}
+                {showStock ? zoneLayer(s, { width: machine.area[0], height: machine.area[1] }, STOCK_AT, api.zoom) : null}
                 <div
                   className="bed__bit"
                   style={{ left: px(bitAt.x) - 11, bottom: px(bitAt.y) - 11, background: `rgba(255,91,31,${0.15 + 0.35 * Math.min(1, -bitAt.z / machine.z)})` }}
@@ -308,7 +332,49 @@ export function PositionStep({ ctx }: { ctx: JobCtx }) {
           </div>
         ) : null}
 
-        {sub === "zero" && !flow.probeOpen ? (
+        {sub === "zero" && flow.manualZOpen ? (
+          <div className="job-sec">
+            <div style={{ font: "600 15px var(--font)" }}>
+              Set Z by hand <span className="mono" style={{ font: "400 11px var(--mono)", color: "var(--text-4)" }}>paper method</span>
+            </div>
+            <div className="job-body">
+              Put a sheet of paper on the top of the board, under the bit.
+              <br />
+              Lower the bit in small steps until it just pinches the paper (it drags when you slide it), then set Z zero.
+            </div>
+            <div className="zman">
+              <button className="jog__btn jog__btn--zh mono" aria-label="Raise bit (Z+)" onClick={() => jog(0, 0, 1)}>
+                <ArrowUp size={18} strokeWidth={1.75} />
+                Up
+              </button>
+              <button className="jog__btn jog__btn--zh mono" aria-label="Lower bit (Z−)" onClick={() => jog(0, 0, -1)}>
+                <ArrowDown size={18} strokeWidth={1.75} />
+                Down
+              </button>
+              <div className="zman__read mono">
+                <span className="readout__k">Z</span>
+                <span>{(m.zMeasured ? wp.z : m.pos.z).toFixed(2)}</span>
+              </div>
+            </div>
+            <Seg<string>
+              label="Z step"
+              size="lg"
+              value={String(flow.jogStep)}
+              onChange={(v) => flow.set({ jogStep: Number(v) })}
+              options={[
+                ["0.01", <span className="mono">0.01 mm</span>],
+                ["0.1", <span className="mono">0.1 mm</span>],
+                ["1", <span className="mono">1 mm</span>],
+              ]}
+            />
+            <div className="small muted">Use 1 mm until the bit is close, 0.1 mm near the paper and 0.01 mm for the last touch. PageUp / PageDown move Z too.</div>
+            <button className="link" style={{ alignSelf: "flex-start", color: "var(--text-2)" }} onClick={closeManualZ}>
+              Back
+            </button>
+          </div>
+        ) : null}
+
+        {sub === "zero" && !flow.probeOpen && !flow.manualZOpen ? (
           <div className="job-sec">
             <div className="job-body">
               Move the bit to the <b style={{ color: "var(--text)", fontWeight: 600 }}>bottom-left corner of the board, on the top face</b>. Click the corner on the preview, then fine-tune with the arrows.
@@ -367,14 +433,34 @@ export function PositionStep({ ctx }: { ctx: JobCtx }) {
                 <span>{m.pos.z.toFixed(3)}</span>
               </div>
             ) : null}
-            <div className="tool-height">
-              <span style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                <span style={{ font: "500 14px var(--font)" }}>Tool height</span>
-                <span className="small muted">{m.zMeasured ? "Measured · top of the board" : "Not measured yet"}</span>
-              </span>
-              <button className="btn btn--outline btn--sm" onClick={() => flow.set({ probeOpen: true })}>
-                Use touch plate
-              </button>
+            <div className="zopts">
+              <div className="zopts__head">
+                <span style={{ font: "500 14px var(--font)" }}>Top of the board (Z)</span>
+                <span className={`small ${m.zMeasured ? "" : "muted"}`} style={m.zMeasured ? { color: "var(--ready-text)" } : undefined}>
+                  {m.zMeasured ? "✓ " : ""}
+                  {zStatus}
+                </span>
+              </div>
+              <div className="zopt">
+                <span className="zopt__text">
+                  <span className="zopt__title">
+                    Touch plate (AutoZero) <span className="zopt__badge">Recommended</span>
+                  </span>
+                  <span className="small muted">Sienci's touch plate finds the top for you, accurate and repeatable.</span>
+                </span>
+                <button className="btn btn--outline btn--sm" onClick={() => flow.set({ probeOpen: true, manualZOpen: false })}>
+                  Use plate
+                </button>
+              </div>
+              <div className="zopt">
+                <span className="zopt__text">
+                  <span className="zopt__title">Set Z by hand (paper method)</span>
+                  <span className="small muted">No plate? Lower the bit onto a sheet of paper.</span>
+                </span>
+                <button className="btn btn--outline btn--sm" onClick={openManualZ}>
+                  By hand
+                </button>
+              </div>
             </div>
           </div>
         ) : null}
@@ -410,7 +496,10 @@ export function PositionStep({ ctx }: { ctx: JobCtx }) {
           <div className="job-sec">
             <div className="job-ok">
               <CheckCircle2 size={18} color="var(--ready-text)" strokeWidth={1.75} />
-              <span>Work zero is set on the bottom-left corner of the board. The sign will be carved from there.</span>
+              <span>
+                Work zero is set on the bottom-left corner of the board. The sign will be carved from there.
+                {m.zeroMethod === "manual" ? " Z was set by hand: double-check the bit just touches the top of the board." : ""}
+              </span>
             </div>
             <button className="link" style={{ alignSelf: "flex-start", color: "var(--text-2)" }} onClick={() => flow.set({ zeroSet: false })}>
               Set zero again

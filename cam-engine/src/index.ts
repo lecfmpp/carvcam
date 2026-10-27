@@ -3,7 +3,8 @@ export { verifyGcode, type VerifyLimits, type VerifyResult, type Problem } from 
 export { simulate, Heightmap } from "./sim/heightmap.js";
 export { loadFonts, FONT_FILES } from "./fonts.js";
 export { MATERIAL_PRESETS, cutParams, type CutParams } from "./materials.js";
-export type { Warning, ElementRef, Fix } from "./warnings.js";
+export type { Warning, ElementRef, Fix, WarningCode } from "./warnings.js";
+export { WARNING_CODES } from "./warnings.js";
 export type { Layout, CutElement, FontMap } from "./layout.js";
 export * from "./schema.js";
 export * as sienci from "./catalog/sienci/index.js";

@@ -32,6 +32,8 @@ import { useActiveMachine, useWorkshop } from "../../state/workshop";
 import { Board } from "../../stage/Board";
 import { SimCanvas } from "../../stage/SimCanvas";
 import { fitScale, Stage } from "../../stage/Stage";
+import { SnapGuides, StageRulers, useRulersOn, useSnapGrid } from "../../stage/Rulers";
+import { rectTargets, snapRect, SNAP_PX, type Guide, type Rect } from "../../stage/snap";
 import { ThreeView } from "../../stage/ThreeView";
 import { machineName } from "../../lib/catalog";
 import { AssistantBar } from "./AssistantBar";
@@ -40,6 +42,8 @@ import { isImageFile, tracingFromFile, TracingLayer } from "./tracing";
 import { toast } from "../../state/ui";
 import { addCurve, addElement, alignElements, deleteElement, patchElement, type CurveNode, duplicateElement, elementBoxes, elementOf, fontOf, margin, moveElement, parseId, type Align, type Box, type ElementId, type Tool } from "./elements";
 import { buildIssues, type UiIssue } from "./issues";
+import { useIssueCtx } from "./IssueCard";
+import { useUi } from "../../state/ui";
 import { CreatePanel } from "./Panel";
 import { importSvgFile, isSvgFile, pickSvgFile } from "./svgImport";
 import "./create.css";
@@ -100,12 +104,14 @@ export default function Create() {
   const assistantInput = useRef<HTMLInputElement>(null);
 
   // The result shown is the current spec's, or the last one that arrived (while regenerating).
-  const result = eng.result;
+  // When the engine throws, the preview keeps the last result (the cards come only from a real one).
+  const result = eng.result ?? (eng.error ? eng.prev : null);
+  const issueCtx = useIssueCtx();
   const issues = useMemo(
-    () => buildIssues(result, { spec, bit, ownedBits, machineName: machineName(machine) }),
+    () => buildIssues(eng.result, issueCtx),
     // Warnings refer to the spec that produced the result; recompute only when it changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [result, bit, ownedBits, machine],
+    [eng.result, bit, ownedBits, machine, issueCtx.useBit2, issueCtx.bit2, issueCtx.keepOut, issueCtx.canUndo, issueCtx.hasLastGood],
   );
   const errors = issues.filter((i) => i.level === "error").length;
   const warnings = issues.filter((i) => i.level === "warning").length;
@@ -164,8 +170,22 @@ export default function Create() {
     setSel(nid);
   };
 
+  // An issue card on another screen asked to select an element here.
+  useEffect(() => {
+    const p = useUi.getState().pendingSel;
+    if (p) {
+      setSel(p as ElementId);
+      useUi.getState().request({ pendingSel: null });
+    }
+  }, []);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z" && !e.shiftKey && !isTyping(e.target)) {
+        e.preventDefault();
+        toast(useDesign.getState().undo() ? "Undone." : "Nothing to undo.");
+        return;
+      }
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         assistantInput.current?.focus();
@@ -234,6 +254,7 @@ export default function Create() {
       <TopBar variant="job" step="create" reachable={errors ? ["create"] : ["create", "prepare"]} />
       <Stage
         caption={caption}
+        canvasTools
         overlay={
           <>
             <ToolRail tool={tool} setTool={setTool} onImport={() => void pickSvgFile().then(importSvg)} />
@@ -253,6 +274,7 @@ export default function Create() {
           const s = fitScale(api.size, block.width, block.height, { x: 260, y: 280 });
           return (
             <Board width={block.width} height={block.height} scale={s} zoom={api.zoom} showOrigin={false}>
+              <StageRulers width={block.width} height={block.height} scale={s} zoom={api.zoom} />
               <div className="create-piece" style={pieceMask(result, bit?.d ?? 3.175)}>
                 {eng.sim ? (
                   <SimCanvas sim={eng.sim} thickness={block.thickness} material={material} scale={s} board={{ width: block.width, height: block.height }} />
@@ -460,7 +482,11 @@ interface OverlayProps {
 
 function Overlay(p: OverlayProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const [drag, setDrag] = useState<{ id: ElementId; x0: number; y0: number; dx: number; dy: number } | null>(null);
+  const [drag, setDrag] = useState<{ id: ElementId; x0: number; y0: number; dx: number; dy: number; guides: Guide[] } | null>(null);
+  const grid = useSnapGrid();
+  const rulersOn = useRulersOn();
+  /** With the rulers on, the size labels sit outside them (rulers hug the board edges). */
+  const dimAt = (inset: number) => (rulersOn ? -54 : inset - 30);
   const m = margin(p.spec);
   const s = p.scale;
   const H = p.block.height;
@@ -499,12 +525,31 @@ function Overlay(p: OverlayProps) {
     } catch {
       /* synthetic pointer: the drag continues through the board's events */
     }
-    setDrag({ id, x0: e.clientX, y0: e.clientY, dx: 0, dy: 0 });
+    setDrag({ id, x0: e.clientX, y0: e.clientY, dx: 0, dy: 0, guides: [] });
   };
+  /** Boxes in stock mm (X0 Y0 = bottom-left of the board, like the rulers). */
+  const stockRect = (b: Box): Rect => ({ x: b.cx - b.w / 2 + m, y: b.cy - b.h / 2 + m, width: b.w, height: b.h });
   const move = (e: RPointerEvent) => {
     if (!drag) return;
     const k = mmPerPx();
-    setDrag({ ...drag, dx: (e.clientX - drag.x0) * k, dy: -(e.clientY - drag.y0) * k });
+    let dx = (e.clientX - drag.x0) * k;
+    let dy = -(e.clientY - drag.y0) * k;
+    let guides: Guide[] = [];
+    // Snap the moving selection to the grid, the board/sign edges and centers and the other elements (Alt = free).
+    const moving = group.map((id) => p.boxes.get(id)).filter((b): b is Box => !!b);
+    if (!e.altKey && moving.length) {
+      const rs = moving.map(stockRect);
+      const x = Math.min(...rs.map((r) => r.x));
+      const y = Math.min(...rs.map((r) => r.y));
+      const u = { x, y, width: Math.max(...rs.map((r) => r.x + r.width)) - x, height: Math.max(...rs.map((r) => r.y + r.height)) - y };
+      const others = [...p.boxes].filter(([id]) => !group.includes(id)).map(([, b]) => stockRect(b));
+      const targets = rectTargets([{ x: 0, y: 0, width: p.block.width, height: p.block.height }, { x: m, y: m, width: p.spec.width, height: p.spec.height }, ...others]);
+      const snapped = snapRect({ ...u, x: x + dx, y: y + dy }, { grid, targets, tol: SNAP_PX * k });
+      dx = snapped.rect.x - x;
+      dy = snapped.rect.y - y;
+      guides = snapped.guides;
+    }
+    setDrag({ ...drag, dx, dy, guides });
   };
   const up = () => {
     if (!drag) return;
@@ -536,10 +581,10 @@ function Overlay(p: OverlayProps) {
       onPointerUp={up}
     >
       {/* Part dimensions */}
-      <div className="create-dim create-dim--w mono" style={{ left: piece.left, width: piece.width, top: piece.top - 30 }}>
+      <div className="create-dim create-dim--w mono" style={{ left: piece.left, width: piece.width, top: dimAt(piece.top) }}>
         {fmt(p.spec.width)} mm
       </div>
-      <div className="create-dim create-dim--h mono" style={{ top: piece.top, height: piece.height, left: piece.left - 30 }}>
+      <div className="create-dim create-dim--h mono" style={{ top: piece.top, height: piece.height, left: dimAt(piece.left) }}>
         <span>{fmt(p.spec.height)} mm</span>
       </div>
 
@@ -577,6 +622,8 @@ function Overlay(p: OverlayProps) {
           </div>
         );
       })}
+
+      {drag ? <SnapGuides guides={drag.guides} width={p.block.width} height={p.block.height} scale={s} zoom={p.zoom} /> : null}
 
       {p.sel && p.boxes.has(p.sel) && !drag && p.editing !== p.sel ? (
         <div className="create-seltools" style={selToolsPos(px(p.boxes.get(p.sel)!), !!curveEl, p.block.height * s)} onPointerDown={(e) => e.stopPropagation()}>

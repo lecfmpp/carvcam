@@ -1,7 +1,7 @@
-import { AlertTriangle, Check, OctagonAlert, Pause, Printer } from "lucide-react";
+import { AlertTriangle, ArrowDown, ArrowUp, Check, OctagonAlert, Pause, Printer } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Banner, SidePanel, VideoCard } from "../../components/ui";
+import { Banner, Seg, SidePanel, VideoCard } from "../../components/ui";
 import { dialFor, materialById, TRACK } from "../../lib/catalog";
 import { useMachine, workPos, type AlarmCode } from "../../machine/store";
 import { useDesign } from "../../state/design";
@@ -70,6 +70,9 @@ export function CarveStep({ ctx }: { ctx: JobCtx }) {
   const [codeOpen, setCodeOpen] = useState(false);
   const [tcStep, setTcStep] = useState(0);
   const [probeLeft, setProbeLeft] = useState<number | null>(null);
+  /** Bit change without a touch plate: set the new bit's Z by hand (paper method). */
+  const [tcManual, setTcManual] = useState(false);
+  const [tcJog, setTcJog] = useState(0.1);
   const [doneSpin, setDoneSpin] = useState(0);
   const [sheetOpen, setSheetOpen] = useState(false);
 
@@ -124,7 +127,11 @@ export function CarveStep({ ctx }: { ctx: JobCtx }) {
           ? { label: "Fits on the machine", sub: `${fmtN(b.width)} × ${fmtN(b.height)} mm inside ${machine.area[0]} × ${machine.area[1]} mm`, ok: true }
           : { label: "Too big for your machine", sub: `Needs ${fmtN(b.width)} × ${fmtN(b.height)} mm, the work area is ${machine.area[0]} × ${machine.area[1]} mm`, ok: false, fix: ["Change machine", () => nav("/workshop/settings")] },
         positioned
-          ? { label: "Work zero set", sub: "Bottom-left corner, top face · height measured", ok: true }
+          ? {
+              label: "Work zero set",
+              sub: m.zeroMethod === "manual" ? "Z set by hand — double-check the bit just touches the top" : "Bottom-left corner, top face · height measured with the touch plate",
+              ok: true,
+            }
           : { label: connected ? "Work zero not set" : "Machine not connected", sub: "The machine does not know where the board is", ok: false, fix: ["Set zero", () => nav("/position")] },
         flow.bitIn
           ? { label: `${firstBit} bit installed`, sub: twoBits ? `You'll switch to ${bitNameFor(design, 2)} halfway` : "Same bit for the whole job", ok: true }
@@ -169,7 +176,9 @@ export function CarveStep({ ctx }: { ctx: JobCtx }) {
       : ["Turn the router back on", `The dial stays on ${dialNext?.dial ?? dialPrev?.dial ?? 3}. The carve picks up where it stopped.`];
   const tcSteps: [string, string][] = [
     ["Swap the bit", `Loosen the collet, take out the ${tcFrom} bit, put in the ${tcTo} bit.`],
-    ["Measure the new bit height", "Put the touch plate under the bit and attach the magnet clip."],
+    tcManual
+      ? ["Set the new bit height by hand", "Paper on the board under the bit. Lower it until it just pinches the paper, then set Z."]
+      : ["Measure the new bit height", "Put the touch plate under the bit and attach the magnet clip."],
     tcRouter,
   ];
   const probeTc = async () => {
@@ -192,6 +201,17 @@ export function CarveStep({ ctx }: { ctx: JobCtx }) {
         setTcStep(2);
       } else setProbeLeft(z);
     }, 90);
+  };
+
+  const manualTc = async () => {
+    // Real machine: Z zero where the new bit touches the paper. The simulator only plays the step.
+    if (useMachine.getState().conn === "real") {
+      useMachine.setState({ zMeasured: false });
+      await useMachine.getState().setWorkZero(["z"]);
+      if (!useMachine.getState().zMeasured) return;
+    }
+    toast("Z set by hand for the new bit.");
+    setTcStep(2);
   };
 
   // ---------- Alarm ----------
@@ -235,7 +255,9 @@ export function CarveStep({ ctx }: { ctx: JobCtx }) {
       tcStep === 0
         ? { label: "Bit is swapped", click: () => setTcStep(1), enabled: true }
         : tcStep === 1
-          ? { label: probeLeft != null ? "Measuring…" : "Measure height", click: probeTc, enabled: probeLeft == null }
+          ? tcManual
+            ? { label: "Set Z zero here", click: () => void manualTc(), enabled: true }
+            : { label: probeLeft != null ? "Measuring…" : "Measure height", click: probeTc, enabled: probeLeft == null }
           : { label: "Done, continue", click: () => m.confirmToolChange(), enabled: true };
   }
   if (phase === "alarm" && A) {
@@ -497,6 +519,35 @@ export function CarveStep({ ctx }: { ctx: JobCtx }) {
               <div role="status" className="mono job-live">
                 Lowering… contact in {probeLeft.toFixed(1)} mm
               </div>
+            ) : null}
+            {tcStep === 1 && tcManual ? (
+              <>
+                <div className="zman">
+                  <button className="jog__btn jog__btn--zh mono" aria-label="Raise bit (Z+)" onClick={() => m.jog(0, 0, tcJog)}>
+                    <ArrowUp size={18} strokeWidth={1.75} />
+                    Up
+                  </button>
+                  <button className="jog__btn jog__btn--zh mono" aria-label="Lower bit (Z−)" onClick={() => m.jog(0, 0, -tcJog)}>
+                    <ArrowDown size={18} strokeWidth={1.75} />
+                    Down
+                  </button>
+                </div>
+                <Seg<string>
+                  label="Z step"
+                  value={String(tcJog)}
+                  onChange={(v) => setTcJog(Number(v))}
+                  options={[
+                    ["0.01", <span className="mono">0.01 mm</span>],
+                    ["0.1", <span className="mono">0.1 mm</span>],
+                    ["1", <span className="mono">1 mm</span>],
+                  ]}
+                />
+              </>
+            ) : null}
+            {tcStep === 1 && probeLeft == null ? (
+              <button className="link" style={{ alignSelf: "flex-start", color: "var(--text-2)" }} onClick={() => setTcManual(!tcManual)}>
+                {tcManual ? "Use the touch plate instead" : "No touch plate? Set Z by hand"}
+              </button>
             ) : null}
           </>
         ) : null}

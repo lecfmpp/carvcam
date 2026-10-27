@@ -1,5 +1,4 @@
 import type { PlateSpecInput } from "@gsender-next/cam-engine";
-import { sienciLink } from "../../lib/referral";
 import { AlertCircle, AlertTriangle, ArrowRight, CheckCircle2, ChevronDown, ChevronRight, ChevronUp, Circle, Copy, Eye, EyeOff, FileUp, Heart, Hexagon, ImagePlus, Layers, Move, Wand2, Minus, MoveVertical, PenTool, Plus, Shapes, Square, Star, Trash2, Type, XCircle } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
@@ -9,7 +8,9 @@ import { useDesign } from "../../state/design";
 import { toast } from "../../state/ui";
 import { useActiveMachine, useWorkshop } from "../../state/workshop";
 import { addElement, arcFromBend, bendOf, elementOf, FONTS, ICONS, idOfTarget, listElements, parseId, patchElement, refOf, type Target, type Box, type ElementId, type ElementRow, type Shape, type SvgEl, type Text, svgAspect } from "./elements";
-import type { IssueAction, UiIssue } from "./issues";
+import { engineErrorIssue, type UiIssue } from "./issues";
+import { IssueCard, useIssueCtx, useIssueRunner } from "./IssueCard";
+import { useUi } from "../../state/ui";
 import { importSvgFile, pickSvgFile } from "./svgImport";
 import { TraceDialog } from "./traceDialog";
 import { addLibraryElement, LibraryDialog } from "./libraryDialog";
@@ -47,15 +48,8 @@ export function CreatePanel(p: Props) {
     selRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [p.sel]);
 
-  const run = (a: IssueAction) => {
-    if (a.kind === "spec") {
-      patchSpec(() => a.spec);
-      toast(`${a.label === "Apply suggestion" ? "Suggestion applied" : a.label}. Re-checking…`);
-    } else if (a.kind === "bit") {
-      patch({ bit: a.bit });
-      toast(`Switched to the ${bitById(a.bit)?.name ?? "new"} bit.`);
-    } else window.open(sienciLink(a.url, "bit_suggestion"), "_blank", "noopener");
-  };
+  const run = useIssueRunner((id) => p.setSel(id));
+  const issueCtx = useIssueCtx();
 
   const status = p.errors ? (
     <>
@@ -102,7 +96,7 @@ export function CreatePanel(p: Props) {
       </div>
 
       <div className="sidepanel__body create-panel__body">
-        {p.engineError ? <Issue kind="error" eyebrow="Error · blocks Continue" title="This design couldn't be checked" body={p.engineError} /> : null}
+        {p.engineError ? <IssueCard issue={engineErrorIssue(p.engineError, issueCtx)} onRun={run} /> : null}
         {spec.texts?.length === 0 && !spec.shapes?.length && !spec.icons?.length && !spec.svgs?.length && !spec.holes?.length ? (
           <div className="create-blankmsg">
             Blank {spec.thickness} mm {material.id} board, {spec.width} × {spec.height} mm. Pick the wood and thickness above, then add text, shapes or lines with the tools on the left, or drop an SVG file on the board.
@@ -188,9 +182,19 @@ export function CreatePanel(p: Props) {
 
 // ------------------------------------------------------------------ chips
 
+let seenBitMenuReq = 0;
+
 function Chips(props: { material: string; thickness: number; bitId: string; onMaterial(id: string): void; onThickness(t: number): void; onBit(id: string): void }) {
   const [open, setOpen] = useState<null | "material" | "thick" | "bit">(null);
   const ref = useRef<HTMLDivElement>(null);
+  // An issue's "Pick another bit" opens this menu.
+  const bitMenuReq = useUi((s) => s.bitMenuReq);
+  useEffect(() => {
+    if (bitMenuReq > seenBitMenuReq) {
+      seenBitMenuReq = bitMenuReq;
+      setOpen("bit");
+    }
+  }, [bitMenuReq]);
   const { bits } = useWorkshop();
   const { headId } = useActiveMachine();
   const m = materialById(props.material);
@@ -266,36 +270,6 @@ function Chips(props: { material: string; thickness: number; bitId: string; onMa
 }
 
 // ------------------------------------------------------------------ issues
-
-function IssueCard({ issue: i, focused, onFocus, onRun, onSelect }: { issue: UiIssue; focused: boolean; onFocus(): void; onRun(a: IssueAction): void; onSelect(): void }) {
-  const eyebrow = i.level === "error" ? "Error · blocks Continue" : i.level === "warning" ? "Warning · you can continue" : "Note";
-  const actions = (
-    <>
-      {i.apply ? (
-        <button className="btn btn--light btn--sm" onClick={() => onRun(i.apply!)}>
-          {i.apply.label}
-        </button>
-      ) : null}
-      {i.alts.map((a) => (
-        <button key={a.label} className="btn btn--outline btn--sm" onClick={() => onRun(a)}>
-          {a.label}
-        </button>
-      ))}
-      {i.level !== "error" && i.target ? (
-        <button className="btn btn--outline btn--sm" aria-pressed={focused} onClick={onFocus}>
-          {focused ? <EyeOff size={14} /> : <Eye size={14} />}
-          {focused ? "Hide on preview" : "Show on preview"}
-        </button>
-      ) : null}
-    </>
-  );
-  const hasActions = !!i.apply || i.alts.length > 0 || (i.level !== "error" && !!i.target);
-  return (
-    <div className={`create-issue create-issue--${i.level}`} onClick={(e) => (e.target as HTMLElement).closest("button") || onSelect()}>
-      <Issue kind={i.level} eyebrow={eyebrow} title={i.title} body={i.detail || undefined} fix={i.suggestion} actions={hasActions ? actions : undefined} />
-    </div>
-  );
-}
 
 // ------------------------------------------------------------------ shape
 

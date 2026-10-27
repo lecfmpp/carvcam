@@ -54,6 +54,8 @@ export const ALARMS: Record<AlarmCode, { eyebrow: string; title: string; body: s
   },
 };
 
+export type ZeroMethod = "probe" | "manual";
+
 export interface Vec3 {
   x: number;
   y: number;
@@ -96,7 +98,10 @@ interface MachineState {
   pos: Vec3;
   /** Work zero in machine coordinates. */
   workZero: Vec3 | null;
+  /** Z zero is known (touch plate or set by hand). */
   zMeasured: boolean;
+  /** How Z zero was set: touch plate ("probe") or by hand, paper method ("manual"). */
+  zeroMethod: ZeroMethod | null;
   bed: { x: number; y: number; z: number };
   job: Job | null;
   /** Simulated job time (s). */
@@ -118,7 +123,8 @@ interface MachineState {
   home(): Promise<void>;
   jog(dx: number, dy: number, dz: number): void;
   moveTo(x: number, y: number): void;
-  setWorkZero(axes?: ("x" | "y" | "z")[]): void;
+  /** Zeroes the given axes where the bit is. Zeroing Z this way (by hand) also marks the height as known. */
+  setWorkZero(axes?: ("x" | "y" | "z")[]): void | Promise<void>;
   probeZ(plateThickness?: number): Promise<void>;
   loadJob(job: Omit<Job, "segs" | "times" | "total" | "toolChanges" | "opOfSeg" | "ops">): void;
   start(): void;
@@ -152,6 +158,7 @@ export const useMachine = create<MachineState>()((set, get) => ({
   pos: { x: 0, y: 0, z: 0 },
   workZero: null,
   zMeasured: false,
+  zeroMethod: null,
   bed: { x: 805, y: 830, z: 129 },
   job: null,
   elapsed: 0,
@@ -192,7 +199,8 @@ export const useMachine = create<MachineState>()((set, get) => ({
 
   jog: (dx, dy, dz) => {
     const s = get();
-    if (s.status !== "idle") return;
+    // During a bit change only Z moves are allowed (setting the new bit's height by hand).
+    if (s.status !== "idle" && !(s.status === "toolchange" && !dx && !dy)) return;
     if (s.conn === "real") return R.jogReal(dx, dy, dz);
     const p = { x: clamp(s.pos.x + dx, 0, s.bed.x), y: clamp(s.pos.y + dy, 0, s.bed.y), z: clamp(s.pos.z + dz, -s.bed.z, 0) };
     set({ pos: p });
@@ -205,11 +213,11 @@ export const useMachine = create<MachineState>()((set, get) => ({
   },
   setWorkZero: (axes = ["x", "y", "z"]) => {
     const s = get();
-    if (s.conn === "real") return void R.setWorkZeroReal(axes);
+    if (s.conn === "real") return R.setWorkZeroReal(axes);
     const wz = s.workZero ?? { ...s.pos };
     const next = { ...wz };
     for (const a of axes) next[a] = s.pos[a];
-    set({ workZero: next, zMeasured: axes.includes("z") ? s.zMeasured : s.zMeasured });
+    set({ workZero: next, ...zeroPatch(axes) });
   },
   probeZ: async (plate = 15) => {
     const s = get();
@@ -222,7 +230,7 @@ export const useMachine = create<MachineState>()((set, get) => ({
     const zero = touch.z - plate;
     const wz = { ...(get().workZero ?? touch), z: zero };
     await animate(touch, { ...touch, z: touch.z + 5 }, 300, (p) => set({ pos: p }));
-    set({ workZero: wz, zMeasured: true });
+    set({ workZero: wz, zMeasured: true, zeroMethod: "probe" });
   },
 
   loadJob: (j) => {
@@ -318,6 +326,11 @@ export const useMachine = create<MachineState>()((set, get) => ({
     set({ job: null, elapsed: 0, carved: null, status: get().status === "disconnected" ? "disconnected" : "idle", alarm: null });
   },
 }));
+
+/** Setting Z zero where the bit is (by hand, paper method) counts as a measured height. */
+export function zeroPatch(axes: readonly ("x" | "y" | "z")[]): Partial<Pick<MachineState, "zMeasured" | "zeroMethod">> {
+  return axes.includes("z") ? { zMeasured: true, zeroMethod: "manual" } : {};
+}
 
 /** Current bit position in work coordinates. */
 export function workPos(s: { pos: Vec3; workZero: Vec3 | null }): Vec3 {

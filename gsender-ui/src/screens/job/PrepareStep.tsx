@@ -12,6 +12,7 @@ import { useWorkshop } from "../../state/workshop";
 import { Board, LayoutOverlay, ToolpathOverlay, useSegments } from "../../stage/Board";
 import { KeepOutLayer } from "../../stage/KeepOutLayer";
 import { fitScale, Stage } from "../../stage/Stage";
+import { StageRulers, useRulersOn } from "../../stage/Rulers";
 import { ThreeView } from "../../stage/ThreeView";
 import type { JobCtx } from "./Job";
 import { bitNameFor, fmtMin, PRESETS, rpmText } from "./jobUtil";
@@ -19,6 +20,8 @@ import { zoneIssues, zoneOverhang } from "./zones";
 import { SetupSheetDialog } from "./SetupSheetDialog";
 import { CostPanel } from "./CostPanel";
 import { BatchDialog } from "./BatchDialog";
+import { buildIssues, engineErrorIssue } from "../create/issues";
+import { IssueCard, useIssueCtx, useIssueRunner } from "../create/IssueCard";
 
 const HINT: Record<Preset, string> = {
   fast: "Shorter job; edges may need a bit more sanding.",
@@ -51,6 +54,7 @@ function usePresetTimes(ctx: JobCtx) {
 }
 
 export function PrepareStep({ ctx }: { ctx: JobCtx }) {
+  const rulersOn = useRulersOn();
   const nav = useNavigate();
   const { design, result, sim, machine, preset, groups } = ctx;
   const patch = useDesign((s) => s.patch);
@@ -111,12 +115,21 @@ export function PrepareStep({ ctx }: { ctx: JobCtx }) {
   const koPath = zoneIssues(result, zones).filter((i) => i.code === "KEEP_OUT_PATH");
   const isKo = (code: string) => code === "KEEP_OUT_OVERLAP" || code === "KEEP_OUT_TOO_TALL";
   const koBlocked = errors.some((a) => isKo(a.code)) || koPath.length > 0;
+  // The same cards as in Create, with their one-click fixes.
+  const issueCtx = useIssueCtx();
+  const runIssue = useIssueRunner();
+  const blocking = useMemo(
+    () => buildIssues(result, issueCtx).filter((i) => i.level === "error"),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [result, issueCtx.ownedBits, issueCtx.keepOut, issueCtx.canUndo, issueCtx.hasLastGood, issueCtx.headId],
+  );
   const maxTabH = Math.max(0.5, Math.min(5, (design.spec.thickness ?? 6) - 1));
 
   return (
     <>
       <Stage
         caption="Toolpath preview · orange is where the bit goes"
+        canvasTools
         tools={
           <button
             className="tool-btn"
@@ -136,10 +149,11 @@ export function PrepareStep({ ctx }: { ctx: JobCtx }) {
           const mat = materialById(design.material);
           if (api.view === "3d" && sim) return <ThreeView sim={sim} thickness={b.thickness} material={mat} board={{ width: b.width, height: b.height }} zoom={api.zoom} spin={api.spin} size={api.size} />;
           return (
-            <Board width={b.width} height={b.height} scale={s} zoom={api.zoom} label={`Board ${fmtN(b.width)} × ${fmtN(b.height)} mm`}>
+            <Board width={b.width} height={b.height} scale={s} zoom={api.zoom} rulers={rulersOn} label={`Board ${fmtN(b.width)} × ${fmtN(b.height)} mm`}>
               <div className={`job-face ${mat.grain ? "job-face--grain" : ""}`} style={{ background: mat.face }} />
               {segs.length ? <ToolpathOverlay segments={segs} width={b.width} height={b.height} scale={s} played={played} opacity={0.75} /> : <LayoutOverlay layout={result!.layout} scale={s} />}
               {zones.length ? <KeepOutLayer zones={zones} scale={s} frame={{ width: b.width, height: b.height }} /> : null}
+              <StageRulers width={b.width} height={b.height} scale={s} zoom={api.zoom} />
             </Board>
           );
         }}
@@ -153,7 +167,7 @@ export function PrepareStep({ ctx }: { ctx: JobCtx }) {
               {koBlocked
                 ? "A clamp is in the bit's way. Move the clamp in Position or the design in Create."
                 : errors.length
-                  ? "Fix the errors in Create to continue."
+                  ? "Fix the problems above to continue (one click each)."
                   : `Everything below is checked for your ${machineName(machine)}.`}
             </div>
             <button className="btn btn--primary btn--lg" disabled={!verified} onClick={() => nav("/position")}>
@@ -166,42 +180,9 @@ export function PrepareStep({ ctx }: { ctx: JobCtx }) {
           </>
         }
       >
-        {errors.map((a, i) =>
-          isKo(a.code) ? (
-            <Issue
-              key={i}
-              kind="error"
-              eyebrow="Keep-out zone · blocks continue"
-              title={a.message}
-              body={a.suggestion}
-              actions={
-                <>
-                  <button className="btn btn--light btn--sm" onClick={() => nav("/position")}>
-                    Edit clamps
-                  </button>
-                  <button className="btn btn--outline btn--sm" onClick={() => nav("/create")}>
-                    Move design
-                  </button>
-                </>
-              }
-            />
-          ) : (
-            <Issue key={i} kind="error" eyebrow="Error · blocks continue" title={a.message} body={a.suggestion} actions={<button className="btn btn--light btn--sm" onClick={() => nav("/create")}>Back to Create</button>} />
-          ),
-        )}
-        {koPath.map((it, i) => (
-          <Issue
-            key={`p${i}`}
-            kind="error"
-            eyebrow="Keep-out zone · blocks continue"
-            title={it.title}
-            body={it.body}
-            actions={
-              <button className="btn btn--light btn--sm" onClick={() => nav("/position")}>
-                Edit clamps
-              </button>
-            }
-          />
+        {ctx.error ? <IssueCard issue={engineErrorIssue(ctx.error, issueCtx)} onRun={runIssue} /> : null}
+        {blocking.map((i) => (
+          <IssueCard key={i.key} issue={i} onRun={runIssue} />
         ))}
 
         <section className="job-sec">

@@ -262,3 +262,22 @@ input, select, textarea { font: inherit; color: inherit; }
 :root[data-panel="1"] .kbd { display: none; }
 /* Touch: no accidental text selection or double-tap delay. */
 :root[data-panel="1"] button, :root[data-panel="1"] .stage { touch-action: manipulation; -webkit-user-select: none; user-select: none; }
+
+/* Canvas rulers and snapping (stage/Rulers.tsx) */
+.canvas-tools { position: relative; display: flex; gap: 6px; }
+.canvas-tools .tool-btn[aria-pressed="true"] { border-color: rgba(255, 255, 255, 0.4); background: rgba(60, 61, 66, 0.9); }
+.canvas-tools__grid { padding: 0 12px; gap: 6px; font-size: 12px; }
+.canvas-tools__pop { position: absolute; top: 52px; left: 0; width: 280px; padding: 12px; border-radius: 12px; background: rgba(26, 27, 30, 0.96); backdrop-filter: var(--blur); border: 1px solid var(--glass-border); display: flex; flex-direction: column; gap: 10px; box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45); }
+.canvas-tools__title { font: 600 13px var(--font); color: var(--text); }
+.canvas-tools__hint { font: 400 12px/1.4 var(--font); color: var(--text-3); }
+.rulers { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+.rulers__svg { position: absolute; overflow: visible; }
+.rulers__band { fill: rgba(20, 21, 24, 0.72); }
+.rulers__tick { stroke: rgba(255, 255, 255, 0.42); }
+.rulers__zero { stroke: var(--accent); }
+.rulers__t { fill: rgba(255, 255, 255, 0.6); font-family: var(--mono); }
+.rulers__zero-t { fill: var(--accent); font-family: var(--mono); }
+.rulers__cur { stroke: #3db6ff; }
+.rulers__cur-t { fill: #3db6ff; font-family: var(--mono); font-weight: 600; }
+.snap-guides { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; z-index: 4; }
+.snap-guides line { stroke: #ff3da5; }

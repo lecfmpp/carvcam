@@ -5,12 +5,12 @@ import { useMemo, type ReactNode } from "react";
  * The stock area on the stage, to scale: children are placed in mm with the origin at the
  * bottom-left corner (work zero), same as the machine.
  */
-export function Board(props: { width: number; height: number; scale: number; zoom?: number; label?: ReactNode; children?: ReactNode; showOrigin?: boolean }) {
+export function Board(props: { width: number; height: number; scale: number; zoom?: number; label?: ReactNode; children?: ReactNode; showOrigin?: boolean; /** Rulers are drawn on top: the label moves above them. */ rulers?: boolean }) {
   const s = props.scale;
   return (
     <div style={{ position: "relative", width: props.width * s, height: props.height * s, transform: `scale(${props.zoom ?? 1})`, transition: "transform 180ms var(--ease)" }}>
       {props.label ? (
-        <div className="mono" style={{ position: "absolute", left: 0, right: 0, top: -34, textAlign: "center", font: "500 12px var(--mono)", color: "var(--text-3)" }}>
+        <div className="mono" style={{ position: "absolute", left: 0, right: 0, top: props.rulers ? -54 : -34, textAlign: "center", font: "500 12px var(--mono)", color: "var(--text-3)" }}>
           {props.label}
         </div>
       ) : null}

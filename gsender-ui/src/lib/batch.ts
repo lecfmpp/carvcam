@@ -39,11 +39,15 @@ export interface BatchRow {
   /** Why it failed (first error), or the first warning when ok. */
   message?: string;
   timeSec: number;
+  /** Code of the first error, and the engine's one-click fix for it (applies to the template, so every row gets it). */
+  code?: string;
+  fix?: { element: { type: "text" | "icon" | "shape" | "svg" | "hole" | "slot"; index: number }; field: string; value: number };
 }
 
 export function toBatchRow(item: BatchItem): BatchRow {
   const r = item.result;
-  const err = r.warnings.find((w) => w.severity === "error")?.message ?? r.verification?.problems.find((p) => p.severity === "error")?.message;
+  const first = r.warnings.find((w) => w.severity === "error");
+  const err = first?.message ?? r.verification?.problems.find((p) => p.severity === "error")?.message;
   const warn = r.warnings.find((w) => w.severity === "warning")?.message;
   return {
     index: item.index,
@@ -52,6 +56,7 @@ export function toBatchRow(item: BatchItem): BatchRow {
     ok: r.ok,
     message: r.ok ? warn : (err ?? "This row could not be generated."),
     timeSec: r.ok ? Math.round(r.verification?.stats.estimatedTimeSec ?? 0) : 0,
+    ...(!r.ok && first ? { code: first.code, ...(first.fix ? { fix: first.fix } : {}) } : {}),
   };
 }
 

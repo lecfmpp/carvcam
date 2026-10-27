@@ -20,6 +20,8 @@ interface Flow {
   bitIn: boolean;
   routerOn: boolean;
   probeOpen: boolean;
+  /** Setting Z by hand (paper method) instead of with the touch plate. */
+  manualZOpen: boolean;
   jogStep: number;
   set(p: Partial<Omit<Flow, "set">>): void;
 }
@@ -30,6 +32,7 @@ export const useFlow = create<Flow>()((set) => ({
   bitIn: false,
   routerOn: false,
   probeOpen: false,
+  manualZOpen: false,
   jogStep: 10,
   set: (p) => set(p),
 }));

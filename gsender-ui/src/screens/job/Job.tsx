@@ -18,6 +18,8 @@ export interface JobCtx {
   result: GenerateResult | null;
   sim: SimGrid | null;
   busy: boolean;
+  /** The engine threw on this design (nothing to carve until it's fixed or undone). */
+  error: string | null;
   machine: Machine;
   head: Head;
   headId: HeadId;
@@ -59,7 +61,7 @@ export default function Job({ step }: { step: JobStep }) {
   const lettering = design.spec.type === "lettering";
   const hasProfile = !!result?.operations.some((o) => o.type === "profile");
   const groups = useMemo(() => (result?.gcode ? groupOps(result, design.tabs.count, lettering) : []), [result, design.tabs.count, lettering]);
-  const ctx: JobCtx = { design, result, sim, busy: eng.busy && !result, machine, head, headId, preset, groups, hasProfile, lettering };
+  const ctx: JobCtx = { design, result, sim, busy: eng.busy && !result, error: eng.busy ? null : eng.error, machine, head, headId, preset, groups, hasProfile, lettering };
 
   const zeroSet = useFlow((s) => s.zeroSet);
   const reachable: JobStep[] = ["create", "prepare"];

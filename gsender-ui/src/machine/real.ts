@@ -4,7 +4,7 @@ import { GrblController, GrblError } from "./grbl/controller";
 import { alarmKind, ERROR_TEXT, type StatusReport, type V3 } from "./grbl/parse";
 import { resumePreamble } from "./grbl/resume";
 import { BridgeTransport, WebSerialTransport, type SerialPortLike, type Transport } from "./grbl/transport";
-import { useMachine, type AlarmCode, type MachineStatus, type Vec3 } from "./store";
+import { useMachine, zeroPatch, type AlarmCode, type MachineStatus, type Vec3 } from "./store";
 
 /**
  * The real machine behind the same state (useMachine) the screens already use. Converts the
@@ -90,7 +90,7 @@ export async function connectReal(target: ConnTarget, onLog?: (dir: "in" | "out"
   negSpace = true;
   // Without limit switches ($22=0) there is no homing: the current position is taken as valid.
   const homingEnabled = (Number(c.settings["22"] ?? "1") & 1) === 1;
-  set({ firmware: `${c.firmware ?? "grbl"} ${c.version}`.trim(), homed: !homingEnabled, homingEnabled, lastError: null, workZero: null, zMeasured: false });
+  set({ firmware: `${c.firmware ?? "grbl"} ${c.version}`.trim(), homed: !homingEnabled, homingEnabled, lastError: null, workZero: null, zMeasured: false, zeroMethod: null });
   if (c.last) onStatus(c.last);
 }
 
@@ -230,7 +230,7 @@ export async function setWorkZeroReal(axes: ("x" | "y" | "z")[]) {
   const s = get();
   const wz = { ...(s.workZero ?? s.pos) };
   for (const a of axes) wz[a] = s.pos[a];
-  set({ workZero: wz });
+  set({ workZero: wz, ...zeroPatch(axes) });
 }
 export async function probeZReal(plate: number) {
   if (!ctl) return;
@@ -239,7 +239,7 @@ export async function probeZReal(plate: number) {
   const s = get();
   // Z zero = touch point − plate thickness. The touch point is 5 mm below where the bit is now.
   const touchZ = s.pos.z - 5;
-  set({ workZero: { ...(s.workZero ?? s.pos), z: touchZ - plate }, zMeasured: true });
+  set({ workZero: { ...(s.workZero ?? s.pos), z: touchZ - plate }, zMeasured: true, zeroMethod: "probe" });
 }
 export function startReal() {
   const s = get();

@@ -275,3 +275,14 @@
 .batch-item__file { font: 500 13px var(--mono); color: #e4e1db; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .batch-item__msg { font: 400 12px/1.35 var(--font); color: var(--text-3); }
 .batch-item__msg--bad { color: var(--alarm-text); }
+
+/* Z zero: touch plate or by hand (paper method) */
+.zopts { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1); }
+.zopts__head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.zopt { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px; border-radius: 10px; background: rgba(255, 255, 255, 0.04); }
+.zopt__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.zopt__title { font: 500 13px var(--font); color: var(--text); }
+.zopt__badge { margin-left: 4px; padding: 1px 6px; border-radius: 999px; font: 500 10px var(--mono); color: var(--accent); background: rgba(255, 91, 31, 0.14); vertical-align: 1px; }
+.zman { display: flex; align-items: center; gap: 8px; }
+.jog__btn--zh { width: 72px; height: 52px; flex-direction: column; gap: 2px; font: 500 12px var(--mono); }
+.zman__read { margin-left: auto; display: flex; gap: 8px; align-items: baseline; font: 500 18px var(--mono); color: var(--text); }
