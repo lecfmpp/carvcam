@@ -74,7 +74,7 @@ ${ld.map((j) => `<script type="application/ld+json">${JSON.stringify(j)}</script
 <a class="logo" href="${href("/")}" aria-label="CarvCAM home"><img src="${asset("/assets/carvcam-icon.svg")}" alt="" width="28" height="28"><span class="wordmark">Carv<span>CAM</span></span></a>
 <nav class="nav" aria-label="Main">${navHtml}</nav>
 <a class="hdr__login" href="${href("/login/")}">Log in</a>
-<a class="btn btn--primary" data-dl="short" href="${site.downloads.windows}">${ICON_WIN}<span>Download</span></a>
+<a class="btn btn--primary" data-dl="short" href="${site.downloads.windows}"><span>Download</span></a>
 </div></header>
 <main id="main">
 ${crumbs ? `<div class="wrap" style="padding-top:28px">${crumbHtml}</div>` : ""}
@@ -83,14 +83,22 @@ ${body}
 ${footer()}
 <script>try { if (localStorage.getItem("sb-zveqsvizefgbicwvjvdu-auth-token")) { const a = document.querySelector(".hdr__login"); a.href = ${JSON.stringify(href("/account/"))}; a.textContent = "Account"; } } catch {}</script>
 <script>(() => {
-  // Download buttons: Windows by default; on Linux they become the AppImage; on Mac they go to the downloads page.
+  // Download buttons: Windows by default; on Linux they become the AppImage (or the Pi .deb on ARM); on Mac they go to the downloads page.
+  // Only the long "Download for …" buttons carry an OS logo, and it always matches the file they download.
   const ua = navigator.userAgent, linux = /Linux/.test(ua) && !/Android|CrOS/.test(ua), mac = /Macintosh|Mac OS X/.test(ua) && !/iPhone|iPad/.test(ua);
   if (!linux && !mac) return;
-  const icon = ${JSON.stringify(ICON_LINUX)};
+  const pi = /aarch64|arm64|armv7|armhf/.test(ua);
   document.querySelectorAll("a[data-dl]").forEach((a) => {
-    const long = a.dataset.dl === "long";
-    if (linux) { a.href = /aarch64|arm64/.test(ua) ? ${JSON.stringify(site.downloads.piDeb)} : /armv7|armhf/.test(ua) ? ${JSON.stringify(site.downloads.pi32Deb)} : ${JSON.stringify(site.downloads.appimage)}; a.querySelector("svg").outerHTML = icon; a.querySelector("span").textContent = long ? (/aarch64|arm64|armv7|armhf/.test(ua) ? "Download for Raspberry Pi" : "Download for Linux") : "Download"; }
-    else { a.href = ${JSON.stringify(href(site.download))}; a.querySelector("span").textContent = long ? "Mac version coming soon" : "Downloads"; }
+    const long = a.dataset.dl === "long", svg = a.querySelector("svg"), label = a.querySelector("span");
+    if (linux) {
+      a.href = /aarch64|arm64/.test(ua) ? ${JSON.stringify(site.downloads.piDeb)} : /armv7|armhf/.test(ua) ? ${JSON.stringify(site.downloads.pi32Deb)} : ${JSON.stringify(site.downloads.appimage)};
+      if (svg) pi ? svg.remove() : (svg.outerHTML = ${JSON.stringify(ICON_LINUX)});
+      label.textContent = long ? (pi ? "Download for Raspberry Pi" : "Download for Linux") : "Download";
+    } else {
+      a.href = ${JSON.stringify(href(site.download))};
+      svg?.remove();
+      label.textContent = long ? "Mac version coming soon" : "Downloads";
+    }
   });
 })();</script>
 </body>
@@ -286,7 +294,7 @@ function download() {
 <div class="dlcards">
 <div class="dlcard on" id="windows"><b>${ICON_WIN} Windows</b><p class="note">Windows 10 and 11, 64-bit</p>${btn(site.downloads.windows, ICON_WIN, "Download for Windows")}<p class="note">CarvCAM-Windows-64Bit.exe</p></div>
 <div class="dlcard on" id="linux"><b>${ICON_LINUX} Linux</b><p class="note">64-bit PC: Ubuntu, Debian, Mint, Fedora and others</p>${btn(site.downloads.appimage, ICON_LINUX, "AppImage")} ${btn(site.downloads.deb, ICON_LINUX, ".deb")}<p class="note">.deb for Ubuntu, Debian and Mint · AppImage for any distro</p></div>
-<div class="dlcard on" id="pi"><b>Raspberry Pi</b><p class="note">Pi 4 and 5 · Raspberry Pi OS</p>${btn(site.downloads.piDeb, ICON_LINUX, "64-bit .deb")} ${btn(site.downloads.pi32Deb, ICON_LINUX, "32-bit .deb")}<p class="note">64-bit: Pi 4 and 5 on Raspberry Pi OS 64-bit · <a href="${site.downloads.piAppImage}">64-bit AppImage</a></p></div>
+<div class="dlcard on" id="pi"><b>Raspberry Pi</b><p class="note">Pi 4 and 5 · Raspberry Pi OS</p>${btn(site.downloads.piDeb, "", "64-bit .deb")} ${btn(site.downloads.pi32Deb, "", "32-bit .deb")}<p class="note">64-bit: Pi 4 and 5 on Raspberry Pi OS 64-bit · <a href="${site.downloads.piAppImage}">64-bit AppImage</a></p></div>
 <div class="dlcard" id="mac"><b>macOS</b><p class="note">Intel and Apple Silicon</p><p><span class="soon">Coming soon</span></p></div>
 </div>
 <div class="prose">
