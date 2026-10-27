@@ -1,4 +1,7 @@
 gsender-ui/public/.debug/
+website/dist/
+website/carvcam-site.html
+website/files.json
 node_modules/
 dist/
 .env.local
