@@ -6,15 +6,15 @@
     { "id": "altmill-4x8", "url": "https://sienci.com/product/altmill-4x8/", "image": "machines/altmill-4x8.webp", "photo": "https://sienci.com/wp-content/uploads/2025/08/AltMill-4x8-Main-Image.png" },
     { "id": "longmill-mk3-30x30", "url": "https://sienci.com/product/longmill-mk3-30x30/", "image": "machines/longmill-mk3-30x30.webp", "photo": "https://sienci.com/wp-content/uploads/2026/01/30x30-Thumbanil.png" },
     { "id": "longmill-mk3-48x30", "url": "https://sienci.com/product/longmill-mk3-48x30/", "image": "machines/longmill-mk3-48x30.webp", "photo": "https://sienci.com/wp-content/uploads/2026/01/48x30-Thumbnail-1.png" },
-    { "id": "longmill-mk2-12x30", "url": "https://resources.sienci.com/", "image": "machines/longmill-mk2.webp", "photo": "https://resources.sienci.com/wp-content/uploads/2025/02/lmk2_knowcnc_Your-CNC-Assembly-View.png" },
-    { "id": "longmill-mk2-30x30", "url": "https://resources.sienci.com/", "image": "machines/longmill-mk2.webp", "photo": "https://resources.sienci.com/wp-content/uploads/2025/02/lmk2_knowcnc_Your-CNC-Assembly-View.png" },
-    { "id": "longmill-mk2-48x30", "url": "https://resources.sienci.com/", "image": "machines/longmill-mk2.webp", "photo": "https://resources.sienci.com/wp-content/uploads/2025/02/lmk2_knowcnc_Your-CNC-Assembly-View.png" }
+    { "id": "longmill-mk2-12x30", "url": "https://resources.sienci.com/", "image": "machines/longmill-mk2.webp" },
+    { "id": "longmill-mk2-30x30", "url": "https://resources.sienci.com/", "image": "machines/longmill-mk2.webp" },
+    { "id": "longmill-mk2-48x30", "url": "https://resources.sienci.com/", "image": "machines/longmill-mk2.webp" }
   ],
   "heads": [
     { "id": "makita-rt0701", "url": "https://sienci.com/product/makita-rt0701c-1-25-hp-110v-compact-router/", "image": "heads/makita-rt0701.webp" },
     { "id": "autospin-t1", "url": "https://sienci.com/product/autospin-t1-router/", "image": "heads/autospin-t1.webp", "photo": "https://sienci.com/wp-content/uploads/2025/06/AutoSpin-T1-Router-Thumbnail.png" },
-    { "id": "spindle-1-5kw-er20", "url": "https://sienci.com/product/altmill-1-5kw-er20-spindle-clear-cut-dust-shoe-kit/", "image": "heads/spindle-1-5kw-er20.webp", "photo": "https://sienci.com/wp-content/uploads/2025/08/AltMill-ER20-15KW-Spindle-7.png" },
-    { "id": "spindle-2-2kw-er20", "url": "https://sienci.com/product/altmill-2-2kw-er20-spindle-clear-cut-dust-shoe-kit/", "image": "heads/spindle-2-2kw-er20.webp", "photo": "https://sienci.com/wp-content/uploads/2025/08/AltMill-22KW-ER20-Spindle.png" }
+    { "id": "spindle-1-5kw-er20", "url": "https://sienci.com/product/altmill-1-5kw-er20-spindle-clear-cut-dust-shoe-kit/", "image": "heads/spindle-1-5kw-er20.webp" },
+    { "id": "spindle-2-2kw-er20", "url": "https://sienci.com/product/altmill-2-2kw-er20-spindle-clear-cut-dust-shoe-kit/", "image": "heads/spindle-2-2kw-er20.webp" }
   ],
   "bits": [
     { "id": "flat-1-16-downcut", "url": "https://sienci.com/product/1-16-flat-downcut-end-mill/", "image": "bits/flat-1-16-downcut.webp", "photo": "https://sienci.com/wp-content/uploads/2021/03/125.png" },
