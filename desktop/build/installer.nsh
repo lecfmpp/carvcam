@@ -1,5 +1,4 @@
-; CarvCAM installer pages, in the same shape as gSender 1.6.4 (electron-build/installer.nsh,
-; GPL-3.0, Sienci Labs): license, folder, install and a finish page with "Create Desktop Shortcut"
+; CarvCAM installer pages: license, folder, install and a finish page with "Create Desktop Shortcut"
 ; and "Run CarvCAM". The Start Menu shortcut is always created (electron-builder).
 !include "MUI2.nsh"
 

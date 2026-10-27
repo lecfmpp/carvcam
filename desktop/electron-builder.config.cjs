@@ -11,7 +11,9 @@ module.exports = {
   copyright: "Copyright © 2026 CarvCAM",
   asar: true,
   asarUnpack: ["**/*.node"],
-  files: ["main.mjs", "app/**", "bridge/**", "package.json", "LICENSE"],
+  files: ["main.mjs", "app/**", "bridge/**", "package.json", "LICENSE", "THIRD_PARTY_NOTICES.txt"],
+  // License and third-party notices also sit next to the program, where users can read them.
+  extraFiles: ["LICENSE", "THIRD_PARTY_NOTICES.txt"],
   directories: { buildResources: "build", output: "release" },
   compression: "normal",
   npmRebuild: false, // serialport uses N-API (prebuilt win32-x64 binaries, nothing to compile)
@@ -69,5 +71,6 @@ module.exports = {
     shortcutName: "CarvCAM",
     include: "build/installer.nsh",
   },
-  publish: [{ provider: "github", owner: "lecfmpp", repo: "carvcam", releaseType: "release" }],
+  // Installers live in a separate public repository; this source repository is private.
+  publish: [{ provider: "github", owner: "lecfmpp", repo: "carvcam-releases", releaseType: "release" }],
 };

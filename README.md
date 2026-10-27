@@ -1,13 +1,14 @@
 # CarvCAM
 
-A new UI and CAM for gSender, built for Sienci Labs machines (LongMill and AltMill).
-It came from the Leandro-Apps/scanbusinesscard repository (`carvcam/` folder), with its history preserved.
+Design, prepare and carve signs on Sienci Labs machines (LongMill and AltMill) in one app.
+Proprietary software — see `LICENSE`. This repository is private.
 
 | Folder | What it is |
 |---|---|
 | `gsender-ui/` | The app (React + Vite): sign design, preparation, positioning, carving and simulation |
 | `cam-engine/` | CAM engine in TypeScript: geometry, operations, G-code and the Sienci catalog |
-| `docs/gsender-reverse-engineering/` | Research and decisions (gSender reverse engineering, comparisons) |
+| `desktop/` | Desktop app (Electron) and installers for Windows, Linux and Raspberry Pi |
+| `docs/` | Internal guides (code signing) |
 
 ## Try it
 

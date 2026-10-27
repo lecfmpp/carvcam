@@ -18,4 +18,5 @@ for (const d of ["app", "bridge"]) rmSync(join(here, d), { recursive: true, forc
 cpSync(join(ui, "dist"), join(here, "app"), { recursive: true });
 mkdirSync(join(here, "bridge"), { recursive: true });
 cpSync(join(ui, "bridge/server.mjs"), join(here, "bridge/server.mjs"));
+execSync("node scripts/notices.mjs", { cwd: here, stdio: "inherit" });
 console.log("prepared app/ and bridge/");
