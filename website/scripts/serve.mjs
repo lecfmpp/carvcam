@@ -3,7 +3,7 @@ import { createServer } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import { extname, join } from "node:path";
 const root = new URL("../dist/", import.meta.url).pathname;
-const types = { ".html": "text/html; charset=utf-8", ".css": "text/css", ".svg": "image/svg+xml", ".webp": "image/webp", ".woff2": "font/woff2", ".xml": "application/xml", ".txt": "text/plain" };
+const types = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".webp": "image/webp", ".woff2": "font/woff2", ".xml": "application/xml", ".txt": "text/plain" };
 const port = Number(process.argv[2] ?? 4321);
 createServer(async (req, res) => {
   let p = join(root, decodeURIComponent(new URL(req.url, "http://x").pathname));

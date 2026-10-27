@@ -23,3 +23,16 @@ npm run serve            # → http://localhost:4321
 Before going live, set `site.url` (domain) and `site.installer` (Windows installer link) in `src/data.mjs`.
 Competitor facts in `competitors` were checked on each vendor's site in October 2026; re-check before
 updating `site.checked`.
+
+## Accounts
+`/signup/`, `/login/`, `/reset-password/`, `/onboarding/` and `/account/` are built by
+`src/account.mjs` and run in the browser with `assets/js/account.js` against Supabase (project and
+publishable key in `src/data.mjs`; tables and RLS in `supabase/migrations/`). They are `noindex` and
+left out of the sitemap and llms.txt.
+
+`assets/js/supabase.js` is a small vendored client (auth + REST only, ~30 KB gzipped). To rebuild it:
+```
+mkdir /tmp/sb && cd /tmp/sb && npm i @supabase/auth-js@2.118.0 @supabase/postgrest-js@2.118.0 esbuild
+printf 'export { AuthClient } from "@supabase/auth-js";\nexport { PostgrestClient } from "@supabase/postgrest-js";\n' > entry.js
+npx esbuild entry.js --bundle --format=esm --minify --target=es2020 --platform=browser --outfile=supabase.js
+```

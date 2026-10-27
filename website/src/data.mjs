@@ -22,6 +22,13 @@ export const site = {
   checked: "October 2026",
 };
 
+// Supabase project for accounts. The publishable key is meant for browsers: row level security
+// decides what each signed-in user can read or write.
+export const supabase = {
+  url: "https://zveqsvizefgbicwvjvdu.supabase.co",
+  key: "sb_publishable_6Y4DigqN04BLaIEppjK8hQ_wHsIG9_g",
+};
+
 export const nav = [
   ["How it works", "/#how"],
   ["Features", "/features/"],

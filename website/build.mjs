@@ -7,6 +7,7 @@ import { dirname, join } from "node:path";
 import { faq, features, howtos, machines, nav, site } from "./src/data.mjs";
 import { comparisons, others, sienciRecs } from "./src/compare.mjs";
 import { docSections, docs } from "./src/docs.mjs";
+import { accountPages } from "./src/account.mjs";
 
 const PREVIEW = process.argv.includes("--preview");
 const OUT = new URL("./dist/", import.meta.url).pathname;
@@ -36,7 +37,7 @@ const ICON_LINUX = `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="curr
 const ICON_WIN = `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 5.5 10.5 4.5v7H3zM11.5 4.4 21 3v8.5h-9.5zM3 12.5h7.5v7L3 18.5zM11.5 12.5H21V21l-9.5-1.4z"/></svg>`;
 const cell = (v) => (v === "yes" ? '<span class="yes">✓ Yes</span>' : v === "no" ? '<span class="no">— No</span>' : v === "part" ? '<span class="part">Partly</span>' : esc(v));
 
-function layout({ path, title, description, body, schema = [], crumbs = null, head = "" }) {
+function layout({ path, title, description, body, schema = [], crumbs = null, head = "", index = true }) {
   at(path);
   const canonical = site.url + path;
   const ld = [...schema];
@@ -62,7 +63,7 @@ function layout({ path, title, description, body, schema = [], crumbs = null, he
 <link rel="icon" type="image/svg+xml" href="${asset("/assets/carvcam-icon.svg")}">
 <link rel="preload" href="${asset("/assets/fonts/geist-sans-latin-600-normal.woff2")}" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="${asset("/assets/site.css")}">${head}
-${path.endsWith(".html") ? "" : `<link rel="alternate" type="text/markdown" href="${site.url}${path}index.md" title="Markdown version">`}
+${path.endsWith(".html") || !index ? "" : `<link rel="alternate" type="text/markdown" href="${site.url}${path}index.md" title="Markdown version">`}
 ${ld.map((j) => `<script type="application/ld+json">${JSON.stringify(j)}</script>`).join("\n")}
 </head>
 <body>
@@ -70,6 +71,7 @@ ${ld.map((j) => `<script type="application/ld+json">${JSON.stringify(j)}</script
 <header class="hdr"><div class="wrap">
 <a class="logo" href="${href("/")}" aria-label="CarvCAM home"><img src="${asset("/assets/carvcam-icon.svg")}" alt="" width="28" height="28"><span class="wordmark">Carv<span>CAM</span></span></a>
 <nav class="nav" aria-label="Main">${navHtml}</nav>
+<a class="hdr__login" href="${href("/login/")}">Log in</a>
 <a class="btn btn--primary" data-dl="short" href="${site.downloads.windows}">${ICON_WIN}<span>Download</span></a>
 </div></header>
 <main id="main">
@@ -77,6 +79,7 @@ ${crumbs ? `<div class="wrap" style="padding-top:28px">${crumbHtml}</div>` : ""}
 ${body}
 </main>
 ${footer()}
+<script>try { if (localStorage.getItem("sb-zveqsvizefgbicwvjvdu-auth-token")) { const a = document.querySelector(".hdr__login"); a.href = ${JSON.stringify(href("/account/"))}; a.textContent = "Account"; } } catch {}</script>
 <script>(() => {
   // Download buttons: Windows by default; on Linux they become the AppImage; on Mac they go to the downloads page.
   const ua = navigator.userAgent, linux = /Linux/.test(ua) && !/Android|CrOS/.test(ua), mac = /Macintosh|Mac OS X/.test(ua) && !/iPhone|iPad/.test(ua);
@@ -90,7 +93,7 @@ ${footer()}
 })();</script>
 </body>
 </html>`;
-  pages.push({ path, html, title, description, body });
+  pages.push({ path, html, title, description, body, index });
 }
 
 /* ---------------- Agent-ready: Markdown for every page, llms.txt and llms-full.txt ---------------- */
@@ -818,6 +821,7 @@ featurePages();
 comparePages();
 learnPages();
 docPages();
+accountPages({ layout, at, href, asset, esc });
 notFound();
 
 await rm(OUT, { recursive: true, force: true });
@@ -829,7 +833,7 @@ for (const p of pages) {
 await mkdir(join(OUT, "assets"), { recursive: true });
 await cp(new URL("./assets/", import.meta.url).pathname, join(OUT, "assets"), { recursive: true });
 await cp(new URL("./src/styles.css", import.meta.url).pathname, join(OUT, "assets/site.css"));
-const urls = pages.filter((p) => !p.path.endsWith(".html"));
+const urls = pages.filter((p) => !p.path.endsWith(".html") && p.index);
 await writeFile(join(OUT, "sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((p) => `<url><loc>${site.url}${p.path}</loc><lastmod>2026-10-27</lastmod></url>`).join("\n")}\n</urlset>\n`);
 // Markdown for every page + indexes for agents
 const mdPages = urls.map((p) => ({ ...p, md: `# ${p.title}\n\n> ${p.description}\n\nSource: ${site.url}${p.path}\n\n${htmlToMd(p.body, p.path)}\n` }));
