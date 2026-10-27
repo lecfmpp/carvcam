@@ -8,7 +8,7 @@ export const fonts = () => (cache ??= loadFontsFromDisk());
 
 export const example = (name: string) => JSON.parse(readFileSync(new URL(`../examples/${name}.json`, import.meta.url), "utf8"));
 
-/** Pontos de uma grade regular que caem dentro da região. */
+/** Points of a regular grid that fall inside the region. */
 export function samplePoints(r: Region, step = 1): Pt[] {
   if (r.length === 0) return [];
   const b = bounds(r);

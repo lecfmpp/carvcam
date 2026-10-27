@@ -4,7 +4,7 @@ import { addSvg, type ElementId } from "./elements";
 
 const MAX_BYTES = 3_000_000;
 
-/** Abre o seletor de arquivos do sistema e devolve o desenho escolhido (ou null). */
+/** Opens the system file picker and returns the chosen drawing (or null). */
 export function pickSvgFile(): Promise<File | null> {
   return new Promise((resolve) => {
     const input = document.createElement("input");
@@ -19,8 +19,8 @@ export function pickSvgFile(): Promise<File | null> {
 export const isSvgFile = (f: File) => f.type === "image/svg+xml" || /\.(svg|dxf)$/i.test(f.name);
 
 /**
- * Lê o arquivo (SVG ou DXF) e acrescenta o desenho no centro da peça. Mostra um aviso e
- * devolve null se o arquivo não servir.
+ * Reads the file (SVG or DXF) and adds the drawing at the center of the part. Shows a notice and
+ * returns null if the file can't be used.
  */
 export async function importSvgFile(file: File, spec: PlateSpecInput): Promise<[PlateSpecInput, ElementId] | null> {
   if (!isSvgFile(file)) {
@@ -31,7 +31,7 @@ export async function importSvgFile(file: File, spec: PlateSpecInput): Promise<[
     toast("This file is too large (over 3 MB). Simplify it before importing.");
     return null;
   }
-  const out = addSvg(spec, await file.text(), file.name, spec.largura / 2, spec.altura / 2);
+  const out = addSvg(spec, await file.text(), file.name, spec.width / 2, spec.height / 2);
   if ("error" in out) {
     toast(out.error);
     return null;

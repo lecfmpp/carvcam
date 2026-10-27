@@ -1,19 +1,20 @@
 #!/usr/bin/env node
-// Baixa a foto oficial de cada máquina, router/spindle e fresa da Sienci Labs (a imagem principal da página do
-// produto, og:image) e salva em WebP leve em public/, nos caminhos de src/lib/sienciProducts.json.
+// Downloads the official photo of each Sienci Labs machine, router/spindle and bit (the main image on
+// the product page, og:image) and saves it as a lightweight WebP in public/, at the paths in
+// src/lib/sienciProducts.json.
 //
-//   npm run images:fetch            # só o que ainda não existe
-//   npm run images:fetch -- --force # baixa tudo de novo
-//   npm run images:fetch -- --only autospin-t1,altmill-4x4   # só esses produtos
+//   npm run images:fetch            # only what doesn't exist yet
+//   npm run images:fetch -- --force # download everything again
+//   npm run images:fetch -- --only autospin-t1,altmill-4x4   # only these products
 //   npm run images:fetch -- --from ~/Downloads/sienci
-//       # sem baixar: converte fotos que você salvou do site, uma por produto, com o id no nome
-//       # (ex.: autospin-t1.jpg, altmill-4x4.png). Os ids estão em src/lib/sienciProducts.json.
+//       # no download: converts photos you saved from the site, one per product, with the id in the
+//       # file name (e.g. autospin-t1.jpg, altmill-4x4.png). The ids are in src/lib/sienciProducts.json.
 //
-// O sienci.com fica atrás do Cloudflare, que às vezes pede uma verificação de navegador em vez
-// da página; nesse caso o script avisa, e o caminho é salvar as fotos pelo navegador e usar --from.
+// sienci.com sits behind Cloudflare, which sometimes serves a browser check instead of the page;
+// the script reports it, and the workaround is to save the photos from a browser and use --from.
 //
-// Precisa de internet com acesso ao sienci.com. As fotos são da Sienci Labs: use-as conforme o
-// acordo com eles (programa de afiliados / material de marca).
+// Needs internet access to sienci.com. The photos belong to Sienci Labs: use them according to
+// your agreement with them (affiliate program / brand materials).
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -22,7 +23,7 @@ import sharp from "sharp";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const products = JSON.parse(await readFile(join(root, "src/lib/sienciProducts.json"), "utf8"));
 const force = process.argv.includes("--force");
-// Para testes: troca https://sienci.com por outro endereço (ex.: um servidor local).
+// For tests: replaces https://sienci.com with another address (e.g. a local server).
 const origin = process.env.SIENCI_ORIGIN?.replace(/\/$/, "");
 const fix = (u) => (origin ? u.replace(/^https:\/\/sienci\.com/, origin) : u);
 const fromIdx = process.argv.indexOf("--from");
@@ -31,7 +32,7 @@ const onlyIdx = process.argv.indexOf("--only");
 const only = onlyIdx > 0 ? new Set((process.argv[onlyIdx + 1] ?? "").split(",").map((x) => x.trim()).filter(Boolean)) : null;
 const UA = "Mozilla/5.0 (CarvCAM image fetch; +https://sienci.com)";
 
-/** URL da imagem principal do produto na página (og:image, twitter:image, galeria ou JSON-LD). */
+/** URL of the product's main image on the page (og:image, twitter:image, gallery or JSON-LD). */
 export function productImage(html) {
   const pats = [
     /<meta[^>]+(?:property|name)=["'](?:og:image(?::secure_url)?|twitter:image)["'][^>]*content=["']([^"']+)["']/i,
@@ -67,7 +68,7 @@ async function one(item, width) {
   if (!page.ok) return { id: item.id, status: `page ${page.status}` };
   const src = productImage(html);
   if (!src) {
-    // Guarda a página para entender o que veio no lugar do produto.
+    // Save the page to see what came back instead of the product.
     const dbg = join(root, "public", ".debug", `${item.id}.html`);
     await mkdir(dirname(dbg), { recursive: true });
     await writeFile(dbg, html);

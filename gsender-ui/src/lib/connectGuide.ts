@@ -1,9 +1,9 @@
 import type { Family, HeadId } from "./catalog";
 
 /**
- * Roteiro de ligação de cada controladora Sienci, para o assistente "Connect". Fontes: manuais da
- * SuperLongBoard (SLB/SLB-EXT), SLB-LITE, AutoSpin T1 e kits de spindle em resources.sienci.com
- * (consultados em out/2026). O texto da interface é em inglês, como o resto do app.
+ * Wiring guide for each Sienci controller, used by the "Connect" assistant. Sources: the
+ * SuperLongBoard (SLB/SLB-EXT), SLB-LITE, AutoSpin T1 and spindle kit manuals on resources.sienci.com
+ * (checked Oct 2026).
  */
 export type ControllerId = "slb-lite" | "slb" | "slb-ext" | "longboard";
 export type Link = "usb" | "ethernet";
@@ -13,13 +13,13 @@ export interface ControllerInfo {
   id: ControllerId;
   name: string;
   firmware: string;
-  /** Tensão da fonte que vem com a placa, quando a Sienci informa. */
+  /** Voltage of the power supply that ships with the controller, when Sienci lists it. */
   psu?: string;
   usb: string;
   ethernet: boolean;
-  /** Como liga e desliga a placa. */
+  /** How to switch the controller on and off. */
   switchOn: string;
-  /** Sinais de que a placa recebeu energia. */
+  /** Signs that the controller is powered. */
   powerLights: string;
   estop: boolean;
 }
@@ -70,7 +70,7 @@ export const CONTROLLERS: Record<ControllerId, ControllerInfo> = {
   },
 };
 
-/** Controladora que vem com cada família. A LongMill MK2 pode ter as duas: a pessoa escolhe. */
+/** Controller that ships with each family. The LongMill MK2 may have either one: the user picks. */
 export function controllersFor(family: Family): ControllerId[] {
   if (family === "AltMill") return ["slb-ext"];
   if (family === "LongMill MK3") return ["slb-lite"];
@@ -80,21 +80,21 @@ export function controllersFor(family: Family): ControllerId[] {
 export interface Step {
   id: string;
   title: string;
-  /** Uma frase de contexto acima da lista. */
+  /** One sentence of context above the list. */
   lead: string;
-  /** Ações, na ordem. */
+  /** Actions, in order. */
   do: string[];
-  /** Como saber que deu certo (a pessoa marca cada uma). */
+  /** How to tell it worked (the user ticks each one). */
   check: string[];
-  /** Portas que o desenho destaca neste passo. */
+  /** Ports the illustration highlights in this step. */
   ports: Port[];
-  /** Se não funcionou. */
+  /** If it didn't work. */
   help: string[];
-  /** Aviso de segurança, quando houver. */
+  /** Safety warning, if any. */
   caution?: string;
 }
 
-/** Passos de ligação para a combinação máquina + controladora + cabeçote + cabo. */
+/** Wiring steps for the machine + controller + router/spindle + cable combination. */
 export function wiringSteps(c: ControllerInfo, head: HeadId, link: Link): Step[] {
   const steps: Step[] = [];
 
@@ -214,7 +214,7 @@ function headStep(c: ControllerInfo, head: HeadId): Step {
         "If it doesn't respond, unplug and re-seat the signal cable at both ends.",
       ],
     };
-  // Kits de spindle com VFD.
+  // Spindle kits with a VFD.
   const big = head === "spindle-2-2kw-er20";
   return {
     id: "head",
@@ -240,7 +240,7 @@ function headStep(c: ControllerInfo, head: HeadId): Step {
   };
 }
 
-/** Linhas do console simulado ao conectar (o adaptador real mostra a resposta da placa). */
+/** Simulated console lines on connect (the real adapter shows the controller's actual reply). */
 export function handshake(c: ControllerInfo, link: Link, port: string): string[] {
   return [
     link === "usb" ? `Opening ${port}…` : `Connecting to ${port}…`,
@@ -250,7 +250,7 @@ export function handshake(c: ControllerInfo, link: Link, port: string): string[]
   ];
 }
 
-/** Porta que o adaptador simulado "encontra". */
+/** Port the simulated adapter "finds". */
 export function fakePort(link: Link): string {
   if (link === "ethernet") return "192.168.5.1:23";
   const mac = typeof navigator !== "undefined" && /Mac/i.test(navigator.platform);

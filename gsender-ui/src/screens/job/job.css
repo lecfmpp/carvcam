@@ -1,4 +1,4 @@
-/* Prepare / Position / Carve (protótipo "Prepare Position Carve"). */
+/* Prepare / Position / Carve ("Prepare Position Carve" prototype). */
 
 .job-sec { display: flex; flex-direction: column; gap: 8px; }
 .job-label { font: 500 12px var(--font); color: var(--text-3); }
@@ -53,11 +53,11 @@
 .job-row--box { padding: 12px 14px; border-radius: 12px; background: rgba(0, 0, 0, 0.22); border: 1px solid rgba(255, 255, 255, 0.07); align-items: center; }
 .dot-now { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); margin-left: 2px; align-self: center; }
 
-/* Face do bloco no palco */
+/* Stock face on the stage */
 .job-face { position: absolute; inset: 0; }
 .job-face--grain { background-image: repeating-linear-gradient(91deg, rgba(90, 55, 20, 0.05) 0 2px, transparent 2px 11px) !important; }
 
-/* Sub-etapas numeradas (Position, troca de fresa) */
+/* Numbered sub-steps (Position, bit change) */
 .substeps { display: flex; flex-direction: column; }
 .substep { display: flex; gap: 12px; padding: 10px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); }
 .substep__text { flex: 1; display: flex; flex-direction: column; gap: 2px; padding-top: 2px; }
@@ -87,7 +87,7 @@
 .readout__k { color: var(--text-3); font-family: var(--font); }
 .tool-height { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1); }
 
-/* Cama da máquina (Position) */
+/* Machine bed (Position) */
 .bed { position: relative; border-radius: 10px; background: #1e1f23; border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: 0 40px 80px rgba(0, 0, 0, 0.45); }
 .bed__grid { position: absolute; inset: 0; border-radius: 10px; pointer-events: none; background-image: linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px); background-size: 28px 28px; }
 .bed__stock { position: absolute; box-shadow: 0 6px 14px rgba(0, 0, 0, 0.4); pointer-events: none; }

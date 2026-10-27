@@ -14,7 +14,7 @@ import { ThreeView } from "../../stage/ThreeView";
 import type { JobCtx } from "./Job";
 import { bitNameFor, fmtMin, rpmText, useFlow } from "./jobUtil";
 
-/** Alarmes com resolução guiada (texto do protótipo). "hold" = só pausa, a posição continua valendo. */
+/** Alarms with guided recovery (prototype copy). "hold" = pause only, the position is still valid. */
 const ALARMS: Record<AlarmCode, { kind: string; hold?: boolean; title: string; why: string; steps: [string, string][]; resume: string; code: string }> = {
   door: { kind: "Paused · door open", hold: true, title: "The enclosure door opened and the carve paused", why: "The bit stopped spinning so nobody gets hurt. Your position is kept.", steps: [["Close the enclosure door", "Door is closed"]], resume: "Resume carving", code: "Hold:1 · Safety door opened" },
   limit: {
@@ -70,17 +70,17 @@ export function CarveStep({ ctx }: { ctx: JobCtx }) {
   const [doneSpin, setDoneSpin] = useState(0);
 
   const phase: Phase = m.status === "running" ? "running" : m.status === "paused" ? "paused" : m.status === "toolchange" ? "toolchange" : m.status === "alarm" ? "alarm" : m.status === "done" ? "done" : "check";
-  const b = result?.layout.bloco;
+  const b = result?.layout.stock;
   const mat = materialById(design.material);
   const job = m.job;
   const progress = job && phase !== "check" ? Math.min(1, m.elapsed / Math.max(1, job.total)) : 0;
 
-  // Operação atual (grupo) a partir do segmento que está sendo cortado.
+  // Current operation (group) from the segment being cut.
   const segIdx = job ? upper(job.times, m.elapsed) : 0;
   const rawOp = job ? (job.opOfSeg[Math.min(segIdx, job.opOfSeg.length - 1)] ?? 0) : 0;
   const curGroup = Math.max(0, groups.findIndex((g) => g.raw.includes(rawOp)));
 
-  // Parar no meio do trabalho volta para o checklist com um aviso.
+  // Stopping mid-job goes back to the checklist with a notice.
   const prev = useRef(m.status);
   useEffect(() => {
     if ((prev.current === "running" || prev.current === "paused" || prev.current === "toolchange") && m.status === "idle") {
@@ -107,16 +107,16 @@ export function CarveStep({ ctx }: { ctx: JobCtx }) {
   const firstTool = groups[0]?.tool ?? 1;
   const firstBit = bitNameFor(design, firstTool);
   const twoBits = new Set(groups.map((g) => g.tool)).size > 1;
-  const rpm = result?.parametros.principal.rpm ?? 18000;
-  const dial = result?.ajustesManuais.find((a) => a.ferramenta === firstTool) ?? null;
-  const fits = b ? b.largura <= machine.area[0] && b.altura <= machine.area[1] : true;
+  const rpm = result?.params.main.rpm ?? 18000;
+  const dial = result?.manualAdjustments.find((a) => a.tool === firstTool) ?? null;
+  const fits = b ? b.width <= machine.area[0] && b.height <= machine.area[1] : true;
 
   type Check = { label: string; sub: string; ok: boolean; fix?: [string, () => void]; dial?: number };
   const checks: Check[] = b
     ? [
         fits
-          ? { label: "Fits on the machine", sub: `${fmtN(b.largura)} × ${fmtN(b.altura)} mm inside ${machine.area[0]} × ${machine.area[1]} mm`, ok: true }
-          : { label: "Too big for your machine", sub: `Needs ${fmtN(b.largura)} × ${fmtN(b.altura)} mm, the work area is ${machine.area[0]} × ${machine.area[1]} mm`, ok: false, fix: ["Change machine", () => nav("/workshop/settings")] },
+          ? { label: "Fits on the machine", sub: `${fmtN(b.width)} × ${fmtN(b.height)} mm inside ${machine.area[0]} × ${machine.area[1]} mm`, ok: true }
+          : { label: "Too big for your machine", sub: `Needs ${fmtN(b.width)} × ${fmtN(b.height)} mm, the work area is ${machine.area[0]} × ${machine.area[1]} mm`, ok: false, fix: ["Change machine", () => nav("/workshop/settings")] },
         positioned
           ? { label: "Work zero set", sub: "Bottom-left corner, top face · height measured", ok: true }
           : { label: connected ? "Work zero not set" : "Machine not connected", sub: "The machine does not know where the board is", ok: false, fix: ["Set zero", () => nav("/position")] },
@@ -135,20 +135,20 @@ export function CarveStep({ ctx }: { ctx: JobCtx }) {
     : [];
   const toFix = checks.filter((c) => !c.ok).length;
   const allOk = !!b && toFix === 0 && !!result?.ok;
-  const totalSec = result?.verificacao?.estatisticas.tempoEstimadoSeg ?? 0;
+  const totalSec = result?.verification?.stats.estimatedTimeSec ?? 0;
   const leftMin = job ? (job.total - m.elapsed) / 60 / (m.feedOverride / 100) : totalSec / 60;
 
   const start = () => {
     if (!result || !b) return;
-    useMachine.getState().loadJob({ name: design.name, gcode: result.gcode, tools: result.ferramentas, board: { width: b.largura, height: b.altura, thickness: b.espessura } });
+    useMachine.getState().loadJob({ name: design.name, gcode: result.gcode, tools: result.tools, board: { width: b.width, height: b.height, thickness: b.thickness } });
     useMachine.getState().start();
   };
 
-  // ---------- Troca de fresa ----------
+  // ---------- Bit change ----------
   const tcFrom = bitNameFor(design, m.activeTool);
   const tcTo = bitNameFor(design, m.pendingTool ?? 2);
-  const dialNext = result?.ajustesManuais.find((a) => a.ferramenta === (m.pendingTool ?? 2));
-  const dialPrev = result?.ajustesManuais.find((a) => a.ferramenta === m.activeTool);
+  const dialNext = result?.manualAdjustments.find((a) => a.tool === (m.pendingTool ?? 2));
+  const dialPrev = result?.manualAdjustments.find((a) => a.tool === m.activeTool);
   const tcRouter: [string, string] = head.auto
     ? ["Automatic speed ✓", "Nothing to set. The carve picks up where it stopped."]
     : dialNext && dialPrev && dialNext.dial !== dialPrev.dial
@@ -161,7 +161,7 @@ export function CarveStep({ ctx }: { ctx: JobCtx }) {
   ];
   const probeTc = async () => {
     if (useMachine.getState().conn === "real") {
-      // Máquina de verdade: mede a nova fresa na placa de toque (15 mm) antes de continuar.
+      // Real machine: measure the new bit on the touch plate (15 mm) before continuing.
       setProbeLeft(0);
       useMachine.setState({ zMeasured: false });
       await useMachine.getState().probeZ(15);
@@ -181,7 +181,7 @@ export function CarveStep({ ctx }: { ctx: JobCtx }) {
     }, 90);
   };
 
-  // ---------- Alarme ----------
+  // ---------- Alarm ----------
   const A = m.alarm ? ALARMS[m.alarm] : null;
   const alarmResolved = !!A && alarmStep >= A.steps.length;
   const resumeFromAlarm = () => {
@@ -199,7 +199,7 @@ export function CarveStep({ ctx }: { ctx: JobCtx }) {
     toast(`Restarting "${g?.label ?? "the operation"}" from the beginning.`);
   };
 
-  // ---------- Painel ----------
+  // ---------- Panel ----------
   let title = "Before you carve";
   let hint = "";
   let primary: { label: string; click(): void; enabled: boolean } | null = null;
@@ -278,17 +278,17 @@ export function CarveStep({ ctx }: { ctx: JobCtx }) {
         }
         render={(api) => {
           if (!b) return <div className="muted">Preparing the job…</div>;
-          const s = fitScale(api.size, b.largura, b.altura);
+          const s = fitScale(api.size, b.width, b.height);
           if ((api.view === "3d" || phase === "done") && sim)
-            return <ThreeView sim={sim} thickness={b.espessura} material={mat} board={{ width: b.largura, height: b.altura }} zoom={api.zoom} spin={api.spin + doneSpin} size={api.size} />;
+            return <ThreeView sim={sim} thickness={b.thickness} material={mat} board={{ width: b.width, height: b.height }} zoom={api.zoom} spin={api.spin + doneSpin} size={api.size} />;
           const live = phase !== "check" && carved;
           return (
-            <Board width={b.largura} height={b.altura} scale={s} zoom={api.zoom} label={`Board ${fmtN(b.largura)} × ${fmtN(b.altura)} mm`}>
+            <Board width={b.width} height={b.height} scale={s} zoom={api.zoom} label={`Board ${fmtN(b.width)} × ${fmtN(b.height)} mm`}>
               <div className={`job-face ${mat.grain ? "job-face--grain" : ""}`} style={{ background: mat.face }} />
               {live ? (
-                <SimCanvas sim={{ x0: carved.x0, y0: carved.y0, cols: carved.cols, rows: carved.rows, res: carved.res, h: carved.h }} thickness={b.espessura} material={mat} scale={s} board={{ width: b.largura, height: b.altura }} />
+                <SimCanvas sim={{ x0: carved.x0, y0: carved.y0, cols: carved.cols, rows: carved.rows, res: carved.res, h: carved.h }} thickness={b.thickness} material={mat} scale={s} board={{ width: b.width, height: b.height }} />
               ) : (
-                <ToolpathOverlay segments={segs} width={b.largura} height={b.altura} scale={s} opacity={0.75} />
+                <ToolpathOverlay segments={segs} width={b.width} height={b.height} scale={s} opacity={0.75} />
               )}
               {live && phase !== "done" ? (
                 <>
@@ -431,7 +431,7 @@ export function CarveStep({ ctx }: { ctx: JobCtx }) {
                     </div>
                     <div>ok · feed {m.feedOverride}% · rapid 100%</div>
                     <div>
-                      {"< "}Run|MPos:{m.pos.x.toFixed(3)},{m.pos.y.toFixed(3)},{m.pos.z.toFixed(3)}|FS:{Math.round(((result?.parametros.principal.avanco ?? 1000) * m.feedOverride) / 100)},{Math.round((rpm * m.rpmOverride) / 100)}
+                      {"< "}Run|MPos:{m.pos.x.toFixed(3)},{m.pos.y.toFixed(3)},{m.pos.z.toFixed(3)}|FS:{Math.round(((result?.params.main.feed ?? 1000) * m.feedOverride) / 100)},{Math.round((rpm * m.rpmOverride) / 100)}
                     </div>
                     <div>ok</div>
                   </div>
@@ -572,7 +572,7 @@ export function CarveStep({ ctx }: { ctx: JobCtx }) {
   );
 }
 
-/** Dial do Makita com a posição destacada (1 a 6). */
+/** Makita dial with the setting highlighted (1 to 6). */
 function Dial({ pos }: { pos: number }) {
   return (
     <div aria-hidden="true" className="dial">

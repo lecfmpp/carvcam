@@ -1,18 +1,17 @@
-#!/usr/bin/env node
-// carvcam-bridge: liga o CarvCAM (no navegador) à controladora da máquina.
+// carvcam-bridge: connects CarvCAM (in the browser) to the machine's controller.
 //
-// O navegador não abre portas USB em todos os navegadores e nunca abre conexões TCP diretas, que é
-// como a SuperLongBoard fala por Ethernet (porta 23). Este programa roda no próprio computador,
-// só aceita conexões dele mesmo (127.0.0.1) e de páginas servidas pelo próprio computador, e passa
-// os bytes nos dois sentidos.
+// Not every browser can open USB ports, and none can open raw TCP connections, which is how the
+// SuperLongBoard talks over Ethernet (port 23). This program runs on the same computer, only
+// accepts connections from itself (127.0.0.1) and from pages served by this computer, and passes
+// the bytes through in both directions.
 //
-//   node bridge/server.mjs            (o "npm run local" já inicia junto)
+//   node bridge/server.mjs            ("npm run local" already starts it)
 //
-// Mensagens (JSON por WebSocket em ws://127.0.0.1:8765):
+// Messages (JSON over WebSocket at ws://127.0.0.1:8765):
 //   → {t:"list"}                                   ← {t:"ports", ports:[{path, manufacturer, vendorId, productId}]}
 //   → {t:"open", kind:"serial", path, baud?}       ← {t:"opened"} | {t:"error", message}
 //   → {t:"open", kind:"tcp", host, port}
-//   → {t:"write", data}   (texto; bytes acima de 0x7F vão como caracteres latin1)
+//   → {t:"write", data}   (text; bytes above 0x7F are sent as latin1 characters)
 //   ← {t:"data", data}    ← {t:"closed", reason}
 import { existsSync, readdirSync } from "node:fs";
 import net from "node:net";
@@ -21,9 +20,9 @@ import { WebSocketServer } from "ws";
 
 export const BRIDGE_PORT = Number(process.env.CARVCAM_BRIDGE_PORT ?? 8765);
 
-/** Só páginas do próprio computador (o app local) podem mandar na máquina. */
+/** Only pages from this computer (the local app) may control the machine. */
 export function originAllowed(origin) {
-  if (!origin) return true; // ferramentas locais (sem navegador)
+  if (!origin) return true; // local tools (no browser)
   try {
     const u = new URL(origin);
     return ["localhost", "127.0.0.1", "[::1]"].includes(u.hostname) && (u.protocol === "http:" || u.protocol === "https:");
@@ -32,8 +31,8 @@ export function originAllowed(origin) {
   }
 }
 
-/** Lista portas seriais. No Linux sem udevadm (alguns contêineres), procura em /dev. */
-// Mesma lista de chips USB que o gSender 1.6.4 aceita como controladora (CNCEngine.js):
+/** Lists serial ports. On Linux without udevadm (some containers), looks in /dev. */
+// Same list of USB chips that gSender 1.6.4 accepts as a controller (CNCEngine.js):
 // 0483 STM32 (SuperLongBoard, SLB-EXT, SLB-LITE), 1A86 CH340 e 2341 Arduino (LongBoard), FTDI, CP210x, Teensy, RP2040...
 const KNOWN_VIDS = ["2E8A", "16C0", "1D50", "0403", "2341", "0042", "1A86", "10C4", "067B", "03EB", "16D0", "0483"];
 export const knownController = (p) => !!p.vendorId && KNOWN_VIDS.includes(String(p.vendorId).toUpperCase());
@@ -48,7 +47,7 @@ export async function listPorts() {
   return ports
     .filter((p) => p.vendorId || /usb|acm|modem|COM\d/i.test(p.path))
     .map((p) => ({ path: p.path, manufacturer: p.manufacturer, vendorId: p.vendorId, productId: p.productId, serialNumber: p.serialNumber, known: knownController(p) }))
-    // Controladoras conhecidas primeiro (no Windows, portas Bluetooth e de modem também aparecem como COM).
+    // Known controllers first (on Windows, Bluetooth and modem ports also show up as COM ports).
     .sort((a, b) => Number(b.known) - Number(a.known));
 }
 
@@ -63,7 +62,7 @@ export function startBridge({ port = BRIDGE_PORT, log = console.log } = {}) {
       try {
         dev?.close();
       } catch {
-        /* já fechado */
+        /* already closed */
       }
       dev = null;
     };

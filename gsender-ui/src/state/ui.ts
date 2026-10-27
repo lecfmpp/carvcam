@@ -8,7 +8,7 @@ interface Toast {
 interface UiState {
   toasts: Toast[];
   toast(text: string, ms?: number): void;
-  /** Assistente de conexão (cabos, energia e teste) aberto. */
+  /** Connection wizard (cables, power and test) is open. */
   connectOpen: boolean;
   openConnect(): void;
   closeConnect(): void;
@@ -16,7 +16,7 @@ interface UiState {
 
 let n = 0;
 
-/** Avisos rápidos no rodapé ("Saved", "Connect the machine first"…). */
+/** Quick notices at the bottom ("Saved", "Connect the machine first"…). */
 export const useUi = create<UiState>()((set, get) => ({
   toasts: [],
   connectOpen: false,
@@ -31,5 +31,5 @@ export const useUi = create<UiState>()((set, get) => ({
 
 export const toast = (text: string, ms?: number) => useUi.getState().toast(text, ms);
 
-/** Abre o assistente "Connect" em vez de conectar direto. */
+/** Opens the "Connect" wizard instead of connecting directly. */
 export const openConnect = () => useUi.getState().openConnect();

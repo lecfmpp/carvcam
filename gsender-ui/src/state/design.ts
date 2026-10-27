@@ -1,33 +1,33 @@
-import type { PlateSpecInput } from "@gsender-next/cam-engine";
+import { migrateLegacyBitId, migrateLegacyProjectId, migrateLegacySpec, type PlateSpecInput } from "@gsender-next/cam-engine";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { materialById, PROJECTS, type Preset } from "../lib/catalog";
 
 /**
- * O projeto em edição: a especificação que vai para o motor de CAM e as escolhas de
- * Preparar (velocidade, abas, segunda fresa). Persistido para sobreviver a recarregar a página.
+ * The project being edited: the spec sent to the CAM engine plus the Prepare choices
+ * (speed, tabs, second bit). Persisted so it survives a page reload.
  */
 export interface Design {
   name: string;
   projectId?: string;
-  /** Material na interface (MDF, Pine…); o motor recebe o id correspondente em `spec.material`. */
+  /** Material as shown in the UI (MDF, Pine…); the engine gets the matching id in `spec.material`. */
   material: string;
   spec: PlateSpecInput;
   bit: string;
-  /** Segunda fresa (recortes e furos), quando ligada. */
+  /** Second bit (cutouts and holes), when enabled. */
   bit2?: string;
   useBit2: boolean;
   preset?: Preset;
   tabs: { count: number; height: number };
-  /** Imagem de referência para decalcar: aparece sob o desenho e nunca é cortada. */
+  /** Reference image to trace over: shown under the design and never cut. */
   tracing?: TracingImage;
 }
 
 export interface TracingImage {
-  /** JPEG reduzido (data URL), para caber no armazenamento local. */
+  /** Downscaled JPEG (data URL), so it fits in local storage. */
   src: string;
   name: string;
-  /** Centro e largura em mm da peça; a altura segue `aspect` (altura ÷ largura). */
+  /** Center and width in mm on the stock; height follows `aspect` (height ÷ width). */
   x: number;
   y: number;
   width: number;
@@ -39,15 +39,15 @@ export interface TracingImage {
 export const BLANK: Design = {
   name: "Untitled sign",
   material: "MDF",
-  spec: { tipo: "placa", largura: 200, altura: 120, espessura: 15, material: "mdf", texto: [], borda: { tipo: "arredondada", raio: 8 }, moldura: 0 },
-  bit: "reta-1-8-upcut",
+  spec: { type: "plate", width: 200, height: 120, thickness: 15, material: "mdf", texts: [], edge: { type: "rounded", radius: 8 }, frame: 0 },
+  bit: "flat-1-8-upcut",
   useBit2: false,
   tabs: { count: 4, height: 3 },
 };
 
 interface DesignState {
   design: Design;
-  /** Incrementa a cada mudança na especificação, para a interface saber quando regenerar. */
+  /** Bumped on every spec change, so the UI knows when to regenerate. */
   rev: number;
   setDesign(d: Design): void;
   patch(p: Partial<Design>): void;
@@ -80,7 +80,7 @@ export const useDesign = create<DesignState>()(
             bit2: p.bits[1],
             useBit2: p.bits.length > 1,
             preset: p.speed,
-            tabs: { count: 4, height: Math.min(3, Math.round(p.spec.espessura * 0.35 * 10) / 10) },
+            tabs: { count: 4, height: Math.min(3, Math.round(p.spec.thickness * 0.35 * 10) / 10) },
           },
           rev: get().rev + 1,
         });
@@ -88,10 +88,30 @@ export const useDesign = create<DesignState>()(
       setMaterial: (id, thickness) => {
         const m = materialById(id);
         const d = get().design;
-        const t = thickness ?? (m.thick.includes(d.spec.espessura) ? d.spec.espessura : m.thick.reduce((a, c) => (Math.abs(c - d.spec.espessura) < Math.abs(a - d.spec.espessura) ? c : a)));
-        set({ design: { ...d, material: m.id, spec: { ...d.spec, material: m.engine, espessura: t } }, rev: get().rev + 1 });
+        const t = thickness ?? (m.thick.includes(d.spec.thickness) ? d.spec.thickness : m.thick.reduce((a, c) => (Math.abs(c - d.spec.thickness) < Math.abs(a - d.spec.thickness) ? c : a)));
+        set({ design: { ...d, material: m.id, spec: { ...d.spec, material: m.engine, thickness: t } }, rev: get().rev + 1 });
       },
     }),
-    { name: "gsender-design", version: 1 },
+    {
+      name: "gsender-design",
+      version: 2,
+      // v1 (0.1.0) stored the spec with Portuguese field names.
+      migrate: (persisted, version) => {
+        const st = persisted as Partial<DesignState>;
+        if (version < 2 && st.design) st.design = migrateLegacyDesign(st.design);
+        return st as DesignState;
+      },
+    },
   ),
 );
+
+/** Design saved by 0.1.0: Portuguese spec fields, bit ids and project id. */
+export function migrateLegacyDesign(d: Design): Design {
+  return {
+    ...d,
+    spec: migrateLegacySpec<PlateSpecInput>(d.spec),
+    bit: migrateLegacyBitId(d.bit),
+    bit2: d.bit2 && migrateLegacyBitId(d.bit2),
+    projectId: d.projectId && migrateLegacyProjectId(d.projectId),
+  };
+}

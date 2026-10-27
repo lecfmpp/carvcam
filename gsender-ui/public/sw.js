@@ -1,7 +1,7 @@
-// Service worker da versão instalada: guarda todos os arquivos do app (lista gerada no build,
-// precache.json) para abrir sem internet. A página (index.html) vem primeiro da rede, para um
-// build novo aparecer no primeiro recarregamento; sem rede, vem do cache. Os demais arquivos têm
-// hash no nome e saem do cache, com a rede atualizando a cópia por trás.
+// Service worker for the installed build: caches every app file (list generated at build time,
+// precache.json) so the app opens offline. The page (index.html) is network-first, so a new build
+// shows up on the first reload; with no network it comes from the cache. The other files have a
+// hash in their name and are served from the cache, with the network refreshing the copy behind the scenes.
 const CACHE = "carvcam-v3";
 
 self.addEventListener("install", (e) => {
@@ -12,7 +12,7 @@ self.addEventListener("install", (e) => {
       try {
         files = await (await fetch("./precache.json", { cache: "no-store" })).json();
       } catch {
-        /* em desenvolvimento não há lista: guarda o básico */
+        /* in development there is no list: cache the basics */
       }
       await cache.addAll(files);
       await self.skipWaiting();

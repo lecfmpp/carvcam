@@ -2,23 +2,24 @@ import { cleanLine, parseLine, type GrblMsg, type StatusReport, type V3 } from "
 import type { Transport } from "./transport";
 
 /**
- * Fala com uma placa grbl/grblHAL: conecta, consulta o estado, move, zera, mede com a placa de
- * toque e envia o trabalho pelo método de contagem de caracteres (o mesmo do gSender e do
- * grbl-streaming oficial): mantém o buffer serial da placa cheio sem nunca passar do tamanho dele.
+ * Talks to a grbl/grblHAL controller: connects, polls status, jogs, sets zero, probes with the touch
+ * plate and streams the job with the character-counting method (the same one gSender and the
+ * official grbl streaming script use): keeps the controller's serial buffer full without ever
+ * exceeding its size.
  *
- * Comandos de tempo real (?, !, ~, Ctrl-X, jog cancel, overrides) vão como bytes soltos, sem fila.
+ * Real-time commands (?, !, ~, Ctrl-X, jog cancel, overrides) are sent as single bytes, bypassing the queue.
  */
 export interface ControllerEvents {
   status(s: StatusReport): void;
   alarm(code: number): void;
-  /** Erro de uma linha (com o texto enviado). Durante um trabalho, a fila para em seguida. */
+  /** Error on a line (with the text that was sent). During a job, the queue stops right after. */
   error(code: number, line: string, inJob: boolean): void;
   message(text: string): void;
   log(dir: "in" | "out", text: string): void;
-  /** Linha do trabalho confirmada pela placa (número da linha no G-code original). */
+  /** Job line acknowledged by the controller (line number in the original G-code). */
   jobLine(line: number): void;
   jobDone(): void;
-  /** Chegou num M6: a fila espera a troca de ferramenta. */
+  /** Reached an M6: the queue waits for the tool change. */
   toolChange(tool: number): void;
   closed(reason: string): void;
 }
@@ -26,13 +27,13 @@ export interface ControllerEvents {
 interface Item {
   text: string;
   bytes: number;
-  /** Linha no G-code do trabalho (só para itens do trabalho). */
+  /** Line in the job's G-code (job items only). */
   jobLine?: number;
-  /** Troca de ferramenta: segura a fila até confirmar. */
+  /** Tool change: holds the queue until confirmed. */
   tool?: number;
   resolve?(lines: string[]): void;
   reject?(e: Error): void;
-  /** Respostas entre o envio e o ok ([VER], [PRB], $n=…). */
+  /** Replies between sending and the ok ([VER], [PRB], $n=…). */
   replies: string[];
 }
 
@@ -52,14 +53,14 @@ export const RT = {
   rpmDown10: "\x9b",
   rpmUp1: "\x9c",
   rpmDown1: "\x9d",
-  /** grblHAL: relatório de estado completo (subestado do alarme incluso), como o gSender usa em alarme. */
+  /** grblHAL: complete status report (including the alarm substate), as gSender uses while in alarm. */
   fullStatus: "\x87",
 } as const;
 
 export class GrblController {
   firmware: "grbl" | "grblHAL" | null = null;
   version = "";
-  /** Tamanho do buffer serial da placa (grbl: 128; grblHAL informa no [OPT]). */
+  /** Controller serial buffer size (grbl: 128; grblHAL reports it in [OPT]). */
   rxSize = 128;
   settings: Record<string, string> = {};
   last: StatusReport | null = null;
@@ -68,7 +69,7 @@ export class GrblController {
   private queue: Item[] = [];
   private inflight: Item[] = [];
   private inflightBytes = 0;
-  /** Fila do trabalho segurada (troca de ferramenta ou erro). */
+  /** Job queue on hold (tool change or error). */
   private held = false;
   private jobActive = false;
   private poll: ReturnType<typeof setInterval> | null = null;
@@ -88,20 +89,20 @@ export class GrblController {
     return this.jobActive;
   }
 
-  /** Abre, espera a placa responder e lê versão e configurações. */
+  /** Opens the port, waits for the controller to answer and reads the version and settings. */
   async connect() {
     this.t.onData((d) => this.onData(d));
     this.t.onClose((r) => this.onClosed(r));
     await this.t.open();
     this.open = true;
-    // Placas com Arduino (LongBoard) reiniciam ao abrir a porta e levam ~1,5 s para responder.
+    // Arduino-based controllers (LongBoard) reset when the port opens and take ~1.5 s to answer.
     const alive = await this.waitFor((m) => m.type === "welcome" || m.type === "status", this.opts.timeoutMs ?? 4000, () => this.rt(RT.status));
     if (!alive) {
       await this.close();
       throw new Error("The controller didn't answer. Check it is on and the E-stop is released.");
     }
-    // Como o gSender: o firmware sai do texto do $I ("[FIRMWARE:grblHAL]" ou o [VER:] do grbl).
-    // A SLB não reinicia ao conectar, então nem sempre há mensagem de boas-vindas.
+    // Like gSender: the firmware comes from the $I text ("[FIRMWARE:grblHAL]" or grbl's [VER:]).
+    // The SLB doesn't reset on connect, so there isn't always a welcome message.
     let info: string[] = [];
     for (let i = 0; i < 3 && !info.length; i++) info = await this.send("$I").catch(() => [] as string[]);
     for (const l of info) {
@@ -112,7 +113,7 @@ export class GrblController {
     const said = info.join("\n");
     if (/grblhal/i.test(said)) this.firmware = "grblHAL";
     else if (!this.firmware && /grbl|fluidnc/i.test(said)) this.firmware = "grbl";
-    // Último recurso: só o grblHAL informa buffer maior que 128 no [OPT].
+    // Last resort: only grblHAL reports a buffer larger than 128 in [OPT].
     if (!this.firmware) this.firmware = this.rxSize > 128 ? "grblHAL" : "grbl";
     const set = await this.send("$$").catch(() => [] as string[]);
     for (const l of set) {
@@ -130,9 +131,9 @@ export class GrblController {
     await this.t.close();
   }
 
-  /* ---------------- envio ---------------- */
+  /* ---------------- sending ---------------- */
 
-  /** Envia uma linha pela fila e espera o "ok". Rejeita com o erro da placa. */
+  /** Sends a line through the queue and waits for the "ok". Rejects with the controller's error. */
   send(line: string): Promise<string[]> {
     const text = cleanLine(line);
     if (!text) return Promise.resolve([]);
@@ -142,14 +143,14 @@ export class GrblController {
     });
   }
 
-  /** Byte de tempo real (não espera resposta). */
+  /** Real-time byte (doesn't wait for a reply). */
   async rt(code: string) {
     if (!this.open) return;
     if (code !== RT.status) this.ev.log?.("out", rtName(code));
     await this.t.write(code.length === 1 && code.charCodeAt(0) > 0x7f ? new Uint8Array([code.charCodeAt(0)]) : code);
   }
 
-  /** Coloca o trabalho na fila. As linhas M6 seguram a fila até confirmToolChange(). */
+  /** Queues the job. M6 lines hold the queue until confirmToolChange(). */
   runJob(gcode: string) {
     const lines = gcode.split(/\r?\n/);
     this.jobActive = true;
@@ -160,7 +161,7 @@ export class GrblController {
       const m6 = /(^|\s)M0?6(\s|$)/i.test(text);
       if (m6) {
         const tool = Number(/T(\d+)/i.exec(text)?.[1] ?? 0);
-        // O grbl não aceita M6: a troca é feita pelo CarvCAM. A linha só avisa.
+        // grbl doesn't accept M6: CarvCAM handles the tool change. The line is only a marker.
         this.queue.push({ text: "", bytes: 0, jobLine: i + 1, tool, replies: [] });
         const rest = text.replace(/(^|\s)M0?6(\s|$)/i, " ").replace(/T\d+/i, "").trim();
         if (rest) this.queue.push({ text: rest, bytes: rest.length + 1, jobLine: i + 1, replies: [] });
@@ -169,7 +170,7 @@ export class GrblController {
     this.pump();
   }
 
-  /** Continua depois da troca de ferramenta. */
+  /** Continues after the tool change. */
   confirmToolChange() {
     this.held = false;
     this.pump();
@@ -184,7 +185,7 @@ export class GrblController {
     this.pump();
   }
 
-  /** Para tudo: segura o movimento, espera parar e reinicia a placa (mantém a posição). */
+  /** Stops everything: feed hold, wait until motion stops, then soft-reset the controller (keeps the position). */
   async stop() {
     this.jobActive = false;
     this.queue = this.queue.filter((q) => q.jobLine === undefined);
@@ -194,7 +195,7 @@ export class GrblController {
     this.failAll("Stopped");
   }
 
-  /* ---------------- comandos prontos ---------------- */
+  /* ---------------- ready-made commands ---------------- */
 
   home() {
     return this.send("$H");
@@ -207,7 +208,7 @@ export class GrblController {
     if (!ax) return Promise.resolve([]);
     return this.send(`$J=G91 G21 ${ax} F${Math.round(feed)}`);
   }
-  /** Vai até uma posição em coordenadas de máquina (só X/Y). */
+  /** Moves to a position in machine coordinates (X/Y only). */
   jogTo(x: number, y: number, feed: number) {
     return this.send(`$J=G53 G21 X${fmt(x)} Y${fmt(y)} F${Math.round(feed)}`);
   }
@@ -217,7 +218,7 @@ export class GrblController {
   setZero(axes: ("x" | "y" | "z")[]) {
     return this.send(`G10 L20 P1 ${axes.map((a) => `${a.toUpperCase()}0`).join(" ")}`);
   }
-  /** Desce até tocar a placa, zera Z na espessura da placa e sobe 5 mm. */
+  /** Moves down until it touches the plate, sets Z zero at the plate thickness and retracts 5 mm. */
   async probeZ(plate: number, maxTravel = 50, feed = 150) {
     await this.send("G21 G91");
     try {
@@ -235,7 +236,7 @@ export class GrblController {
     await new Promise((r) => setTimeout(r, ms));
     await this.send("M5");
   }
-  /** Leva os overrides ao valor pedido a partir de 100%. */
+  /** Steps the overrides to the requested value, starting from 100%. */
   async setFeedOverride(pct: number) {
     await this.stepOverride(pct, RT.feed100, RT.feedUp10, RT.feedDown10, RT.feedUp1, RT.feedDown1);
   }
@@ -255,7 +256,7 @@ export class GrblController {
     }
   }
 
-  /* ---------------- recepção ---------------- */
+  /* ---------------- receiving ---------------- */
 
   private pump() {
     if (!this.open) return;
@@ -264,7 +265,7 @@ export class GrblController {
       const isJob = next.jobLine !== undefined;
       if (isJob && this.held) return;
       if (next.tool !== undefined) {
-        // Só para a troca quando tudo antes dela foi executado.
+        // Only stop for the tool change once everything before it has run.
         if (this.inflight.length) return;
         this.queue.shift();
         this.held = true;
@@ -312,7 +313,7 @@ export class GrblController {
           it.reject?.(new GrblError(m.code, it.text));
           this.ev.error?.(m.code, it.text, it.jobLine !== undefined);
           if (it.jobLine !== undefined) {
-            // Erro no meio do trabalho: segura a fila e o movimento, como o gSender faz.
+            // Error mid-job: hold the queue and the motion, as gSender does.
             this.held = true;
             void this.rt(RT.hold);
           }
@@ -331,7 +332,7 @@ export class GrblController {
         break;
       case "welcome":
         this.firmware = m.firmware;
-        // Depois de um reset a placa esquece o que estava no buffer.
+        // After a reset the controller forgets what was in its buffer.
         if (this.inflight.length) this.failAll("The controller restarted");
         break;
       case "msg":
@@ -361,7 +362,7 @@ export class GrblController {
     for (const it of all) it.reject?.(new Error(reason));
   }
 
-  /** Espera uma mensagem que satisfaça a condição; repete `kick` a cada 300 ms. */
+  /** Waits for a message that matches the predicate; repeats `kick` every 300 ms. */
   private waitFor(pred: (m: GrblMsg) => boolean, ms: number, kick?: () => unknown): Promise<boolean> {
     return new Promise((resolve) => {
       const done = (ok: boolean) => {

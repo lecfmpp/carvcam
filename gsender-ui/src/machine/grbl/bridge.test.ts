@@ -1,14 +1,14 @@
 import net from "node:net";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-// @ts-expect-error módulo JS do bridge
+// @ts-expect-error the bridge is a JS module
 import { originAllowed, startBridge } from "../../../bridge/server.mjs";
 import { GrblController } from "./controller";
 import { FakeGrbl } from "./fake";
 import { BridgeTransport } from "./transport";
 
 /**
- * Ponta a ponta pelo bridge: CarvCAM → WebSocket → carvcam-bridge → TCP (como a SLB por Ethernet)
- * → placa falsa. Precisa do WebSocket global do Node 22.
+ * End to end through the bridge: CarvCAM → WebSocket → carvcam-bridge → TCP (like the SLB over Ethernet)
+ * → fake controller. Needs Node 22's global WebSocket.
  */
 const hasWs = typeof WebSocket !== "undefined";
 
@@ -23,7 +23,7 @@ describe.runIf(hasWs)("carvcam-bridge", () => {
       fake.onData((t) => sock.write(Buffer.from(t, "latin1")));
       void fake.open();
       sock.on("data", (b) => {
-        // Bytes de tempo real chegam soltos; linhas terminam em \n.
+        // Real-time bytes arrive on their own; lines end in \n.
         const s = b.toString("latin1");
         for (const ch of s.match(/[?!~\x18\x80-\xff]|[^?!~\x18\x80-\xff]+/g) ?? []) void fake.write(ch);
       });

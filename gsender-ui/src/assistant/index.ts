@@ -5,7 +5,7 @@ import type { AssistantProvider } from "./types";
 export type { AssistantContext, AssistantProvider, AssistantReply, ChatTurn } from "./types";
 export { getClaudeKey, setClaudeKey } from "./claude";
 
-/** Claude quando há chave salva; senão o assistente embutido, que funciona sem rede. */
+/** Claude when a key is saved; otherwise the built-in assistant, which works offline. */
 export function getAssistant(): AssistantProvider {
   const key = getClaudeKey();
   return key ? makeClaudeAssistant(key) : localAssistant;

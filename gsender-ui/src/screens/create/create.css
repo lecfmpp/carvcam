@@ -1,6 +1,6 @@
-/* Tela Create: painel do desenho, quadro interativo, trilho de ferramentas e assistente. */
+/* Create screen: design panel, interactive board, tool rail and assistant. */
 
-/* ---------- trilho de ferramentas e legenda ---------- */
+/* ---------- tool rail and legend ---------- */
 .create-rail { position: absolute; left: 24px; top: 86px; z-index: 3; display: flex; flex-direction: column; gap: 4px; padding: 4px; border-radius: 14px; background: rgba(26, 27, 30, 0.72); backdrop-filter: var(--blur); border: 1px solid var(--glass-border); }
 .create-rail__btn { width: 44px; height: 44px; border: 0; border-radius: 10px; background: transparent; color: var(--text-2); display: flex; align-items: center; justify-content: center; }
 .create-rail__btn:hover { background: rgba(255, 255, 255, 0.07); color: var(--text); }
@@ -13,7 +13,7 @@
 .create-legend__sw { width: 14px; height: 14px; border-radius: 4px; border: 1px solid transparent; flex: none; }
 .create-legend__pro { margin-top: 4px; padding-top: 8px; border-top: 1px solid var(--line); font-size: 11px; line-height: 1.6; color: var(--text-3); }
 
-/* ---------- quadro ---------- */
+/* ---------- board ---------- */
 .create-piece { position: absolute; inset: 0; filter: drop-shadow(0 18px 30px rgba(0, 0, 0, 0.45)); }
 .create-vector { position: absolute; inset: 0; width: 100%; height: 100%; }
 .create-overlay { position: absolute; inset: 0; touch-action: none; }
@@ -83,7 +83,7 @@
 .create-marker__tag { padding: 3px 7px; border-radius: 6px; background: rgba(17, 18, 20, 0.88); color: #F2C14E; font-size: 11px; white-space: nowrap; }
 .create-marker__dot { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid #F2C14E; background: repeating-linear-gradient(135deg, #F2C14E 0 2px, transparent 2px 5px); }
 
-/* ---------- painel ---------- */
+/* ---------- panel ---------- */
 .create-panel__head { padding: 18px 20px 16px; display: flex; flex-direction: column; gap: 12px; border-bottom: 1px solid var(--line); position: relative; }
 .create-panel__titlerow { display: flex; align-items: center; gap: 12px; }
 .create-panel__name { flex: 1; min-width: 0; font: 600 20px var(--font); letter-spacing: -0.02em; color: var(--text); background: transparent; border: 1px solid transparent; border-radius: 8px; padding: 2px 6px; margin-left: -6px; }
@@ -162,7 +162,7 @@
 .create-add__chip { height: 34px; padding: 0 14px; border-radius: 999px; border: 1px dashed var(--line-2); background: transparent; color: var(--text-2); font: 500 13px var(--font); }
 .create-add__chip:hover { border-color: var(--text-3); color: var(--text); background: rgba(255, 255, 255, 0.04); }
 
-/* ---------- assistente ---------- */
+/* ---------- assistant ---------- */
 .create-ai { width: 460px; max-width: calc(100vw - var(--panel-w) - 140px); position: relative; }
 .create-ai__bar { display: flex; align-items: center; gap: 10px; height: 60px; padding: 0 8px 0 18px; border-radius: 16px; background: rgba(26, 27, 30, 0.82); backdrop-filter: var(--blur); border: 1px solid var(--glass-border); }
 .create-ai__input { flex: 1; min-width: 0; height: 40px; border: 0; background: transparent; color: var(--text); font: 400 15px var(--font); }
@@ -187,7 +187,7 @@
 .create-ai__key .btn--sm { display: inline-flex; align-items: center; gap: 6px; }
 .create-ai__keyform { display: flex; gap: 8px; width: 100%; }
 
-/* O quadro desenha a peça recortada; a sombra retangular do bloco não faz sentido aqui. */
+/* The board draws the cut-out part; the stock's rectangular shadow makes no sense here. */
 .create .stage__canvas > div > div:first-child { box-shadow: none !important; }
 .create-chip__thick { display: flex; flex-direction: column; line-height: 1.05; font-size: 13px; }
 .create-chip__thick b { font-weight: 600; }

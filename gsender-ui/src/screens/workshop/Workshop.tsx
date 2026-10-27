@@ -31,7 +31,7 @@ export default function Workshop({ tab }: { tab: Tab }) {
 
 // ---------------------------------------------------------------- First cuts
 
-/** Projeto do catálogo no formato do editor (igual ao que `openProject` monta). */
+/** Catalog project in the editor's format (same as what `openProject` builds). */
 function projectDesign(p: Project): Design {
   const m = materialById(p.material);
   return {
@@ -43,7 +43,7 @@ function projectDesign(p: Project): Design {
     bit2: p.bits[1],
     useBit2: p.bits.length > 1,
     preset: p.speed,
-    tabs: { count: 4, height: Math.min(3, Math.round(p.spec.espessura * 0.35 * 10) / 10) },
+    tabs: { count: 4, height: Math.min(3, Math.round(p.spec.thickness * 0.35 * 10) / 10) },
   };
 }
 
@@ -51,11 +51,11 @@ interface Preview {
   sim: SimGrid | null;
   minutes: number | null;
   board: { width: number; height: number; thickness: number } | null;
-  /** Contorno da peça final (sem a sobra do bloco), para recortar a prévia. */
+  /** Outline of the finished part (without the stock margin), to clip the preview. */
   piece: { x: number; y: number }[][] | null;
 }
 
-// Simulações das prévias, guardadas enquanto o app estiver aberto.
+// Preview simulations, cached while the app is open.
 const cache = new Map<string, Preview>();
 let queue: Promise<unknown> = Promise.resolve();
 
@@ -63,26 +63,26 @@ function previewKey(p: Project, m: Machine, head: HeadId) {
   return `${p.id}|${m.id}|${head}`;
 }
 
-/** Gera a prévia de um projeto (uma por vez, para não travar o worker). */
+/** Generates a project's preview (one at a time, so the worker doesn't stall). */
 function loadPreview(p: Project, m: Machine, head: HeadId): Promise<Preview> {
   const key = previewKey(p, m, head);
   const hit = cache.get(key);
   if (hit) return Promise.resolve(hit);
   const fits = projectFits(p, m);
-  // Se não cabe, a prévia é gerada numa máquina grande só para mostrar a peça.
+  // If it doesn't fit, the preview is generated on a large machine just to show the part.
   const target = fits ? m : machineById("altmill-4x8");
   const tHead = fits ? head : target.defaultHead;
   const d = projectDesign(p);
   const job = queue.then(async () => {
-    const w = p.spec.largura;
-    const h = p.spec.altura;
+    const w = p.spec.width;
+    const h = p.spec.height;
     const r = await runEngine(d.spec, engineOptions(d, target.id, tHead, d.preset ?? target.preset), true, Math.max(0.5, Math.max(w, h) / 260));
-    const b = r.result?.layout.bloco;
+    const b = r.result?.layout.stock;
     const out: Preview = {
       sim: r.sim,
-      minutes: fits && r.result?.ok ? Math.max(1, Math.round((r.result.verificacao?.estatisticas.tempoEstimadoSeg ?? 0) / 60)) : null,
-      board: b ? { width: b.largura, height: b.altura, thickness: b.espessura } : null,
-      piece: r.result?.layout.peca ?? null,
+      minutes: fits && r.result?.ok ? Math.max(1, Math.round((r.result.verification?.stats.estimatedTimeSec ?? 0) / 60)) : null,
+      board: b ? { width: b.width, height: b.height, thickness: b.thickness } : null,
+      piece: r.result?.layout.part ?? null,
     };
     cache.set(key, out);
     return out;
@@ -197,7 +197,7 @@ function ProjectCard({ project: p, onMake }: { project: Project; onMake(): void 
       <div className={`ws-proj-pv ${ok ? "" : "is-dim"}`}>
         {pv?.sim && pv.board ? (
           (() => {
-            // Enquadra só a peça (o bloco tem 10 mm de sobra quando há recorte).
+            // Frame only the part (the stock has a 10 mm margin when there's a cutout).
             const bb = pv.piece?.length ? bounds(pv.piece) : { minX: 0, minY: 0, maxX: pv.board.width, maxY: pv.board.height };
             const s = Math.min(box.w / (bb.maxX - bb.minX), box.h / (bb.maxY - bb.minY));
             const H = pv.board.height;
@@ -215,7 +215,7 @@ function ProjectCard({ project: p, onMake }: { project: Project; onMake(): void 
             );
           })()
         ) : (
-          <div className="ws-skel" style={{ width: Math.min(box.w, (p.spec.largura / p.spec.altura) * box.h), height: Math.min(box.h, (p.spec.altura / p.spec.largura) * box.w) }} aria-label="Preparing preview" />
+          <div className="ws-skel" style={{ width: Math.min(box.w, (p.spec.width / p.spec.height) * box.h), height: Math.min(box.h, (p.spec.height / p.spec.width) * box.w) }} aria-label="Preparing preview" />
         )}
         {!ok ? <span className="ws-needs">{fitNames(p)}</span> : null}
       </div>
@@ -349,7 +349,7 @@ function Library() {
   );
 }
 
-/** Tipo da fresa em uma linha, para o card. */
+/** Bit type on one line, for the card. */
 function bitKind(b: Bit) {
   if (b.profile === "v") return `V-bit · ${b.angle ?? 60}°`;
   if (b.profile === "ball") return "Ball nose · upcut";
@@ -410,7 +410,7 @@ function Settings() {
   );
 }
 
-/** Modo Painel para a tela touch do gControl. */
+/** Panel mode for the gControl touchscreen. */
 function PanelSetting() {
   const { panel, setPanel } = useWorkshop();
   const on = usePanelMode();

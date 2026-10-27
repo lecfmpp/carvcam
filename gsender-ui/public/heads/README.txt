@@ -1,1 +1,1 @@
-Fotos WebP dos routers e spindles (npm run images:fetch). Sem a foto, o card mostra um desenho.
+WebP photos of the routers and spindles (npm run images:fetch). Without a photo, the card shows a drawing.

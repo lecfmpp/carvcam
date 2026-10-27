@@ -4,12 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#111214" />
+    <meta name="description" content="CarvCAM: design, prepare and carve signs on Sienci Labs CNC machines." />
     <title>CarvCAM</title>
     <link rel="icon" type="image/svg+xml" href="./carvcam-icon.svg" />
     <!--
-      Tela de entrada: aparece antes de qualquer JavaScript, sem nada da internet. A animação é a
-      do "CarvCAM Intro" (tábua sobe, fresa mergulha e abre o canal, cavacos, nome e linha de
-      corte), um pouco mais curta. A barra mostra o carregamento real (window.__boot, em main.tsx).
+      Splash screen: shows up before any JavaScript, with nothing from the internet. The animation is
+      the "CarvCAM Intro" one (board rises, bit plunges and cuts the groove, chips, name and cut
+      line), slightly shorter. The bar shows the real loading progress (window.__boot, in main.tsx).
     -->
     <style>
       html, body { margin: 0; background: #111214; }
@@ -78,7 +79,7 @@
       </div>
     </div>
     <script>
-      // Progresso da inicialização: main.tsx chama __boot.step(%, texto) e __boot.done().
+      // Startup progress: main.tsx calls __boot.step(%, text) and __boot.done().
       (function () {
         var el = document.getElementById("boot");
         var fill = el.querySelector(".boot-fill");
@@ -93,7 +94,7 @@
             el.setAttribute("aria-valuenow", String(Math.round(cur)));
             if (text) label.textContent = text;
           },
-          // Fica pelo menos o tempo da animação (1,9 s) para a marca não piscar.
+          // Stays up at least as long as the animation (1.9 s) so the logo doesn't flash.
           done: function () {
             window.__boot.step(100, "Ready");
             clearTimeout(slow);

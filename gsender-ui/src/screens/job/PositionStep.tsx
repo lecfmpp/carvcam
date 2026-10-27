@@ -10,9 +10,9 @@ import { fitScale, Stage } from "../../stage/Stage";
 import type { JobCtx } from "./Job";
 import { useFlow } from "./jobUtil";
 
-/** Onde a pessoa prende o bloco, em coordenadas de máquina (canto inferior esquerdo). */
+/** Where the user clamps the stock, in machine coordinates (bottom-left corner). */
 export const STOCK_AT = { x: 60, y: 60 };
-const PLATE = 15; // espessura da placa de toque (mm)
+const PLATE = 15; // touch plate thickness (mm)
 
 type Sub = "connect" | "home" | "stock" | "zero" | "done";
 
@@ -27,13 +27,13 @@ export function PositionStep({ ctx }: { ctx: JobCtx }) {
 
   const connected = m.status !== "disconnected" && m.status !== "connecting";
   const sub: Sub = !connected ? "connect" : !m.homed ? "home" : !flow.stockOk ? "stock" : !flow.zeroSet ? "zero" : "done";
-  const bloco = result?.layout.bloco ?? { largura: design.spec.largura, altura: design.spec.altura, espessura: design.spec.espessura };
-  const margin = result ? (bloco.largura - design.spec.largura) / 2 : 0;
+  const stock = result?.layout.stock ?? { width: design.spec.width, height: design.spec.height, thickness: design.spec.thickness };
+  const margin = result ? (stock.width - design.spec.width) / 2 : 0;
   const atCorner = Math.abs(m.pos.x - STOCK_AT.x) < 0.05 && Math.abs(m.pos.y - STOCK_AT.y) < 0.05;
-  const stockW = Math.round(bloco.largura * 10) / 10;
-  const stockH = Math.round(bloco.altura * 10) / 10;
+  const stockW = Math.round(stock.width * 10) / 10;
+  const stockH = Math.round(stock.height * 10) / 10;
 
-  // Teclado: setas movem em X/Y, PageUp/PageDown em Z.
+  // Keyboard: arrows jog X/Y, PageUp/PageDown jog Z.
   useEffect(() => {
     if (sub !== "zero" || flow.probeOpen) return;
     const onKey = (e: KeyboardEvent) => {
@@ -95,7 +95,7 @@ export function PositionStep({ ctx }: { ctx: JobCtx }) {
   const wp = workPos(m);
   const showStock = flow.stockOk || sub === "stock";
   const mat = materialById(design.material);
-  // Antes de conectar, a posição é desconhecida: o marcador fica no meio da cama.
+  // Before connecting, the position is unknown: the marker sits in the middle of the bed.
   const bitAt = connected ? m.pos : { x: machine.area[0] / 2, y: machine.area[1] / 2, z: 0 };
 
   return (
@@ -128,7 +128,7 @@ export function PositionStep({ ctx }: { ctx: JobCtx }) {
                   <>
                     <div
                       className="bed__stock"
-                      style={{ left: px(STOCK_AT.x), bottom: px(STOCK_AT.y), width: px(bloco.largura), height: px(bloco.altura), background: mat.face, opacity: flow.stockOk ? 1 : 0.45, border: flow.stockOk ? "none" : "1.5px dashed var(--text)" }}
+                      style={{ left: px(STOCK_AT.x), bottom: px(STOCK_AT.y), width: px(stock.width), height: px(stock.height), background: mat.face, opacity: flow.stockOk ? 1 : 0.45, border: flow.stockOk ? "none" : "1.5px dashed var(--text)" }}
                     >
                       {margin > 0 ? <div className="bed__ghost" style={{ inset: px(margin) }} /> : null}
                     </div>
@@ -218,7 +218,7 @@ export function PositionStep({ ctx }: { ctx: JobCtx }) {
             <div className="job-row job-row--box">
               <span>Minimum board</span>
               <span className="mono" style={{ font: "500 15px var(--mono)", color: "var(--text)" }}>
-                {stockW} × {stockH} × {bloco.espessura} mm
+                {stockW} × {stockH} × {stock.thickness} mm
               </span>
             </div>
             <ZeroIllustration face={mat.face} recess={mat.recess} side={mat.side} />
@@ -341,7 +341,7 @@ export function PositionStep({ ctx }: { ctx: JobCtx }) {
   );
 }
 
-/** Desenho do bloco com o zero no canto inferior esquerdo da face de cima (do protótipo). */
+/** Stock drawing with zero at the bottom-left corner of the top face (from the prototype). */
 function ZeroIllustration({ face, recess, side }: { face: string; recess: string; side: string }) {
   return (
     <div className="zero-illus">

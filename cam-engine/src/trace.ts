@@ -2,42 +2,42 @@ import { areaD, FillRule, simplifyPathsD, unionD, type PathD } from "clipper2-ts
 import type { Pt, Region } from "./geometry/clip.js";
 
 /**
- * Vetorização de imagem (bitmap → contornos). Pixels "dentro" (escuros, por padrão) viram
- * área; segue as bordas entre pixels dentro e fora, junta em contornos fechados, descarta
- * manchas pequenas, simplifica e suaviza a escada dos pixels.
+ * Image tracing (bitmap → outlines). "Inside" pixels (dark, by default) become
+ * area; follows the edges between inside and outside pixels, joins them into closed outlines, drops
+ * small specks, simplifies and smooths the pixel staircase.
  *
- * Coordenadas de saída em pixels, Y para baixo (como na imagem); quem chama converte para mm.
+ * Output coordinates are in pixels, Y down (as in the image); the caller converts to mm.
  */
 
 export interface TraceOpts {
-  /** 0–255: luminância abaixo disso conta como "dentro". */
-  limiar?: number;
-  /** Inverte: claro vira dentro. */
-  inverter?: boolean;
-  /** Ignora contornos com área menor que isto (px²). */
-  manchaMin?: number;
-  /** Tolerância da simplificação, em px. */
-  detalhe?: number;
-  /** Passes de suavização (0–4). */
-  suavizar?: number;
+  /** 0–255: luminance below this counts as "inside". */
+  threshold?: number;
+  /** Invert: light becomes inside. */
+  invert?: boolean;
+  /** Ignore outlines with an area smaller than this (px²). */
+  minBlob?: number;
+  /** Simplification tolerance, in px. */
+  detail?: number;
+  /** Smoothing passes (0–4). */
+  smooth?: number;
 }
 
-/** Máscara binária a partir de RGBA (transparente conta como claro). */
-export function maskFromRgba(data: Uint8ClampedArray | Uint8Array, w: number, h: number, limiar = 128, inverter = false): Uint8Array {
+/** Binary mask from RGBA (transparent counts as light). */
+export function maskFromRgba(data: Uint8ClampedArray | Uint8Array, w: number, h: number, threshold = 128, invert = false): Uint8Array {
   const m = new Uint8Array(w * h);
   for (let i = 0; i < w * h; i++) {
     const a = data[i * 4 + 3] / 255;
     const lum = (0.2126 * data[i * 4] + 0.7152 * data[i * 4 + 1] + 0.0722 * data[i * 4 + 2]) * a + 255 * (1 - a);
-    const dark = lum < limiar;
-    m[i] = dark !== inverter ? 1 : 0;
+    const dark = lum < threshold;
+    m[i] = dark !== invert ? 1 : 0;
   }
   return m;
 }
 
 export function traceMask(mask: Uint8Array, w: number, h: number, o: TraceOpts = {}): Region {
   const at = (x: number, y: number) => (x >= 0 && y >= 0 && x < w && y < h ? mask[y * w + x] : 0);
-  // Arestas orientadas entre pixels, com o "dentro" à esquerda (em Y para baixo, sentido
-  // horário na tela). Vértices na grade (w+1)×(h+1).
+  // Directed edges between pixels, with "inside" on the left (with Y down, clockwise
+  // on screen). Vertices on the (w+1)×(h+1) grid.
   const W = w + 1;
   const out = new Map<number, number[]>();
   const add = (x0: number, y0: number, x1: number, y1: number) => {
@@ -50,10 +50,10 @@ export function traceMask(mask: Uint8Array, w: number, h: number, o: TraceOpts =
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       if (!at(x, y)) continue;
-      if (!at(x, y - 1)) add(x, y, x + 1, y); // topo: →
-      if (!at(x + 1, y)) add(x + 1, y, x + 1, y + 1); // direita: ↓
-      if (!at(x, y + 1)) add(x + 1, y + 1, x, y + 1); // baixo: ←
-      if (!at(x - 1, y)) add(x, y + 1, x, y); // esquerda: ↑
+      if (!at(x, y - 1)) add(x, y, x + 1, y); // top: →
+      if (!at(x + 1, y)) add(x + 1, y, x + 1, y + 1); // right: ↓
+      if (!at(x, y + 1)) add(x + 1, y + 1, x, y + 1); // bottom: ←
+      if (!at(x - 1, y)) add(x, y + 1, x, y); // left: ↑
     }
   }
 
@@ -63,8 +63,8 @@ export function traceMask(mask: Uint8Array, w: number, h: number, o: TraceOpts =
     if (!l || !l.length) return undefined;
     let idx = 0;
     if (l.length > 1 && prevDir) {
-      // Vértice em sela (dois pixels só pela diagonal): vira sempre para o mesmo lado, para
-      // os contornos não se cruzarem.
+      // Saddle vertex (two pixels touching only diagonally): always turn the same way, so
+      // outlines never cross.
       const kx = k % W;
       const ky = Math.floor(k / W);
       let best = -Infinity;
@@ -95,7 +95,7 @@ export function traceMask(mask: Uint8Array, w: number, h: number, o: TraceOpts =
         const vx = v % W;
         const vy = Math.floor(v / W);
         const nd: [number, number] = [vx - kx, vy - ky];
-        // Só guarda os cantos (onde a direção muda).
+        // Only keep the corners (where the direction changes).
         if (!dir || dir[0] !== nd[0] || dir[1] !== nd[1]) pts.push({ x: kx, y: ky });
         dir = nd;
         k = v;
@@ -105,16 +105,16 @@ export function traceMask(mask: Uint8Array, w: number, h: number, o: TraceOpts =
     }
   }
 
-  const manchaMin = o.manchaMin ?? 4;
-  let r: PathD[] = loops.filter((p) => Math.abs(areaD(p)) >= manchaMin);
-  const passes = Math.max(0, Math.min(4, Math.round(o.suavizar ?? 2)));
+  const minBlob = o.minBlob ?? 4;
+  let r: PathD[] = loops.filter((p) => Math.abs(areaD(p)) >= minBlob);
+  const passes = Math.max(0, Math.min(4, Math.round(o.smooth ?? 2)));
   for (let i = 0; i < passes; i++) r = r.map(chaikin);
-  r = simplifyPathsD(r, o.detalhe ?? 0.6, true).filter((p) => p.length >= 3);
-  // Par-ímpar resolve furos e ilhas independentemente da orientação de cada contorno.
+  r = simplifyPathsD(r, o.detail ?? 0.6, true).filter((p) => p.length >= 3);
+  // Even-odd resolves holes and islands regardless of each outline's orientation.
   return r.length ? unionD(r, FillRule.EvenOdd) : [];
 }
 
-/** Um passe de Chaikin (corta os cantos a 1/4 e 3/4): tira a escada dos pixels. */
+/** One Chaikin pass (cuts corners at 1/4 and 3/4): removes the pixel staircase. */
 function chaikin(p: PathD): PathD {
   const out: PathD = [];
   for (let i = 0; i < p.length; i++) {
@@ -125,7 +125,7 @@ function chaikin(p: PathD): PathD {
   return out;
 }
 
-/** Região → SVG (path par-ímpar), em pixels, para virar um desenho importado comum. */
+/** Region → SVG (even-odd path), in pixels, to become a regular imported drawing. */
 export function regionToSvg(r: Region, w: number, h: number): string {
   const d = r.map((p) => "M" + p.map((q) => `${q.x.toFixed(2)} ${q.y.toFixed(2)}`).join("L") + "Z").join("");
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}px" height="${h}px"><path fill="#000" fill-rule="evenodd" d="${d}"/></svg>`;

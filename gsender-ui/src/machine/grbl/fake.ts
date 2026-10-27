@@ -1,20 +1,20 @@
 import type { Transport } from "./transport";
 
 /**
- * Placa grbl de mentira para testes: responde como uma SLB (grblHAL) ou LongBoard (grbl),
- * executa uma linha por "tick" e confere que nunca recebe mais bytes do que cabem no buffer.
+ * Fake grbl controller for tests: answers like an SLB (grblHAL) or a LongBoard (grbl), runs one
+ * line per "tick" and checks it never receives more bytes than fit in its buffer.
  */
 export class FakeGrbl implements Transport {
   readonly label = "Fake grbl";
   received: string[] = [];
   realtime: string[] = [];
-  /** Maior quantidade de bytes esperando no buffer ao mesmo tempo. */
+  /** Largest number of bytes waiting in the buffer at once. */
   maxBuffered = 0;
   state = "Idle";
   sub: number | undefined;
   mpos = { x: 0, y: 0, z: 0 };
   wco = { x: 0, y: 0, z: 0 };
-  /** Linhas que respondem com erro (texto exato → código). */
+  /** Lines that answer with an error (exact text → code). */
   errors: Record<string, number> = {};
   probeOk = true;
   private pending: string[] = [];
@@ -28,7 +28,7 @@ export class FakeGrbl implements Transport {
     readonly rx = kind === "grblHAL" ? 1024 : 128,
   ) {}
 
-  /** Placas com Arduino reiniciam ao abrir a porta: só respondem depois da mensagem de boas-vindas. */
+  /** Arduino-based controllers reset when the port opens: they only answer after the welcome message. */
   private booted = false;
   async open() {
     this.booted = this.kind === "grblHAL";
@@ -57,7 +57,7 @@ export class FakeGrbl implements Transport {
     if (text.length === 1 && "?!~\x18".includes(text)) return this.rtCmd(text);
     if (text.length === 1 && text.charCodeAt(0) > 0x7f) {
       this.realtime.push(text);
-      // 0x87: relatório completo do grblHAL; aqui responde como o "?".
+      // 0x87: grblHAL full status report; here it answers like "?".
       if (text === "\x87" && this.kind === "grblHAL") this.rtCmd("?", false);
       return;
     }
@@ -106,7 +106,7 @@ export class FakeGrbl implements Transport {
     this.received.push(l);
     if (this.errors[l]) return this.emit(`error:${this.errors[l]}`);
     if (l === "$I") {
-      // Como a SLB responde: [VER], [OPT] com o buffer e [FIRMWARE:grblHAL].
+      // How the SLB answers: [VER], [OPT] with the buffer size, and [FIRMWARE:grblHAL].
       if (this.kind === "grblHAL") this.emit("[VER:1.1f.20240514:SLB]", `[OPT:VNMSL,35,${this.rx},3,0]`, "[FIRMWARE:grblHAL]");
       else this.emit("[VER:1.1h.20190825:]", "[OPT:V,15,128]");
     } else if (l === "$$") this.emit("$110=4000.000", "$130=1260.000", "$22=1");

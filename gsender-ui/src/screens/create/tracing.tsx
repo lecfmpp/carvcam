@@ -2,9 +2,9 @@ import { useRef, useState, type PointerEvent as RPointerEvent } from "react";
 import { create } from "zustand";
 import { useDesign, type TracingImage } from "../../state/design";
 
-const MAX_SIDE = 1400; // px: reduz a imagem para caber no armazenamento local
+const MAX_SIDE = 1400; // px: downscale the image so it fits in local storage
 
-/** Modo "mover a imagem no quadro" (liga e desliga pelo painel). */
+/** "Move the image on the board" mode (toggled from the panel). */
 export const useTracingUi = create<{ moving: boolean; setMoving(v: boolean): void }>((set) => ({
   moving: false,
   setMoving: (moving) => set({ moving }),
@@ -12,7 +12,7 @@ export const useTracingUi = create<{ moving: boolean; setMoving(v: boolean): voi
 
 export const isImageFile = (f: File) => /^image\/(png|jpe?g|webp|gif|bmp)$/i.test(f.type) || /\.(png|jpe?g|webp|gif|bmp)$/i.test(f.name);
 
-/** Carrega a imagem do arquivo já reduzida (fundo branco onde era transparente). */
+/** Loads the image from the file, already downscaled (white background where it was transparent). */
 export async function loadImageFile(file: File): Promise<{ src: string; w: number; h: number }> {
   const url = URL.createObjectURL(file);
   try {
@@ -38,15 +38,15 @@ export async function loadImageFile(file: File): Promise<{ src: string; w: numbe
   }
 }
 
-/** Nova imagem de decalque, cabendo na peça e centrada. */
-export async function tracingFromFile(file: File, plate: { largura: number; altura: number }): Promise<TracingImage> {
+/** New tracing image, fitted to the part and centered. */
+export async function tracingFromFile(file: File, plate: { width: number; height: number }): Promise<TracingImage> {
   const { src, w, h } = await loadImageFile(file);
   const aspect = h / w;
-  const width = Math.round(Math.min(plate.largura, plate.altura / aspect) * 10) / 10;
-  return { src, name: file.name, x: plate.largura / 2, y: plate.altura / 2, width, aspect, opacity: 0.5, visible: true };
+  const width = Math.round(Math.min(plate.width, plate.height / aspect) * 10) / 10;
+  return { src, name: file.name, x: plate.width / 2, y: plate.height / 2, width, aspect, opacity: 0.5, visible: true };
 }
 
-/** Pixels (rgba) da imagem de decalque, reduzida a `maxSide`, para a vetorização. */
+/** Pixels (rgba) of the tracing image, downscaled to `maxSide`, for vectorizing. */
 export async function tracingPixels(t: TracingImage, maxSide = 700): Promise<ImageData> {
   const img = await new Promise<HTMLImageElement>((resolve, reject) => {
     const i = new Image();
@@ -66,8 +66,8 @@ export async function tracingPixels(t: TracingImage, maxSide = 700): Promise<Ima
 }
 
 /**
- * A imagem de decalque no quadro, sob o desenho. No modo mover, recebe o ponteiro e pode ser
- * arrastada; fora dele, é só uma referência visual.
+ * The tracing image on the board, under the design. In move mode it takes the pointer and can be
+ * dragged; otherwise it's just a visual reference.
  */
 export function TracingLayer({ margin: m, scale: s, boardH }: { margin: number; scale: number; boardH: number }) {
   const t = useDesign((st) => st.design.tracing);
@@ -95,7 +95,7 @@ export function TracingLayer({ margin: m, scale: s, boardH }: { margin: number; 
     try {
       (e.currentTarget as Element).setPointerCapture(e.pointerId);
     } catch {
-      /* ponteiro sintético */
+      /* synthetic pointer */
     }
     setDrag({ x0: e.clientX, y0: e.clientY, dx: 0, dy: 0 });
   };

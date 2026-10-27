@@ -1,384 +1,384 @@
 import type opentype from "opentype.js";
-import { fmt, type Aviso, type RefElemento } from "./avisos.js";
+import { fmt, type Warning, type ElementRef } from "./warnings.js";
 import { area, bounds, difference, intersection, offset, translate, union, type Region } from "./geometry/clip.js";
 import { circle, curve, icon, plateOutline, polygon, slot, star, stroke } from "./geometry/shapes.js";
 import { centerAt, textToRegion } from "./geometry/text.js";
-import { parseDesenho } from "./desenho.js";
-import { placeSvg, SvgInvalido } from "./svg.js";
-import type { FontId, Machine, Modo, PlateSpec, Tool } from "./schema.js";
+import { parseDrawing } from "./drawing.js";
+import { placeSvg, InvalidSvg } from "./svg.js";
+import type { FontId, Machine, Mode, PlateSpec, Tool } from "./schema.js";
 
 type Mods = {
-  deslocamento: number;
-  contorno?: { distancia: number; largura: number };
-  operacao: "normal" | "subtrair" | "mascara";
-  alvos?: { tipo: "texto" | "icone" | "forma" | "svg"; indice: number }[];
-  hachura?: { espacamento: number; angulo: number };
+  offset: number;
+  outline?: { distance: number; width: number };
+  operation: "normal" | "subtract" | "mask";
+  targets?: { type: "text" | "icon" | "shape" | "svg"; index: number }[];
+  hatch?: { spacing: number; angle: number };
 };
 
-export interface ElementoCorte {
-  /** Ex.: "texto 1 (Casa da Ana)", "ícone 2 (coração)". */
-  rotulo: string;
-  ref?: RefElemento;
-  /** Só no fundo do relevo: os elementos em pé, para saber a qual deles um aviso se refere. */
-  itens?: { ref: RefElemento; regiao: Region }[];
-  regiao: Region;
-  profundidade: number;
-  /** Gravação com hachura em vez de esvaziar a área. */
-  hachura?: { espacamento: number; angulo: number };
+export interface CutElement {
+  /** E.g. "text 1 (Ana's House)", "icon 2 (heart)". */
+  label: string;
+  ref?: ElementRef;
+  /** Relief background only: the raised elements, to know which one a warning refers to. */
+  items?: { ref: ElementRef; region: Region }[];
+  region: Region;
+  depth: number;
+  /** Engrave with hatch lines instead of clearing the whole area. */
+  hatch?: { spacing: number; angle: number };
 }
 
-/** Tudo em coordenadas do bloco: X0 Y0 no canto inferior esquerdo, Z0 na face de cima. */
+/** Everything in stock coordinates: X0 Y0 at the bottom-left corner, Z0 on the top surface. */
 export interface Layout {
-  bloco: { largura: number; altura: number; espessura: number };
-  /** Contorno da peça final. */
-  peca: Region;
-  gravados: ElementoCorte[];
-  /** Fundo a rebaixar ao redor dos elementos em relevo. */
-  relevo: ElementoCorte | null;
-  /** Elementos vazados (estêncil) dentro da placa. */
-  vazados: ElementoCorte[];
-  furos: ElementoCorte[];
-  /** Contorno externo a recortar (fresa por fora). Null quando não há recorte. */
-  perfil: ElementoCorte | null;
-  avisos: Aviso[];
+  stock: { width: number; height: number; thickness: number };
+  /** Outline of the finished part. */
+  part: Region;
+  engraved: CutElement[];
+  /** Background to clear around the relief (raised) elements. */
+  relief: CutElement | null;
+  /** Through-cut (stencil) elements inside the sign. */
+  cutouts: CutElement[];
+  holes: CutElement[];
+  /** Outer outline to profile cut (bit on the outside). Null when there is no cutout. */
+  profile: CutElement | null;
+  warnings: Warning[];
 }
 
 export type FontMap = Partial<Record<FontId, opentype.Font>>;
 
-const THROUGH = 0.3; // mm além da espessura nos cortes vazados (entra na mesa de sacrifício)
+const THROUGH = 0.3; // mm past the thickness on through cuts (goes into the spoilboard)
 
 export function buildLayout(spec: PlateSpec, fonts: FontMap, tool: Tool, cutTool: Tool, machine: Machine): Layout {
-  const avisos: Aviso[] = [];
-  const m = spec.recorteExterno ? spec.margem : 0;
-  const bloco = { largura: spec.largura + 2 * m, altura: spec.altura + 2 * m, espessura: spec.espessura };
-  const through = spec.espessura + THROUGH;
+  const warnings: Warning[] = [];
+  const m = spec.outerCutout ? spec.margin : 0;
+  const stock = { width: spec.width + 2 * m, height: spec.height + 2 * m, thickness: spec.thickness };
+  const through = spec.thickness + THROUGH;
 
-  if (bloco.largura > machine.cursoX || bloco.altura > machine.cursoY) {
-    avisos.push({
-      codigo: "PECA_MAIOR_QUE_MAQUINA",
-      severidade: "erro",
-      mensagem: `O bloco (${fmt(bloco.largura)} × ${fmt(bloco.altura)} mm) é maior que a área útil da máquina (${fmt(machine.cursoX)} × ${fmt(machine.cursoY)} mm).`,
-      sugestao: "Diminua a placa ou divida o projeto em partes.",
+  if (stock.width > machine.travelX || stock.height > machine.travelY) {
+    warnings.push({
+      code: "PART_LARGER_THAN_MACHINE",
+      severity: "error",
+      message: `The stock (${fmt(stock.width)} × ${fmt(stock.height)} mm) is larger than the machine's work area (${fmt(machine.travelX)} × ${fmt(machine.travelY)} mm).`,
+      suggestion: "Make the sign smaller or split the project into parts.",
     });
   }
-  if (spec.espessura > cutTool.comprimentoCorte && (spec.recorteExterno || spec.tipo === "letreiro")) {
-    avisos.push({
-      codigo: "FERRAMENTA_CURTA",
-      severidade: "erro",
-      mensagem: `A fresa de recorte corta até ${fmt(cutTool.comprimentoCorte)} mm, mas o material tem ${fmt(spec.espessura)} mm.`,
-      sugestao: "Use uma fresa mais longa ou um material mais fino.",
+  if (spec.thickness > cutTool.cutLength && (spec.outerCutout || spec.type === "lettering")) {
+    warnings.push({
+      code: "TOOL_TOO_SHORT",
+      severity: "error",
+      message: `The cutout bit cuts up to ${fmt(cutTool.cutLength)} mm deep, but the material is ${fmt(spec.thickness)} mm thick.`,
+      suggestion: "Use a longer bit or thinner material.",
     });
   }
 
-  // ---- Elementos (texto e ícones) em coordenadas da peça ----
-  type Placed = { rotulo: string; regiao: Region; modo: Modo; profundidade: number; tamanho: number; idx: number; tipo: "texto" | "icone" | "forma" | "svg"; mods: Mods };
+  // ---- Elements (text and icons) in part coordinates ----
+  type Placed = { label: string; region: Region; mode: Mode; depth: number; size: number; idx: number; type: "text" | "icon" | "shape" | "svg"; mods: Mods };
   let placed: Placed[] = [];
 
-  const autoTexts: { idx: number; regiao: Region; tamanho: number }[] = [];
-  spec.texto.forEach((t, i) => {
-    const font = fonts[t.fonte];
+  const autoTexts: { idx: number; region: Region; size: number }[] = [];
+  spec.texts.forEach((t, i) => {
+    const font = fonts[t.font];
     if (!font) {
-      avisos.push({ codigo: "FONTE_INDISPONIVEL", severidade: "erro", mensagem: `A fonte "${t.fonte}" não foi carregada.` });
+      warnings.push({ code: "FONT_UNAVAILABLE", severity: "error", message: `The font "${t.font}" was not loaded.` });
       return;
     }
-    const raw = textToRegion(font, t.conteudo, t.tamanho, t.arco || undefined);
+    const raw = textToRegion(font, t.content, t.size, t.arc || undefined);
     if (t.x !== undefined && t.y !== undefined) {
-      placed.push({ rotulo: `texto ${i + 1} (${t.conteudo})`, regiao: centerAt(raw, t.x, t.y), modo: t.modo, profundidade: t.profundidade, tamanho: t.tamanho, idx: i, tipo: "texto", mods: t });
+      placed.push({ label: `text ${i + 1} (${t.content})`, region: centerAt(raw, t.x, t.y), mode: t.mode, depth: t.depth, size: t.size, idx: i, type: "text", mods: t });
     } else {
-      autoTexts.push({ idx: i, regiao: raw, tamanho: t.tamanho });
+      autoTexts.push({ idx: i, region: raw, size: t.size });
     }
   });
 
-  // Empilha os textos sem posição, centralizados na placa, na ordem em que vieram.
+  // Stack the texts that have no position, centered on the sign, in the order they came.
   if (autoTexts.length) {
     const heights = autoTexts.map((a) => {
-      const b = bounds(a.regiao);
+      const b = bounds(a.region);
       return b.maxY - b.minY;
     });
-    const gaps = autoTexts.slice(1).map((a) => a.tamanho * 0.45);
+    const gaps = autoTexts.slice(1).map((a) => a.size * 0.45);
     const total = heights.reduce((s, h) => s + h, 0) + gaps.reduce((s, g) => s + g, 0);
-    let top = spec.altura / 2 + total / 2;
+    let top = spec.height / 2 + total / 2;
     autoTexts.forEach((a, k) => {
       const cy = top - heights[k] / 2;
-      const t = spec.texto[a.idx];
-      placed.push({ rotulo: `texto ${a.idx + 1} (${t.conteudo})`, regiao: centerAt(a.regiao, spec.largura / 2, cy), modo: t.modo, profundidade: t.profundidade, tamanho: t.tamanho, idx: a.idx, tipo: "texto", mods: t });
+      const t = spec.texts[a.idx];
+      placed.push({ label: `text ${a.idx + 1} (${t.content})`, region: centerAt(a.region, spec.width / 2, cy), mode: t.mode, depth: t.depth, size: t.size, idx: a.idx, type: "text", mods: t });
       top -= heights[k] + (gaps[k] ?? 0);
     });
   }
 
-  spec.formas.forEach((f, i) => {
-    const nome = { retangulo: "retângulo", circulo: "círculo", linha: "linha", poligono: "polígono", estrela: "estrela", curva: "curva" }[f.tipo];
-    if (f.tipo === "curva") {
-      const regiao = curve(f.x, f.y, f.pontos, f.fechada, f.espessura);
-      const b = regiao.length ? bounds(regiao) : null;
-      const tamanho = f.fechada && b ? Math.min(b.maxX - b.minX, b.maxY - b.minY) : f.espessura;
-      placed.push({ rotulo: `${nome} ${i + 1}`, regiao, modo: f.modo, profundidade: f.profundidade, tamanho, idx: i, tipo: "forma", mods: f });
+  spec.shapes.forEach((f, i) => {
+    const name = { rectangle: "rectangle", circle: "circle", line: "line", polygon: "polygon", star: "star", curve: "curve" }[f.type];
+    if (f.type === "curve") {
+      const region = curve(f.x, f.y, f.nodes, f.closed, f.thickness);
+      const b = region.length ? bounds(region) : null;
+      const size = f.closed && b ? Math.min(b.maxX - b.minX, b.maxY - b.minY) : f.thickness;
+      placed.push({ label: `${name} ${i + 1}`, region, mode: f.mode, depth: f.depth, size, idx: i, type: "shape", mods: f });
       return;
     }
-    const regiao =
-      f.tipo === "retangulo"
-        ? plateOutline(f.x - f.largura / 2, f.y - f.altura / 2, f.largura, f.altura, f.raio > 0 ? "arredondada" : "reta", f.raio)
-        : f.tipo === "circulo"
-          ? circle(f.x, f.y, f.diametro / 2)
-          : f.tipo === "poligono"
-            ? polygon(f.x, f.y, f.diametro / 2, f.lados, f.rotacao)
-            : f.tipo === "estrela"
-              ? star(f.x, f.y, f.diametro / 2, f.pontas, f.interno, f.rotacao)
-              : stroke(f.x, f.y, f.x2, f.y2, f.espessura);
-    const tamanho = f.tipo === "retangulo" ? Math.min(f.largura, f.altura) : f.tipo === "linha" ? f.espessura : f.diametro;
-    placed.push({ rotulo: `${nome} ${i + 1}`, regiao, modo: f.modo, profundidade: f.profundidade, tamanho, idx: i, tipo: "forma", mods: f });
+    const region =
+      f.type === "rectangle"
+        ? plateOutline(f.x - f.width / 2, f.y - f.height / 2, f.width, f.height, f.radius > 0 ? "rounded" : "straight", f.radius)
+        : f.type === "circle"
+          ? circle(f.x, f.y, f.diameter / 2)
+          : f.type === "polygon"
+            ? polygon(f.x, f.y, f.diameter / 2, f.sides, f.rotation)
+            : f.type === "star"
+              ? star(f.x, f.y, f.diameter / 2, f.points, f.inner, f.rotation)
+              : stroke(f.x, f.y, f.x2, f.y2, f.thickness);
+    const size = f.type === "rectangle" ? Math.min(f.width, f.height) : f.type === "line" ? f.thickness : f.diameter;
+    placed.push({ label: `${name} ${i + 1}`, region, mode: f.mode, depth: f.depth, size, idx: i, type: "shape", mods: f });
   });
 
   spec.svgs.forEach((sv, i) => {
-    const nome = sv.nome ? `desenho ${i + 1} (${sv.nome})` : `desenho ${i + 1}`;
+    const name = sv.name ? `drawing ${i + 1} (${sv.name})` : `drawing ${i + 1}`;
     try {
-      const d = parseDesenho(sv.conteudo);
-      // "tamanho" do desenho é a largura: é o campo que a correção sugerida ajusta.
-      placed.push({ rotulo: nome, regiao: placeSvg(d, sv.x, sv.y, sv.largura), modo: sv.modo, profundidade: sv.profundidade, tamanho: sv.largura, idx: i, tipo: "svg", mods: sv });
+      const d = parseDrawing(sv.content);
+      // A drawing's "size" is its width: that is the field the suggested fix adjusts.
+      placed.push({ label: name, region: placeSvg(d, sv.x, sv.y, sv.width), mode: sv.mode, depth: sv.depth, size: sv.width, idx: i, type: "svg", mods: sv });
     } catch (e) {
-      avisos.push({
-        codigo: "SVG_INVALIDO",
-        severidade: "erro",
-        mensagem: `Não deu para ler ${nome}: ${e instanceof SvgInvalido ? e.message : "arquivo inválido."}`,
-        sugestao: "Exporte de novo como SVG ou DXF simples (textos convertidos em curvas) ou apague este desenho.",
-        elemento: { tipo: "svg", indice: i },
+      warnings.push({
+        code: "INVALID_SVG",
+        severity: "error",
+        message: `Could not read ${name}: ${e instanceof InvalidSvg ? e.message : "invalid file."}`,
+        suggestion: "Export it again as a plain SVG or DXF (text converted to curves), or delete this drawing.",
+        element: { type: "svg", index: i },
       });
     }
   });
 
-  spec.icones.forEach((ic, i) => {
-    placed.push({ rotulo: `ícone ${i + 1} (${ic.id})`, regiao: icon(ic.id, ic.x, ic.y, ic.tamanho), modo: ic.modo, profundidade: ic.profundidade, tamanho: ic.tamanho, idx: i, tipo: "icone", mods: ic });
+  spec.icons.forEach((ic, i) => {
+    placed.push({ label: `icon ${i + 1} (${ic.id})`, region: icon(ic.id, ic.x, ic.y, ic.size), mode: ic.mode, depth: ic.depth, size: ic.size, idx: i, type: "icon", mods: ic });
   });
 
-  placed = applyModifiers(placed, avisos);
+  placed = applyModifiers(placed, warnings);
 
   const toBlock = (r: Region) => translate(r, m, m);
 
-  // ---- Letreiro: as próprias letras são a peça ----
-  if (spec.tipo === "letreiro") {
-    const pecaLocal = union(...placed.map((p) => p.regiao));
-    const box = { largura: spec.largura, altura: spec.altura };
-    checkFit(pecaLocal, box, "o letreiro", placed.map((p) => p.tamanho), avisos);
-    const peca = toBlock(pecaLocal);
-    if (area(peca) <= 0) avisos.push({ codigo: "NADA_A_CORTAR", severidade: "erro", mensagem: "O letreiro não tem nenhuma letra ou ícone." });
+  // ---- Cut-out lettering: the letters themselves are the part ----
+  if (spec.type === "lettering") {
+    const localPart = union(...placed.map((p) => p.region));
+    const box = { width: spec.width, height: spec.height };
+    checkFit(localPart, box, "the lettering", placed.map((p) => p.size), warnings);
+    const part = toBlock(localPart);
+    if (area(part) <= 0) warnings.push({ code: "NOTHING_TO_CUT", severity: "error", message: "The lettering has no letters or icons." });
     return {
-      bloco,
-      peca,
-      gravados: [],
-      relevo: null,
-      vazados: [],
-      furos: buildHoles(spec, cutTool, peca, m, through, avisos),
-      perfil: { rotulo: "contorno do letreiro", regiao: peca, profundidade: through },
-      avisos,
+      stock,
+      part,
+      engraved: [],
+      relief: null,
+      cutouts: [],
+      holes: buildHoles(spec, cutTool, part, m, through, warnings),
+      profile: { label: "lettering outline", region: part, depth: through },
+      warnings,
     };
   }
 
-  // ---- Placa ----
-  const pecaLocal = plateOutline(0, 0, spec.largura, spec.altura, spec.borda.tipo, spec.borda.raio);
-  const peca = toBlock(pecaLocal);
-  const hasRelief = placed.some((p) => p.modo === "relevo");
-  const inner = hasRelief && spec.moldura > 0 ? offset(pecaLocal, -spec.moldura) : offset(pecaLocal, -1);
+  // ---- Sign ----
+  const localPart = plateOutline(0, 0, spec.width, spec.height, spec.edge.type, spec.edge.radius);
+  const part = toBlock(localPart);
+  const hasRelief = placed.some((p) => p.mode === "relief");
+  const inner = hasRelief && spec.frame > 0 ? offset(localPart, -spec.frame) : offset(localPart, -1);
 
   for (const p of placed) {
-    const ref = { tipo: p.tipo, indice: p.idx } as RefElemento;
-    checkFit(p.regiao, null, p.rotulo, [p.tamanho], avisos, inner, ref);
-    if (p.modo !== "recorte" && p.profundidade >= spec.espessura) {
-      avisos.push({
-        codigo: "PROFUNDIDADE_EXCEDE",
-        severidade: "erro",
-        mensagem: `A profundidade de ${p.rotulo} (${fmt(p.profundidade)} mm) atravessaria o material de ${fmt(spec.espessura)} mm.`,
-        sugestao: `Use no máximo ${fmt(spec.espessura * 0.6)} mm, ou escolha o modo "recorte".`,
-        elemento: ref,
-        correcao: { elemento: ref, campo: "profundidade", valor: Math.floor(spec.espessura * 0.6 * 10) / 10 },
+    const ref = { type: p.type, index: p.idx } as ElementRef;
+    checkFit(p.region, null, p.label, [p.size], warnings, inner, ref);
+    if (p.mode !== "cutout" && p.depth >= spec.thickness) {
+      warnings.push({
+        code: "DEPTH_EXCEEDS",
+        severity: "error",
+        message: `The depth of ${p.label} (${fmt(p.depth)} mm) would go through the ${fmt(spec.thickness)} mm material.`,
+        suggestion: `Use at most ${fmt(spec.thickness * 0.6)} mm, or choose "cutout" mode.`,
+        element: ref,
+        fix: { element: ref, field: "depth", value: Math.floor(spec.thickness * 0.6 * 10) / 10 },
       });
     }
-    if (p.modo !== "recorte" && p.profundidade > tool.comprimentoCorte) {
-      avisos.push({
-        codigo: "FERRAMENTA_CURTA",
-        severidade: "erro",
-        mensagem: `A fresa corta até ${fmt(tool.comprimentoCorte)} mm de profundidade, e ${p.rotulo} pede ${fmt(p.profundidade)} mm.`,
-        elemento: ref,
+    if (p.mode !== "cutout" && p.depth > tool.cutLength) {
+      warnings.push({
+        code: "TOOL_TOO_SHORT",
+        severity: "error",
+        message: `The bit cuts up to ${fmt(tool.cutLength)} mm deep, and ${p.label} needs ${fmt(p.depth)} mm.`,
+        element: ref,
       });
     }
-    if (tool.tipo === "vbit" && p.modo !== "gravado") {
-      avisos.push({
-        codigo: "VBIT_SO_GRAVA",
-        severidade: "erro",
-        mensagem: `A fresa em V só faz gravação. ${p.rotulo} está em modo "${p.modo}".`,
-        sugestao: "Troque para uma fresa reta ou mude o elemento para gravado.",
-        elemento: ref,
+    if (tool.type === "vbit" && p.mode !== "engrave") {
+      warnings.push({
+        code: "VBIT_ENGRAVE_ONLY",
+        severity: "error",
+        message: `A V-bit can only engrave. ${capitalize(p.label)} is in "${p.mode}" mode.`,
+        suggestion: "Switch to a straight bit or set the element to engrave.",
+        element: ref,
       });
     }
   }
 
-  const gravados: ElementoCorte[] = placed
-    .filter((p) => p.modo === "gravado")
-    .map((p) => ({ rotulo: p.rotulo, ref: { tipo: p.tipo, indice: p.idx }, regiao: toBlock(intersection(p.regiao, pecaLocal)), profundidade: p.profundidade, hachura: p.mods.hachura }));
+  const engraved: CutElement[] = placed
+    .filter((p) => p.mode === "engrave")
+    .map((p) => ({ label: p.label, ref: { type: p.type, index: p.idx }, region: toBlock(intersection(p.region, localPart)), depth: p.depth, hatch: p.mods.hatch }));
 
-  let relevo: ElementoCorte | null = null;
-  const reliefItems = placed.filter((p) => p.modo === "relevo");
+  let relief: CutElement | null = null;
+  const reliefItems = placed.filter((p) => p.mode === "relief");
   if (reliefItems.length) {
-    const depths = [...new Set(reliefItems.map((p) => p.profundidade))];
+    const depths = [...new Set(reliefItems.map((p) => p.depth))];
     const depth = Math.max(...depths);
     if (depths.length > 1) {
-      avisos.push({
-        codigo: "PROFUNDIDADES_DIFERENTES",
-        severidade: "aviso",
-        mensagem: `Os elementos em relevo pedem profundidades diferentes; todos vão usar ${fmt(depth)} mm, porque o fundo é um só.`,
+      warnings.push({
+        code: "DIFFERENT_DEPTHS",
+        severity: "warning",
+        message: `The relief elements ask for different depths; all of them will use ${fmt(depth)} mm, because there is only one background.`,
       });
     }
-    // Sem moldura, o fundo vai até a borda (e um pouco além, para não sobrar rebarba).
-    const field = spec.moldura > 0 ? inner : offset(pecaLocal, cutTool.diametro / 2 + 0.5);
-    const fundo = difference(field, union(...reliefItems.map((p) => p.regiao)));
-    relevo = {
-      rotulo: "fundo do relevo",
-      regiao: toBlock(fundo),
-      profundidade: depth,
-      itens: reliefItems.map((p) => ({ ref: { tipo: p.tipo, indice: p.idx }, regiao: toBlock(p.regiao) })),
+    // Without a frame, the background runs to the edge (and a little past it, so no lip is left).
+    const field = spec.frame > 0 ? inner : offset(localPart, cutTool.diameter / 2 + 0.5);
+    const floor = difference(field, union(...reliefItems.map((p) => p.region)));
+    relief = {
+      label: "the relief background",
+      region: toBlock(floor),
+      depth: depth,
+      items: reliefItems.map((p) => ({ ref: { type: p.type, index: p.idx }, region: toBlock(p.region) })),
     };
 
-    // Gravado que cai no fundo rebaixado e é mais raso que ele simplesmente desaparece.
+    // An engraving that lands on the cleared background and is shallower than it simply disappears.
     for (const p of placed) {
-      if (p.modo !== "gravado" || p.profundidade > depth) continue;
-      const total = area(p.regiao);
+      if (p.mode !== "engrave" || p.depth > depth) continue;
+      const total = area(p.region);
       if (total <= 0) continue;
-      const sumido = area(intersection(p.regiao, fundo)) / total;
-      if (sumido < 0.5) continue;
-      const ref = { tipo: p.tipo, indice: p.idx } as RefElemento;
-      const nova = Math.round((depth + 1) * 10) / 10;
-      avisos.push({
-        codigo: "GRAVADO_NO_FUNDO",
-        severidade: "aviso",
-        mensagem: `${capitalize(p.rotulo)} está no fundo rebaixado (${fmt(depth)} mm); gravado a ${fmt(p.profundidade)} mm, não vai aparecer.`,
-        sugestao: `Coloque-o em cima de um elemento em relevo, deixe-o em relevo, ou grave mais fundo (${fmt(nova)} mm).`,
-        elemento: ref,
-        correcao: nova < spec.espessura ? { elemento: ref, campo: "profundidade", valor: nova } : undefined,
+      const covered = area(intersection(p.region, floor)) / total;
+      if (covered < 0.5) continue;
+      const ref = { type: p.type, index: p.idx } as ElementRef;
+      const newDepth = Math.round((depth + 1) * 10) / 10;
+      warnings.push({
+        code: "ENGRAVED_IN_FLOOR",
+        severity: "warning",
+        message: `${capitalize(p.label)} sits on the cleared background (${fmt(depth)} mm); engraved at ${fmt(p.depth)} mm, it will not show.`,
+        suggestion: `Place it on top of a relief element, make it relief, or engrave it deeper (${fmt(newDepth)} mm).`,
+        element: ref,
+        fix: newDepth < spec.thickness ? { element: ref, field: "depth", value: newDepth } : undefined,
       });
     }
   }
 
-  const vazados: ElementoCorte[] = placed
-    .filter((p) => p.modo === "recorte")
+  const cutouts: CutElement[] = placed
+    .filter((p) => p.mode === "cutout")
     .map((p) => {
-      const r = intersection(p.regiao, inner);
-      const ilhas = r.filter((path) => pathIsHole(path)).length;
-      if (ilhas > 0) {
-        avisos.push({
-          codigo: "ILHAS_SOLTAS",
-          severidade: "aviso",
-          mensagem: `${capitalize(p.rotulo)} tem ${ilhas} miolo(s) (como o centro do "o") que vão se soltar no recorte.`,
-          sugestao: "Use uma fonte estêncil, ou deixe esse elemento em relevo ou gravado.",
-          elemento: { tipo: p.tipo, indice: p.idx },
+      const r = intersection(p.region, inner);
+      const islands = r.filter((path) => pathIsHole(path)).length;
+      if (islands > 0) {
+        warnings.push({
+          code: "LOOSE_ISLANDS",
+          severity: "warning",
+          message: `${capitalize(p.label)} has ${islands} island(s) (like the center of an "o") that will fall out when cut.`,
+          suggestion: "Use a stencil font, or set this element to relief or engrave.",
+          element: { type: p.type, index: p.idx },
         });
       }
-      return { rotulo: p.rotulo, ref: { tipo: p.tipo, indice: p.idx } as RefElemento, regiao: toBlock(r), profundidade: through };
+      return { label: p.label, ref: { type: p.type, index: p.idx } as ElementRef, region: toBlock(r), depth: through };
     });
 
-  const furos = buildHoles(spec, cutTool, peca, m, through, avisos);
-  const perfil = spec.recorteExterno ? { rotulo: "contorno da placa", regiao: peca, profundidade: through } : null;
+  const holes = buildHoles(spec, cutTool, part, m, through, warnings);
+  const profile = spec.outerCutout ? { label: "sign outline", region: part, depth: through } : null;
 
-  if (!gravados.length && !relevo && !vazados.length && !furos.length && !perfil) {
-    avisos.push({ codigo: "NADA_A_CORTAR", severidade: "erro", mensagem: "Não há nada para cortar nesta placa." });
+  if (!engraved.length && !relief && !cutouts.length && !holes.length && !profile) {
+    warnings.push({ code: "NOTHING_TO_CUT", severity: "error", message: "There is nothing to cut on this sign." });
   }
 
-  return { bloco, peca, gravados, relevo, vazados, furos, perfil, avisos };
+  return { stock, part, engraved, relief, cutouts, holes, profile, warnings };
 }
 
 /**
- * Aplica os ajustes de cada elemento: deslocamento (offset), anel de contorno e as operações
- * entre elementos (subtrair / máscara). Elementos que subtraem ou mascaram não são cortados.
+ * Applies each element's modifiers: offset, outline ring and the operations between
+ * elements (subtract / mask). Elements that subtract or mask are not cut themselves.
  */
-function applyModifiers<P extends { rotulo: string; regiao: Region; tipo: string; idx: number; mods: Mods }>(placed: P[], avisos: Aviso[]): P[] {
+function applyModifiers<P extends { label: string; region: Region; type: string; idx: number; mods: Mods }>(placed: P[], warnings: Warning[]): P[] {
   const shaped = placed.map((p) => {
-    let r = p.regiao;
-    const d = p.mods.deslocamento ?? 0;
+    let r = p.region;
+    const d = p.mods.offset ?? 0;
     if (d) r = offset(r, d);
-    const c = p.mods.contorno;
+    const c = p.mods.outline;
     if (c && area(r) > 0) {
-      const ring = difference(offset(r, c.distancia + c.largura), offset(r, c.distancia));
+      const ring = difference(offset(r, c.distance + c.width), offset(r, c.distance));
       r = union(r, ring);
     }
-    if (p.regiao.length && area(r) <= 0.001) {
-      avisos.push({
-        codigo: "ELEMENTO_NAO_USINAVEL",
-        severidade: "erro",
-        mensagem: `${capitalize(p.rotulo)} sumiu depois de afinar ${fmt(-d)} mm.`,
-        sugestao: "Diminua o quanto o elemento é afinado.",
-        elemento: { tipo: p.tipo, indice: p.idx } as RefElemento,
-        correcao: { elemento: { tipo: p.tipo, indice: p.idx } as RefElemento, campo: "deslocamento", valor: 0 },
+    if (p.region.length && area(r) <= 0.001) {
+      warnings.push({
+        code: "ELEMENT_NOT_MACHINABLE",
+        severity: "error",
+        message: `${capitalize(p.label)} disappeared after being thinned by ${fmt(-d)} mm.`,
+        suggestion: "Thin the element less.",
+        element: { type: p.type, index: p.idx } as ElementRef,
+        fix: { element: { type: p.type, index: p.idx } as ElementRef, field: "offset", value: 0 },
       });
     }
-    return { ...p, regiao: r };
+    return { ...p, region: r };
   });
-  const sub = shaped.filter((p) => p.mods.operacao === "subtrair");
-  const mask = shaped.filter((p) => p.mods.operacao === "mascara");
-  const normal = shaped.filter((p) => (p.mods.operacao ?? "normal") === "normal");
+  const sub = shaped.filter((p) => p.mods.operation === "subtract");
+  const mask = shaped.filter((p) => p.mods.operation === "mask");
+  const normal = shaped.filter((p) => (p.mods.operation ?? "normal") === "normal");
   if (!sub.length && !mask.length) return shaped;
   if (!normal.length) {
-    avisos.push({ codigo: "NADA_A_CORTAR", severidade: "erro", mensagem: "Só há elementos que subtraem ou mascaram; não sobra nada para cortar." });
+    warnings.push({ code: "NOTHING_TO_CUT", severity: "error", message: "There are only subtract or mask elements; nothing is left to cut." });
   }
-  // Sem lista de alvos, a operação vale para todos os elementos normais.
-  const hits = (op: P, alvo: P) => !op.mods.alvos || op.mods.alvos.some((a) => a.tipo === alvo.tipo && a.indice === alvo.idx);
+  // Without a target list, the operation applies to every normal element.
+  const hits = (op: P, target: P) => !op.mods.targets || op.mods.targets.some((a) => a.type === target.type && a.index === target.idx);
   return normal.map((p) => {
-    let r = p.regiao;
+    let r = p.region;
     const cuts = sub.filter((s) => hits(s, p));
-    if (cuts.length) r = difference(r, union(...cuts.map((s) => s.regiao)));
+    if (cuts.length) r = difference(r, union(...cuts.map((s) => s.region)));
     const masks = mask.filter((s) => hits(s, p));
-    if (masks.length) r = intersection(r, union(...masks.map((s) => s.regiao)));
-    return { ...p, regiao: r };
+    if (masks.length) r = intersection(r, union(...masks.map((s) => s.region)));
+    return { ...p, region: r };
   });
 }
 
-function buildHoles(spec: PlateSpec, tool: Tool, peca: Region, m: number, depth: number, avisos: Aviso[]): ElementoCorte[] {
-  const out: ElementoCorte[] = [];
-  spec.furos.forEach((f, i) => {
-    if (f.diametro < tool.diametro - 0.01) {
-      avisos.push({
-        codigo: "FURO_MENOR_QUE_FRESA",
-        severidade: "erro",
-        mensagem: `O furo ${i + 1} tem ${fmt(f.diametro)} mm, menor que a fresa de ${fmt(tool.diametro, 2)} mm.`,
-        sugestao: `Aumente o furo para pelo menos ${fmt(tool.diametro, 2)} mm.`,
-        elemento: { tipo: "furo", indice: i },
-        correcao: { elemento: { tipo: "furo", indice: i }, campo: "diametro", valor: Math.ceil(tool.diametro * 10) / 10 },
+function buildHoles(spec: PlateSpec, tool: Tool, part: Region, m: number, depth: number, warnings: Warning[]): CutElement[] {
+  const out: CutElement[] = [];
+  spec.holes.forEach((f, i) => {
+    if (f.diameter < tool.diameter - 0.01) {
+      warnings.push({
+        code: "HOLE_SMALLER_THAN_BIT",
+        severity: "error",
+        message: `Hole ${i + 1} is ${fmt(f.diameter)} mm, smaller than the ${fmt(tool.diameter, 2)} mm bit.`,
+        suggestion: `Make the hole at least ${fmt(tool.diameter, 2)} mm.`,
+        element: { type: "hole", index: i },
+        fix: { element: { type: "hole", index: i }, field: "diameter", value: Math.ceil(tool.diameter * 10) / 10 },
       });
       return;
     }
-    const r = circle(f.x + m, f.y + m, f.diametro / 2);
-    checkInside(r, peca, `o furo ${i + 1}`, avisos, { tipo: "furo", indice: i });
-    out.push({ rotulo: `furo ${i + 1}`, ref: { tipo: "furo", indice: i }, regiao: r, profundidade: depth });
+    const r = circle(f.x + m, f.y + m, f.diameter / 2);
+    checkInside(r, part, `hole ${i + 1}`, warnings, { type: "hole", index: i });
+    out.push({ label: `hole ${i + 1}`, ref: { type: "hole", index: i }, region: r, depth: depth });
   });
-  spec.rasgos.forEach((s, i) => {
-    if (s.largura < tool.diametro - 0.01) {
-      avisos.push({
-        codigo: "RASGO_MENOR_QUE_FRESA",
-        severidade: "erro",
-        mensagem: `O rasgo ${i + 1} tem ${fmt(s.largura)} mm de largura, menor que a fresa de ${fmt(tool.diametro, 2)} mm.`,
-        elemento: { tipo: "rasgo", indice: i },
-        correcao: { elemento: { tipo: "rasgo", indice: i }, campo: "largura", valor: Math.ceil(tool.diametro * 10) / 10 },
+  spec.slots.forEach((s, i) => {
+    if (s.width < tool.diameter - 0.01) {
+      warnings.push({
+        code: "SLOT_SMALLER_THAN_BIT",
+        severity: "error",
+        message: `Slot ${i + 1} is ${fmt(s.width)} mm wide, narrower than the ${fmt(tool.diameter, 2)} mm bit.`,
+        element: { type: "slot", index: i },
+        fix: { element: { type: "slot", index: i }, field: "width", value: Math.ceil(tool.diameter * 10) / 10 },
       });
       return;
     }
-    const r = slot(s.x + m, s.y + m, s.comprimento, s.largura, s.angulo);
-    checkInside(r, peca, `o rasgo ${i + 1}`, avisos, { tipo: "rasgo", indice: i });
-    out.push({ rotulo: `rasgo ${i + 1}`, ref: { tipo: "rasgo", indice: i }, regiao: r, profundidade: depth });
+    const r = slot(s.x + m, s.y + m, s.length, s.width, s.angle);
+    checkInside(r, part, `slot ${i + 1}`, warnings, { type: "slot", index: i });
+    out.push({ label: `slot ${i + 1}`, ref: { type: "slot", index: i }, region: r, depth: depth });
   });
   return out;
 }
 
-function checkInside(r: Region, peca: Region, rotulo: string, avisos: Aviso[], ref: RefElemento) {
-  if (area(difference(r, peca)) > 0.01) {
-    avisos.push({ codigo: "FORA_DA_PECA", severidade: "erro", mensagem: `${capitalize(rotulo)} sai para fora da peça.`, elemento: ref });
+function checkInside(r: Region, part: Region, label: string, warnings: Warning[], ref: ElementRef) {
+  if (area(difference(r, part)) > 0.01) {
+    warnings.push({ code: "OUTSIDE_PART", severity: "error", message: `${capitalize(label)} goes outside the part.`, element: ref });
   }
 }
 
 function checkFit(
   r: Region,
-  box: { largura: number; altura: number } | null,
-  rotulo: string,
-  tamanhos: number[],
-  avisos: Aviso[],
+  box: { width: number; height: number } | null,
+  label: string,
+  sizes: number[],
+  warnings: Warning[],
   inner?: Region,
-  ref?: RefElemento,
+  ref?: ElementRef,
 ) {
   const b = bounds(r);
   const w = b.maxX - b.minX;
@@ -386,8 +386,8 @@ function checkFit(
   let factor = 1;
   let fits = true;
   if (box) {
-    fits = w <= box.largura + 1e-6 && h <= box.altura + 1e-6;
-    factor = Math.min(box.largura / w, box.altura / h);
+    fits = w <= box.width + 1e-6 && h <= box.height + 1e-6;
+    factor = Math.min(box.width / w, box.height / h);
   } else if (inner) {
     fits = area(difference(r, inner)) < 0.01;
     if (!fits) {
@@ -396,15 +396,15 @@ function checkFit(
     }
   }
   if (!fits) {
-    const sugerido = Math.floor(Math.min(...tamanhos) * Math.min(1, factor) * 0.95);
-    avisos.push({
-      codigo: "TEXTO_NAO_CABE",
-      severidade: "erro",
-      mensagem: `${capitalize(rotulo)} não cabe na área disponível da placa.`,
-      sugestao: sugerido > 0 ? `Reduza o tamanho para cerca de ${sugerido} mm ou aumente a placa.` : "Aumente a placa.",
-      dados: { tamanhoSugerido: sugerido },
-      elemento: ref,
-      correcao: ref && sugerido > 0 && (ref.tipo === "texto" || ref.tipo === "icone") ? { elemento: ref, campo: "tamanho", valor: sugerido } : ref && sugerido > 0 && ref.tipo === "svg" ? { elemento: ref, campo: "largura", valor: sugerido } : undefined,
+    const suggested = Math.floor(Math.min(...sizes) * Math.min(1, factor) * 0.95);
+    warnings.push({
+      code: "TEXT_DOES_NOT_FIT",
+      severity: "error",
+      message: `${capitalize(label)} does not fit in the available area of the sign.`,
+      suggestion: suggested > 0 ? `Reduce the size to about ${suggested} mm or make the sign bigger.` : "Make the sign bigger.",
+      data: { suggestedSize: suggested },
+      element: ref,
+      fix: ref && suggested > 0 && (ref.type === "text" || ref.type === "icon") ? { element: ref, field: "size", value: suggested } : ref && suggested > 0 && ref.type === "svg" ? { element: ref, field: "width", value: suggested } : undefined,
     });
   }
 }

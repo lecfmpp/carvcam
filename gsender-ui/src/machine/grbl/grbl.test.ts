@@ -91,7 +91,7 @@ describe("controller", () => {
     expect(sent.length).toBe(302);
     expect(sent[1]).toBe("G1 X0.000 Y0.000 Z-1.000 F1200");
     expect(f.maxBuffered).toBeLessThanOrEqual(128);
-    expect(f.maxBuffered).toBeGreaterThan(60); // mantém o buffer cheio, não uma linha por vez
+    expect(f.maxBuffered).toBeGreaterThan(60); // keeps the buffer full, not one line at a time
     expect(done[done.length - 1]).toBe(302);
     await c.close();
   });
@@ -195,7 +195,7 @@ describe("resume in the middle", () => {
   it("lifts to safe Z, restarts the spindle, returns over the last point and plunges at feed", async () => {
     const { resumePreamble } = await import("./resume");
     const g = ["G21 G90", "G0 Z10", "M3 S18000", "G1 Z-1 F300", "G1 X10 F1500", "G1 X20", "G0 Z10"];
-    // Recomeça em "G1 X20": volta por cima até X10, desce até Z-1 e só então continua cortando.
+    // Restarts at "G1 X20": travels over to X10, plunges to Z-1 and only then keeps cutting.
     expect(resumePreamble(g, 6)).toEqual(["G21", "G90", "G0 Z10", "M3 S18000", "G4 P3", "G0 X10", "G1 Z-1 F750", "F1500"]);
     expect(resumePreamble(["G20", "M3 S10000", "M5", "G1 X1 F40"], 5)).toEqual(["G20", "G90", "G0 Z5", "G0 X1", "F40"]);
   });

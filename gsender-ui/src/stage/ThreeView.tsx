@@ -4,14 +4,14 @@ import type { SimGrid } from "../engine/protocol";
 import { THROUGH_COLOR, type Material } from "../lib/catalog";
 
 /**
- * Vista 3D da peça simulada: o mapa de alturas vira uma malha iluminada, com luz de estúdio
- * e sombra de contato. Arrastar gira; o botão 360° dá uma volta completa.
+ * 3D view of the simulated part: the height map becomes a lit mesh, with studio lighting
+ * and a contact shadow. Drag to orbit; the 360° button does a full turn.
  */
 export function ThreeView(props: { sim: SimGrid; thickness: number; material: Material; board: { width: number; height: number }; zoom: number; spin: number; size: { w: number; h: number }; marker?: { x: number; y: number; z: number } | null }) {
   const host = useRef<HTMLDivElement>(null);
   const ctx = useRef<{ renderer: THREE.WebGLRenderer; scene: THREE.Scene; camera: THREE.PerspectiveCamera; mesh?: THREE.Mesh; marker: THREE.Mesh; yaw: number; tilt: number; dist: number; raf?: number } | null>(null);
 
-  // Cena (uma vez).
+  // Scene (once).
   useEffect(() => {
     const el = host.current!;
     let renderer: THREE.WebGLRenderer;
@@ -76,13 +76,13 @@ export function ThreeView(props: { sim: SimGrid; thickness: number; material: Ma
     c.renderer.render(c.scene, c.camera);
   }
 
-  // Malha a partir do mapa de alturas.
+  // Mesh from the height map.
   useEffect(() => {
     const c = ctx.current;
     if (!c) return;
     const { sim, thickness, material } = props;
     const { cols, rows, res, x0, y0, h } = sim;
-    // Reduz a malha para no máximo ~520 colunas (260 no modo Painel).
+    // Reduce the mesh to at most ~520 columns (260 in Panel mode).
     const maxCols = document.documentElement.dataset.panel === "1" ? 260 : 520;
     const step = Math.max(1, Math.ceil(Math.max(cols, rows) / maxCols));
     const nx = Math.floor((cols - 1) / step) + 1;
@@ -148,7 +148,7 @@ export function ThreeView(props: { sim: SimGrid; thickness: number; material: Ma
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.marker?.x, props.marker?.y, props.marker?.z]);
 
-  // Volta de 360° (respeita prefers-reduced-motion).
+  // 360° turn (respects prefers-reduced-motion).
   useEffect(() => {
     const c = ctx.current;
     if (!c || props.spin === 0) return;

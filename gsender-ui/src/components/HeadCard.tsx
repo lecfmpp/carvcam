@@ -6,8 +6,8 @@ import { sienciLink, type Placement } from "../lib/referral";
 import "./machine-card.css";
 
 /**
- * Card branco de um router/spindle, no mesmo desenho do card de máquina: foto (WebP), nome,
- * frase curta, rotação e controle em destaque e a ficha com rótulos.
+ * White router/spindle card, in the same design as the machine card: photo (WebP), name,
+ * short tagline, RPM and control highlighted, and the labeled spec sheet.
  */
 export function HeadCard(props: { id: HeadId; selected?: boolean; onSelect?(): void; badge?: string; placement?: Placement }) {
   const h = headInfo(props.id);
@@ -98,7 +98,7 @@ export function HeadCard(props: { id: HeadId; selected?: boolean; onSelect?(): v
   );
 }
 
-/** Foto WebP; enquanto ela não existe, um desenho do router ou do spindle. */
+/** WebP photo; until it exists, a drawing of the router or spindle. */
 function HeadPhoto({ info }: { info: HeadInfo }) {
   const [failed, setFailed] = useState(false);
   if (failed) return <HeadDrawing spindle={info.kind === "Spindle kit"} />;
@@ -106,7 +106,7 @@ function HeadPhoto({ info }: { info: HeadInfo }) {
 }
 
 function HeadDrawing({ spindle }: { spindle: boolean }) {
-  // Corpo cilíndrico em pé, porca da pinça e a fresa. O spindle é mais largo, com aletas.
+  // Upright cylindrical body, collet nut and the bit. The spindle is wider, with fins.
   const w = spindle ? 92 : 70;
   const x = 200 - w / 2;
   return (

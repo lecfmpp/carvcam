@@ -1,4 +1,4 @@
-/* Card branco de máquina (e de fresa, ver .pcard em bit-card): ficha de produto sobre o app escuro. */
+/* White machine card (and bit card, see .pcard in bit-card): a product sheet on the dark app. */
 :root {
   --pc-bg: #ffffff;
   --pc-photo: #f4f3f0;
@@ -71,7 +71,7 @@
 .mcard--wide .mcard__body { flex: 1.3 1 360px; padding: 20px 22px 8px; }
 .mcard--wide .mcard__foot { flex: 1 1 100%; border-top: 1px solid var(--pc-line); }
 
-/* Grade de máquinas no onboarding */
+/* Machine grid in onboarding */
 .mgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 16px; }
 .mgroup { display: flex; flex-direction: column; gap: 12px; }
 .mgroup__head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
@@ -84,7 +84,7 @@
   .mcard, .mcard.is-selectable:hover { transition: none; transform: none; }
 }
 
-/* Card de fresa */
+/* Bit card */
 .bcard { box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04), 0 10px 26px rgba(0, 0, 0, 0.26); }
 .bcard.is-owned { border-color: rgba(20, 107, 75, 0.55); }
 .bcard__photo { position: relative; aspect-ratio: 4 / 3; max-width: 100%; background: var(--pc-photo); display: flex; align-items: center; justify-content: center; }
@@ -117,7 +117,7 @@
 .bsection__all:hover { color: var(--accent); }
 .bdisclosure { font: 400 12.5px/1.5 var(--font); color: var(--text-4); }
 
-/* Card de router/spindle (usa as classes do card de máquina) */
+/* Router/spindle card (reuses the machine card classes) */
 .hcard__photo { aspect-ratio: 16 / 10; }
 .hcard__mode { font: 600 18px/1.3 var(--font); letter-spacing: -0.01em; color: var(--pc-ink); }
 .hcard__mode.is-auto { color: var(--pc-ok); }

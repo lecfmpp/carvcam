@@ -1,14 +1,14 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import {
-  compatibilidade,
-  FRESA_POR_ID,
-  FRESAS,
-  MAQUINAS,
-  MERGULHO_RETO_MAX,
-  parametrosSienci,
-  PROJETOS,
-  projetosParaMaquina,
-  type MaquinaId,
+  compatibility,
+  BIT_BY_ID,
+  BITS,
+  MACHINES,
+  MAX_STRAIGHT_PLUNGE,
+  sienciParams,
+  PROJECTS,
+  projectsForMachine,
+  type MachineId,
 } from "../src/catalog/sienci/index.js";
 import { generatePlate } from "../src/generate.js";
 import type { FontMap } from "../src/layout.js";
@@ -19,104 +19,104 @@ beforeAll(async () => {
   f = await fonts();
 });
 
-const fresa = (id: string) => FRESA_POR_ID.get(id)!;
-const codes = (r: { avisos: { codigo: string }[] }) => r.avisos.map((a) => a.codigo);
+const bit = (id: string) => BIT_BY_ID.get(id)!;
+const codes = (r: { warnings: { code: string }[] }) => r.warnings.map((a) => a.code);
 
-describe("catálogo Sienci", () => {
-  it("tem dados completos em todas as fresas", () => {
-    for (const fr of FRESAS) {
-      expect(fr.diametro).toBeGreaterThan(0);
-      expect(fr.comprimentoCorte).toBeGreaterThan(0);
+describe("Sienci catalog", () => {
+  it("has complete data for every bit", () => {
+    for (const fr of BITS) {
+      expect(fr.diameter).toBeGreaterThan(0);
+      expect(fr.cutLength).toBeGreaterThan(0);
       expect(fr.url).toMatch(/^https:\/\/sienci\.com\//);
-      if (fr.tipo === "vbit") expect(fr.angulo).toBeGreaterThan(0);
+      if (fr.type === "vbit") expect(fr.angle).toBeGreaterThan(0);
     }
   });
 
-  it("sabe o que prende em cada router e spindle", () => {
-    expect(compatibilidade(fresa("reta-1-8-upcut"), "makita-rt0701").status).toBe("com-acessorio");
-    expect(compatibilidade(fresa("reta-1-4-upcut"), "makita-rt0701").status).toBe("compativel");
-    expect(compatibilidade(fresa("reta-1-8-upcut"), "autospin-t1").status).toBe("compativel");
-    expect(compatibilidade(fresa("vbit-60-15mm"), "spindle-2-2kw-er20").status).toBe("compativel");
+  it("knows what each router and spindle can hold", () => {
+    expect(compatibility(bit("flat-1-8-upcut"), "makita-rt0701").status).toBe("with-accessory");
+    expect(compatibility(bit("flat-1-4-upcut"), "makita-rt0701").status).toBe("compatible");
+    expect(compatibility(bit("flat-1-8-upcut"), "autospin-t1").status).toBe("compatible");
+    expect(compatibility(bit("vbit-60-15mm"), "spindle-2-2kw-er20").status).toBe("compatible");
   });
 
-  it("converte a tabela oficial para mm (madeira macia, velocidade regular, 1/8″ reta)", () => {
-    expect(parametrosSienci("1/8-reta", "mdf", "regular")).toEqual({
-      avanco: 2159, mergulho: 1092, sobreposicao: 1.52, passadaCanal: 4.06, passadaPocket: 9.14, rpm: 17000,
+  it("converts the official table to mm (softwood, regular speed, 1/8″ straight)", () => {
+    expect(sienciParams("1/8-straight", "mdf", "regular")).toEqual({
+      feed: 2159, plunge: 1092, stepover: 1.52, slotStepdown: 4.06, pocketStepdown: 9.14, rpm: 17000,
     });
-    expect(parametrosSienci("aplainar-22", "acrilico", "regular")).toBeUndefined();
+    expect(sienciParams("surfacing-22", "acrylic", "regular")).toBeUndefined();
   });
 });
 
-describe("geração com máquina Sienci", () => {
-  const placa = { largura: 200, altura: 100, espessura: 12, texto: [{ conteudo: "Oi", tamanho: 30, modo: "gravado" as const, profundidade: 2 }] };
+describe("generation with a Sienci machine", () => {
+  const plate = { width: 200, height: 100, thickness: 12, texts: [{ content: "Hi", size: 30, mode: "engrave" as const, depth: 2 }] };
 
-  it("Makita: avisa da pinça 1/8″ e diz a posição do dial", () => {
-    const r = generatePlate(placa, { fontes: f, sienci: { maquina: "longmill-mk2-30x30", fresa: "reta-1-8-upcut" } });
+  it("Makita: warns about the 1/8″ collet and gives the dial position", () => {
+    const r = generatePlate(plate, { fonts: f, sienci: { machine: "longmill-mk2-30x30", bit: "flat-1-8-upcut" } });
     expect(r.ok).toBe(true);
-    expect(codes(r)).toContain("FRESA_PRECISA_ACESSORIO");
-    expect(r.ajustesManuais).toHaveLength(1);
-    expect(r.ajustesManuais[0].dial).toBe(3);
-    expect(r.gcode).toContain("gire o dial do Makita RT0701 para 3");
+    expect(codes(r)).toContain("BIT_NEEDS_ACCESSORY");
+    expect(r.manualAdjustments).toHaveLength(1);
+    expect(r.manualAdjustments[0].dial).toBe(3);
+    expect(r.gcode).toContain("set the Makita RT0701 dial to 3");
   });
 
-  it("AutoSpin: sem acessório e sem dial (rotação pelo G-code)", () => {
-    const r = generatePlate(placa, { fontes: f, sienci: { maquina: "longmill-mk3-30x30", fresa: "reta-1-8-upcut" } });
+  it("AutoSpin: no accessory and no dial (speed from the G-code)", () => {
+    const r = generatePlate(plate, { fonts: f, sienci: { machine: "longmill-mk3-30x30", bit: "flat-1-8-upcut" } });
     expect(r.ok).toBe(true);
-    expect(codes(r)).not.toContain("FRESA_PRECISA_ACESSORIO");
-    expect(r.ajustesManuais).toEqual([]);
+    expect(codes(r)).not.toContain("BIT_NEEDS_ACCESSORY");
+    expect(r.manualAdjustments).toEqual([]);
     expect(r.gcode).toMatch(/^S17000 M3$/m);
   });
 
-  it("usa a tabela Sienci com mergulho limitado para descida reta", () => {
-    const r = generatePlate(placa, { fontes: f, sienci: { maquina: "longmill-mk3-30x30", fresa: "reta-1-8-upcut", velocidade: "regular" } });
-    expect(r.parametros.principal).toMatchObject({ rpm: 17000, avanco: 2159, passada: 4.06, mergulho: MERGULHO_RETO_MAX });
-    expect(r.fonteParametros).toMatch(/Sienci/);
+  it("uses the Sienci table with a capped plunge for straight descent", () => {
+    const r = generatePlate(plate, { fonts: f, sienci: { machine: "longmill-mk3-30x30", bit: "flat-1-8-upcut", speed: "regular" } });
+    expect(r.params.main).toMatchObject({ rpm: 17000, feed: 2159, stepdown: 4.06, plunge: MAX_STRAIGHT_PLUNGE });
+    expect(r.paramsSource).toMatch(/Sienci/);
   });
 
-  it("recusa fresa que não serve para placas e cabeçote que não existe na máquina", () => {
-    const bola = generatePlate(placa, { fontes: f, sienci: { maquina: "altmill-4x4", fresa: "bola-1-4" } });
-    expect(bola.ok).toBe(false);
-    expect(codes(bola)).toContain("FRESA_NAO_SUPORTADA");
-    const makitaNaAltmill = generatePlate(placa, { fontes: f, sienci: { maquina: "altmill-4x4", cabecote: "makita-rt0701", fresa: "reta-1-4-upcut" } });
-    expect(makitaNaAltmill.ok).toBe(false);
+  it("rejects a bit not suited to signs and a head the machine doesn't offer", () => {
+    const ball = generatePlate(plate, { fonts: f, sienci: { machine: "altmill-4x4", bit: "ball-1-4" } });
+    expect(ball.ok).toBe(false);
+    expect(codes(ball)).toContain("BIT_NOT_SUPPORTED");
+    const makitaOnAltmill = generatePlate(plate, { fonts: f, sienci: { machine: "altmill-4x4", head: "makita-rt0701", bit: "flat-1-4-upcut" } });
+    expect(makitaOnAltmill.ok).toBe(false);
   });
 
-  it("fresa de compressão: aumenta a passada para passar da parte upcut", () => {
+  it("compression bit: raises the stepdown to pass the upcut section", () => {
     const r = generatePlate(
-      { tipo: "letreiro", largura: 200, altura: 80, espessura: 6, material: "compensado", texto: [{ conteudo: "Oi", fonte: "pacifico", tamanho: 40 }] },
-      { fontes: f, sienci: { maquina: "longmill-mk3-30x30", fresa: "reta-1-8-compressao", velocidade: "reduzida" } },
+      { type: "lettering", width: 200, height: 80, thickness: 6, material: "plywood", texts: [{ content: "Hi", font: "pacifico", size: 40 }] },
+      { fonts: f, sienci: { machine: "longmill-mk3-30x30", bit: "flat-1-8-compression", speed: "reduced" } },
     );
     expect(r.ok).toBe(true);
-    expect(codes(r)).toContain("COMPRESSAO_PASSADA");
-    expect(r.parametros.principal.passada).toBe(3.5);
+    expect(codes(r)).toContain("COMPRESSION_STEPDOWN");
+    expect(r.params.main.stepdown).toBe(3.5);
   });
 
-  it("usa o curso real da máquina", () => {
-    const grande = PROJETOS.find((p) => p.id === "placa-de-endereco")!;
-    const r = generatePlate(grande.placa, { fontes: f, sienci: { maquina: "longmill-mk3-30x30", fresa: grande.fresa } });
-    expect(codes(r)).toContain("PECA_MAIOR_QUE_MAQUINA");
+  it("uses the machine's real travel", () => {
+    const large = PROJECTS.find((p) => p.id === "address-sign")!;
+    const r = generatePlate(large.plate, { fonts: f, sienci: { machine: "longmill-mk3-30x30", bit: large.bit } });
+    expect(codes(r)).toContain("PART_LARGER_THAN_MACHINE");
   });
 });
 
-describe("projetos iniciais", () => {
-  const maquinas = Object.keys(MAQUINAS) as MaquinaId[];
+describe("starter projects", () => {
+  const machines = Object.keys(MACHINES) as MachineId[];
 
-  it("cada projeto cabe em pelo menos uma máquina, e os pequenos cabem em todas", () => {
-    for (const p of PROJETOS) {
-      const cabe = maquinas.filter((m) => projetosParaMaquina(m).find((x) => x.projeto.id === p.id)!.cabe);
-      expect(cabe.length).toBeGreaterThan(0);
-      if (p.id !== "placa-de-endereco") expect(cabe).toEqual(maquinas);
+  it("each project fits at least one machine, and the small ones fit all", () => {
+    for (const p of PROJECTS) {
+      const fits = machines.filter((m) => projectsForMachine(m).find((x) => x.project.id === p.id)!.fits);
+      expect(fits.length).toBeGreaterThan(0);
+      if (p.id !== "address-sign") expect(fits).toEqual(machines);
     }
   });
 
-  it.each(maquinas)("%s: todo projeto que cabe gera G-code aprovado, sem erros", (m) => {
-    for (const pm of projetosParaMaquina(m)) {
-      // A placa grande é lenta para gerar; basta testá-la numa máquina.
-      if (!pm.cabe || (pm.projeto.id === "placa-de-endereco" && m !== "altmill-4x4")) continue;
-      const p = pm.projeto;
-      const r = generatePlate(p.placa, { fontes: f, sienci: { maquina: m, fresa: p.fresa, fresaRecorte: p.fresaRecorte, velocidade: p.velocidade } });
-      expect({ projeto: p.id, erros: r.avisos.filter((a) => a.severidade === "erro") }).toEqual({ projeto: p.id, erros: [] });
-      expect(r.verificacao?.ok).toBe(true);
+  it.each(machines)("%s: every project that fits generates approved G-code, with no errors", (m) => {
+    for (const pm of projectsForMachine(m)) {
+      // The large sign is slow to generate; testing it on one machine is enough.
+      if (!pm.fits || (pm.project.id === "address-sign" && m !== "altmill-4x4")) continue;
+      const p = pm.project;
+      const r = generatePlate(p.plate, { fonts: f, sienci: { machine: m, bit: p.bit, cutoutBit: p.cutoutBit, speed: p.speed } });
+      expect({ project: p.id, errors: r.warnings.filter((a) => a.severity === "error") }).toEqual({ project: p.id, errors: [] });
+      expect(r.verification?.ok).toBe(true);
     }
   });
 });

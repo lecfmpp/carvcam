@@ -2,24 +2,24 @@ import type { HeadId } from "./catalog";
 import products from "./sienciProducts.json";
 
 /**
- * Ficha de cada router/spindle para os cards da tela "What spins the bit?" (texto em inglês).
- * Números das páginas de produto da Sienci Labs (out/2026). A rotação e as hastes que o motor
- * usa continuam em cam-engine/src/catalog/sienci/cabecotes.ts.
+ * Spec sheet for each router/spindle, shown on the cards of the "What spins the bit?" screen.
+ * Numbers from the Sienci Labs product pages (Oct 2026). The RPM ranges and shank sizes the
+ * engine uses still live in cam-engine/src/catalog/sienci/heads.ts.
  */
 export interface HeadInfo {
   id: HeadId;
   name: string;
-  /** "Trim router" ou "Spindle kit". */
+  /** "Trim router" or "Spindle kit". */
   kind: string;
   tagline: string;
   power: string;
   speedControl: string;
-  /** Texto curto sobre como a rotação muda (aparece no destaque). */
+  /** Short text on how the speed is set (shown in the highlight). */
   speedShort: string;
   collets: string;
   mount: string;
   voltage: string;
-  /** Aviso que vale ler antes de escolher (tomada 240 V, pinça à parte). */
+  /** Note worth reading before choosing (240 V outlet, collet sold separately). */
   note?: string;
   inBox: string;
   url: string;

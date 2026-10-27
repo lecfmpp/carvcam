@@ -1,8 +1,9 @@
+import { migrateLegacyBitId, migrateLegacyProjectId } from "@gsender-next/cam-engine";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { HEADS, KIT, machineById, type HeadId, type MachineId } from "../lib/catalog";
 
-/** A oficina da pessoa: máquinas, cabeçote, fresas que ela tem e progresso na trilha "Start here". */
+/** The user's workshop: machines, head, the bits they own and progress on the "Start here" track. */
 export interface WorkshopState {
   onboarded: boolean;
   machines: { id: MachineId; head: HeadId }[];
@@ -10,11 +11,11 @@ export interface WorkshopState {
   bits: string[];
   trackDone: string[];
   mode: "simple" | "pro";
-  /** Modo Painel (tela touch do gControl): automático, sempre ligado ou desligado. */
+  /** Panel mode (gControl touchscreen): automatic, always on or off. */
   panel: "auto" | "on" | "off";
-  /** Ligações já conferidas no assistente "Connect" (chave: máquina|cabeçote|controladora|cabo). */
+  /** Connections already checked in the "Connect" wizard (key: machine|head|controller|cable). */
   wired: string[];
-  /** Escolhas do assistente por máquina: controladora (MK2 tem duas) e cabo. */
+  /** Wizard choices per machine: controller (MK2 has two) and cable. */
   link: Record<string, { controller: string; link: "usb" | "ethernet" }>;
 
   finishOnboarding(machine: MachineId, head: HeadId, bits: string[]): void;
@@ -73,11 +74,23 @@ export const useWorkshop = create<WorkshopState>()(
       },
       setLink: (machine, v) => set({ link: { ...get().link, [machine]: v } }),
     }),
-    { name: "gsender-workshop", version: 1 },
+    {
+      name: "gsender-workshop",
+      version: 2,
+      // v1 (0.1.0) stored Portuguese bit and project ids.
+      migrate: (persisted, version) => {
+        const st = persisted as Partial<WorkshopState>;
+        if (version < 2) {
+          if (st.bits) st.bits = st.bits.map(migrateLegacyBitId);
+          if (st.trackDone) st.trackDone = st.trackDone.map(migrateLegacyProjectId);
+        }
+        return st as WorkshopState;
+      },
+    },
   ),
 );
 
-/** Máquina e cabeçote ativos. */
+/** Active machine and head. */
 export function useActiveMachine() {
   const { machines, active } = useWorkshop();
   const cur = machines[active] ?? machines[0];

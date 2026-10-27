@@ -1,17 +1,17 @@
 import { sienci, type MaterialId, type PlateSpecInput } from "@gsender-next/cam-engine";
 
 /**
- * Catálogo no formato da interface. Os dados vêm do motor (catálogo Sienci verificado);
- * aqui só ficam rótulos em inglês (o design é em inglês), cores e textos de apoio.
+ * Catalog in the shape the UI needs. The data comes from the engine (verified Sienci catalog);
+ * this file only adds labels, colors and helper text.
  */
 
-export type MachineId = sienci.MaquinaId;
-export type HeadId = sienci.CabecoteId;
+export type MachineId = sienci.MachineId;
+export type HeadId = sienci.HeadId;
 export type Preset = "fast" | "balanced" | "detailed";
 export type Intent = "engrave" | "relief" | "cutout" | "plastic" | "surface";
 
-export const PRESET_TO_SPEED: Record<Preset, sienci.Velocidade> = { fast: "maxima", balanced: "regular", detailed: "reduzida" };
-export const SPEED_TO_PRESET: Record<sienci.Velocidade, Preset> = { maxima: "fast", regular: "balanced", reduzida: "detailed" };
+export const PRESET_TO_SPEED: Record<Preset, sienci.Speed> = { fast: "maximum", balanced: "regular", detailed: "reduced" };
+export const SPEED_TO_PRESET: Record<sienci.Speed, Preset> = { maximum: "fast", regular: "balanced", reduced: "detailed" };
 export const PRESET_LABEL: Record<Preset, { title: string; table: string; blurb: string }> = {
   fast: { title: "Fast", table: "Maximum", blurb: "Quickest carve. Fine for soft wood and simple shapes." },
   balanced: { title: "Balanced", table: "Regular", blurb: "Good finish and reasonable time. Best for most signs." },
@@ -38,17 +38,17 @@ export interface Machine {
 
 const FAMILY_OF: Record<string, Family> = { MK2: "LongMill MK2", MK3: "LongMill MK3" };
 
-export const MACHINES: Machine[] = Object.values(sienci.MAQUINAS).map((m) => ({
+export const MACHINES: Machine[] = Object.values(sienci.MACHINES).map((m) => ({
   id: m.id,
-  family: m.familia === "AltMill" ? "AltMill" : FAMILY_OF[m.versao],
-  size: m.tamanho,
-  area: [m.curso.x, m.curso.y],
-  z: m.curso.z,
-  maxSpeed: m.avancoMax.xy,
-  controller: m.controlador,
-  heads: m.cabecotes,
-  defaultHead: m.cabecotePadrao,
-  preset: SPEED_TO_PRESET[m.velocidadePadrao],
+  family: m.family === "AltMill" ? "AltMill" : FAMILY_OF[m.version],
+  size: m.size,
+  area: [m.travel.x, m.travel.y],
+  z: m.travel.z,
+  maxSpeed: m.maxFeed.xy,
+  controller: m.controller,
+  heads: m.heads,
+  defaultHead: m.defaultHead,
+  preset: SPEED_TO_PRESET[m.defaultSpeed],
 }));
 
 export const machineById = (id: MachineId) => MACHINES.find((m) => m.id === id)!;
@@ -80,14 +80,14 @@ const HEAD_TEXT: Record<HeadId, { name: string; note: string }> = {
 };
 
 export const HEADS: Record<HeadId, Head> = Object.fromEntries(
-  Object.values(sienci.CABECOTES).map((c) => [
+  Object.values(sienci.HEADS).map((c) => [
     c.id,
-    { id: c.id, name: HEAD_TEXT[c.id].name, note: HEAD_TEXT[c.id].note, kind: c.tipo === "router" ? "Router" : "Spindle", auto: c.controleRpm === "gcode", rpm: [c.rpmMin, c.rpmMax] },
+    { id: c.id, name: HEAD_TEXT[c.id].name, note: HEAD_TEXT[c.id].note, kind: c.type === "router" ? "Router" : "Spindle", auto: c.rpmControl === "gcode", rpm: [c.rpmMin, c.rpmMax] },
   ]),
 ) as Record<HeadId, Head>;
 
 export function dialFor(head: HeadId, rpm: number) {
-  return sienci.dialPara(sienci.CABECOTES[head], rpm);
+  return sienci.nearestDial(sienci.HEADS[head], rpm);
 }
 
 // ---------------- Bits ----------------
@@ -114,45 +114,45 @@ export interface Bit {
 }
 
 const BIT_TEXT: Record<string, { name: string; inch: string; uses: Intent[]; use: string }> = {
-  "reta-1-16-downcut": { name: "1/16″ flat downcut", inch: "1/16″", uses: ["engrave", "relief"], use: "Fine lettering and engraving without chipping the top face" },
-  "reta-1-16-upcut": { name: "1/16″ flat upcut", inch: "1/16″", uses: ["engrave", "relief"], use: "Fine detail that clears chips well" },
-  "reta-1-8-downcut": { name: "1/8″ flat downcut", inch: "1/8″", uses: ["relief", "engrave"], use: "Relief and engraving without chipping the top face" },
-  "reta-1-8-upcut": { name: "1/8″ flat upcut", inch: "1/8″", uses: ["cutout", "relief", "engrave"], use: "The everyday bit: letters, shapes and small cut-outs" },
-  "reta-1-8-1canal": { name: "1/8″ single flute", inch: "1/8″", uses: ["plastic", "cutout"], use: "Acrylic and plastics without melting" },
-  "reta-1-8-compressao": { name: "1/8″ compression", inch: "1/8″", uses: ["cutout"], use: "Clean top and bottom edges on plywood" },
-  "reta-1-4-upcut": { name: "1/4″ flat upcut", inch: "1/4″", uses: ["cutout", "relief"], use: "Fast cut-outs and large pockets" },
-  "reta-1-4-downcut": { name: "1/4″ flat downcut", inch: "1/4″", uses: ["relief", "cutout"], use: "Large pockets in plywood without chipping" },
-  "reta-1-4-1canal": { name: "1/4″ single flute", inch: "1/4″", uses: ["plastic", "cutout"], use: "Larger plastic and aluminum parts" },
-  "reta-1-4-compressao": { name: "1/4″ compression", inch: "1/4″", uses: ["cutout"], use: "Clean plywood edges on both faces" },
+  "flat-1-16-downcut": { name: "1/16″ flat downcut", inch: "1/16″", uses: ["engrave", "relief"], use: "Fine lettering and engraving without chipping the top face" },
+  "flat-1-16-upcut": { name: "1/16″ flat upcut", inch: "1/16″", uses: ["engrave", "relief"], use: "Fine detail that clears chips well" },
+  "flat-1-8-downcut": { name: "1/8″ flat downcut", inch: "1/8″", uses: ["relief", "engrave"], use: "Relief and engraving without chipping the top face" },
+  "flat-1-8-upcut": { name: "1/8″ flat upcut", inch: "1/8″", uses: ["cutout", "relief", "engrave"], use: "The everyday bit: letters, shapes and small cut-outs" },
+  "flat-1-8-1flute": { name: "1/8″ single flute", inch: "1/8″", uses: ["plastic", "cutout"], use: "Acrylic and plastics without melting" },
+  "flat-1-8-compression": { name: "1/8″ compression", inch: "1/8″", uses: ["cutout"], use: "Clean top and bottom edges on plywood" },
+  "flat-1-4-upcut": { name: "1/4″ flat upcut", inch: "1/4″", uses: ["cutout", "relief"], use: "Fast cut-outs and large pockets" },
+  "flat-1-4-downcut": { name: "1/4″ flat downcut", inch: "1/4″", uses: ["relief", "cutout"], use: "Large pockets in plywood without chipping" },
+  "flat-1-4-1flute": { name: "1/4″ single flute", inch: "1/4″", uses: ["plastic", "cutout"], use: "Larger plastic and aluminum parts" },
+  "flat-1-4-compression": { name: "1/4″ compression", inch: "1/4″", uses: ["cutout"], use: "Clean plywood edges on both faces" },
   "vbit-30-1-8": { name: "30° V-bit", inch: "1/8″", uses: ["engrave"], use: "Sharp, fine lettering" },
   "vbit-60-15mm": { name: "60° V-bit", inch: "15 mm", uses: ["engrave", "plastic"], use: "V-carved lettering and acrylic engraving" },
   "vbit-90-15mm": { name: "90° V-bit", inch: "15 mm", uses: ["engrave"], use: "Wide chamfers and bold V-lettering" },
-  "aplainar-22mm": { name: "22 mm surfacing bit", inch: "7/8″", uses: ["surface"], use: "Flattens the spoilboard and the top of rough boards" },
-  "bola-1-4": { name: "1/4″ ball nose", inch: "1/4″", uses: [], use: "Smooth curved 3D relief" },
+  "surfacing-22mm": { name: "22 mm surfacing bit", inch: "7/8″", uses: ["surface"], use: "Flattens the spoilboard and the top of rough boards" },
+  "ball-1-4": { name: "1/4″ ball nose", inch: "1/4″", uses: [], use: "Smooth curved 3D relief" },
 };
 
-const PROFILE: Record<string, BitProfile> = { reta: "flat", vbit: "v", bola: "ball", aplainar: "surfacing" };
-const FLUTE: Record<string, string> = { upcut: "upcut", downcut: "downcut", compressao: "compression", reto: "straight" };
+const PROFILE: Record<string, BitProfile> = { straight: "flat", vbit: "v", ball: "ball", surfacing: "surfacing" };
+const FLUTE: Record<string, string> = { upcut: "upcut", downcut: "downcut", compression: "compression", straight: "straight" };
 
-export const BITS: Bit[] = sienci.FRESAS.map((f) => {
+export const BITS: Bit[] = sienci.BITS.map((f) => {
   const t = BIT_TEXT[f.id];
   return {
     id: f.id,
     name: t.name,
-    profile: f.corte === "compressao" ? "compression" : PROFILE[f.tipo],
-    flute: f.canais === 1 && f.tipo === "reta" ? "single flute" : FLUTE[f.corte],
-    d: f.diametro,
+    profile: f.cut === "compression" ? "compression" : PROFILE[f.type],
+    flute: f.flutes === 1 && f.type === "straight" ? "single flute" : FLUTE[f.cut],
+    d: f.diameter,
     inch: t.inch,
-    shank: Math.abs(f.haste - 3.175) < 0.01 ? "1/8" : "1/4",
-    cut: f.comprimentoCorte,
-    angle: f.angulo,
-    flutes: f.canais,
+    shank: Math.abs(f.shank - 3.175) < 0.01 ? "1/8" : "1/4",
+    cut: f.cutLength,
+    angle: f.angle,
+    flutes: f.flutes,
     uses: t.uses,
     use: t.use,
     kit: sienci.STARTER_SET.includes(f.id),
-    notForSigns: !f.usoNaV1,
+    notForSigns: !f.supportedInV1,
     storeUrl: f.url,
-    storeName: f.nome,
+    storeName: f.name,
   };
 });
 
@@ -164,10 +164,10 @@ export type CompatLevel = "fits" | "accessory" | "no";
 
 export function compat(bit: Bit, head: HeadId): { level: CompatLevel; label: string; accessory?: { name: string; url: string } } {
   if (bit.notForSigns && bit.profile !== "surfacing") return { level: "no", label: "Not for signs (yet)" };
-  const c = sienci.compatibilidade(sienci.FRESA_POR_ID.get(bit.id)!, head);
+  const c = sienci.compatibility(sienci.BIT_BY_ID.get(bit.id)!, head);
   const short = HEADS[head].kind === "Spindle" ? "spindle" : HEADS[head].name.split(" ")[0];
-  if (c.status === "compativel") return { level: "fits", label: `Fits your ${short}` };
-  if (c.status === "com-acessorio") return { level: "accessory", label: "Needs the 1/8″ collet", accessory: { name: "1/8″ precision collet", url: c.acessorio.url } };
+  if (c.status === "compatible") return { level: "fits", label: `Fits your ${short}` };
+  if (c.status === "with-accessory") return { level: "accessory", label: "Needs the 1/8″ collet", accessory: { name: "1/8″ precision collet", url: c.accessory.url } };
   return { level: "no", label: "Does not fit" };
 }
 
@@ -186,11 +186,11 @@ export interface Material {
 
 export const MATERIALS: Material[] = [
   { id: "MDF", engine: "mdf", face: "#C9A47B", recess: "#94704D", side: "#77583D", grain: false, thick: [6, 12, 15, 18], sub: "Smooth, cheap, great for painted signs" },
-  { id: "Pine", engine: "madeira_macia", face: "#E2C08D", recess: "#B08955", side: "#9A7446", grain: true, thick: [12, 19], sub: "Soft and affordable, a good first project" },
-  { id: "Oak", engine: "madeira_dura", face: "#C79A62", recess: "#94683A", side: "#7C5630", grain: true, thick: [12, 19], sub: "Hard, strong grain, lasts outdoors with finish" },
-  { id: "Walnut", engine: "madeira_dura", face: "#8A5E3C", recess: "#5E3E26", side: "#4A3120", grain: true, thick: [12, 19], sub: "Dark and premium, carves cleanly" },
-  { id: "Birch plywood", engine: "compensado", face: "#E3CBA2", recess: "#B39468", side: "#A08257", grain: true, thick: [6, 12, 18], sub: "Light and stable, layered edges" },
-  { id: "Acrylic", engine: "acrilico", face: "#DCE5E9", recess: "#A3B4BB", side: "#8A9BA2", grain: false, thick: [3, 6], sub: "Clean edges, needs a single-flute bit" },
+  { id: "Pine", engine: "softwood", face: "#E2C08D", recess: "#B08955", side: "#9A7446", grain: true, thick: [12, 19], sub: "Soft and affordable, a good first project" },
+  { id: "Oak", engine: "hardwood", face: "#C79A62", recess: "#94683A", side: "#7C5630", grain: true, thick: [12, 19], sub: "Hard, strong grain, lasts outdoors with finish" },
+  { id: "Walnut", engine: "hardwood", face: "#8A5E3C", recess: "#5E3E26", side: "#4A3120", grain: true, thick: [12, 19], sub: "Dark and premium, carves cleanly" },
+  { id: "Birch plywood", engine: "plywood", face: "#E3CBA2", recess: "#B39468", side: "#A08257", grain: true, thick: [6, 12, 18], sub: "Light and stable, layered edges" },
+  { id: "Acrylic", engine: "acrylic", face: "#DCE5E9", recess: "#A3B4BB", side: "#8A9BA2", grain: false, thick: [3, 6], sub: "Clean edges, needs a single-flute bit" },
 ];
 export const materialById = (id: string) => MATERIALS.find((m) => m.id === id) ?? MATERIALS[0];
 export const THROUGH_COLOR = "#1C1D20";
@@ -211,37 +211,37 @@ export interface Project {
   track?: number;
 }
 
-const P = Object.fromEntries(sienci.PROJETOS.map((p) => [p.id, p]));
+const P = Object.fromEntries(sienci.PROJECTS.map((p) => [p.id, p]));
 const withTexts = (id: string, texts: string[]): PlateSpecInput => {
-  const spec = structuredClone(P[id].placa);
+  const spec = structuredClone(P[id].plate);
   texts.forEach((t, i) => {
-    if (spec.texto?.[i]) spec.texto[i].conteudo = t;
+    if (spec.texts?.[i]) spec.texts[i].content = t;
   });
   return spec;
 };
 
 export const PROJECTS: Project[] = [
-  { id: "teste-de-profundidade", title: "Depth test", level: "First cut", learn: "What 1, 2 and 3 mm deep look and sound like", material: "MDF", bits: ["reta-1-8-upcut"], speed: "detailed", spec: P["teste-de-profundidade"].placa, track: 1 },
-  { id: "porta-copos", title: "Coaster with an initial", level: "First cut", learn: "Cutting a shape out with holding tabs", material: "MDF", bits: ["reta-1-8-upcut"], spec: withTexts("porta-copos", ["M"]), track: 2 },
-  { id: "placa-de-porta", title: "Raised door sign", level: "Easy", learn: "Lowering the background around raised letters", material: "MDF", bits: ["reta-1-8-upcut"], spec: withTexts("placa-de-porta", ["The Millers"]), track: 3 },
-  { id: "plaquinha-de-pet", title: "Pet name plaque", level: "Intermediate", learn: "Changing the bit in the middle of a job", material: "Pine", bits: ["reta-1-16-downcut", "reta-1-8-upcut"], spec: withTexts("plaquinha-de-pet", ["BISCUIT", "since 2024"]) },
-  { id: "letreiro-bem-vindos", title: "“Welcome” script lettering", level: "Intermediate", learn: "Clean plywood edges with a compression bit", material: "Birch plywood", bits: ["reta-1-8-compressao"], speed: "balanced", spec: withTexts("letreiro-bem-vindos", ["Welcome"]) },
-  { id: "chaveiro-acrilico", title: "Acrylic keychain", level: "Intermediate", learn: "V-carving and cutting plastic cleanly", material: "Acrylic", bits: ["vbit-30-1-8", "reta-1-8-1canal"], spec: withTexts("chaveiro-acrilico", ["JO"]) },
-  { id: "placa-de-endereco", title: "Large address sign", level: "Intermediate", learn: "Planning a job that fills a big machine", material: "MDF", bits: ["reta-1-4-upcut"], spec: withTexts("placa-de-endereco", ["1428"]) },
+  { id: "depth-test", title: "Depth test", level: "First cut", learn: "What 1, 2 and 3 mm deep look and sound like", material: "MDF", bits: ["flat-1-8-upcut"], speed: "detailed", spec: P["depth-test"].plate, track: 1 },
+  { id: "coaster", title: "Coaster with an initial", level: "First cut", learn: "Cutting a shape out with holding tabs", material: "MDF", bits: ["flat-1-8-upcut"], spec: withTexts("coaster", ["M"]), track: 2 },
+  { id: "door-sign", title: "Raised door sign", level: "Easy", learn: "Lowering the background around raised letters", material: "MDF", bits: ["flat-1-8-upcut"], spec: withTexts("door-sign", ["The Millers"]), track: 3 },
+  { id: "pet-plaque", title: "Pet name plaque", level: "Intermediate", learn: "Changing the bit in the middle of a job", material: "Pine", bits: ["flat-1-16-downcut", "flat-1-8-upcut"], spec: withTexts("pet-plaque", ["BISCUIT", "since 2024"]) },
+  { id: "welcome-sign", title: "“Welcome” script lettering", level: "Intermediate", learn: "Clean plywood edges with a compression bit", material: "Birch plywood", bits: ["flat-1-8-compression"], speed: "balanced", spec: withTexts("welcome-sign", ["Welcome"]) },
+  { id: "acrylic-keychain", title: "Acrylic keychain", level: "Intermediate", learn: "V-carving and cutting plastic cleanly", material: "Acrylic", bits: ["vbit-30-1-8", "flat-1-8-1flute"], spec: withTexts("acrylic-keychain", ["JO"]) },
+  { id: "address-sign", title: "Large address sign", level: "Intermediate", learn: "Planning a job that fills a big machine", material: "MDF", bits: ["flat-1-4-upcut"], spec: withTexts("address-sign", ["1428"]) },
 ];
 
 export const TRACK = [
   { id: "surface", title: "Surface the bed", sub: "Flatten the spoilboard with the 22 mm bit" },
-  { id: "teste-de-profundidade", title: "Depth test" },
-  { id: "porta-copos", title: "Coaster" },
-  { id: "placa-de-porta", title: "Door sign" },
+  { id: "depth-test", title: "Depth test" },
+  { id: "coaster", title: "Coaster" },
+  { id: "door-sign", title: "Door sign" },
 ];
 
 /** Whether a project's board (with margin when it is cut out) fits the machine. */
 export function projectFits(p: Project, m: Machine) {
-  const margin = (p.spec.recorteExterno ?? true) ? 2 * (p.spec.margem ?? 10) : 0;
-  const w = p.spec.largura + margin;
-  const h = p.spec.altura + margin;
+  const margin = (p.spec.outerCutout ?? true) ? 2 * (p.spec.margin ?? 10) : 0;
+  const w = p.spec.width + margin;
+  const h = p.spec.height + margin;
   return w <= m.area[0] && h <= m.area[1];
 }
 

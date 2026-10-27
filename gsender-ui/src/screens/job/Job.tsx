@@ -25,13 +25,13 @@ export interface JobCtx {
   groups: OpGroup[];
   /** Tabs actually used (0 when the piece has no outer cut). */
   hasProfile: boolean;
-  letreiro: boolean;
+  lettering: boolean;
 }
 
-// O último resultado sobrevive à troca de etapa (cada rota monta o Job de novo).
+// The last result survives a step change (each route mounts Job again).
 let cache: { key: string; result: GenerateResult | null; sim: SimGrid | null } | null = null;
 
-/** Etapas 2–4 do trabalho: Prepare, Position e Carve. */
+/** Job steps 2–4: Prepare, Position and Carve. */
 export default function Job({ step }: { step: JobStep }) {
   const design = useDesign((s) => s.design);
   const { machine, head, headId } = useActiveMachine();
@@ -43,12 +43,12 @@ export default function Job({ step }: { step: JobStep }) {
   const result = eng.result ?? fromCache?.result ?? null;
   const sim = eng.sim ?? fromCache?.sim ?? null;
 
-  // A cama simulada tem o tamanho da máquina ativa.
+  // The simulated bed matches the active machine's size.
   useEffect(() => {
     useMachine.getState().setBed({ x: machine.area[0], y: machine.area[1], z: machine.z });
   }, [machine]);
 
-  // Projeto mudou: o zero continua, mas a fresa e o router precisam ser conferidos de novo.
+  // Project changed: zero is kept, but the bit and router must be checked again.
   const rev = useDesign((s) => s.rev);
   const lastRev = useRef(rev);
   useEffect(() => {
@@ -56,10 +56,10 @@ export default function Job({ step }: { step: JobStep }) {
     lastRev.current = rev;
   }, [rev]);
 
-  const letreiro = design.spec.tipo === "letreiro";
-  const hasProfile = !!result?.operacoes.some((o) => o.tipo === "perfil");
-  const groups = useMemo(() => (result?.gcode ? groupOps(result, design.tabs.count, letreiro) : []), [result, design.tabs.count, letreiro]);
-  const ctx: JobCtx = { design, result, sim, busy: eng.busy && !result, machine, head, headId, preset, groups, hasProfile, letreiro };
+  const lettering = design.spec.type === "lettering";
+  const hasProfile = !!result?.operations.some((o) => o.type === "profile");
+  const groups = useMemo(() => (result?.gcode ? groupOps(result, design.tabs.count, lettering) : []), [result, design.tabs.count, lettering]);
+  const ctx: JobCtx = { design, result, sim, busy: eng.busy && !result, machine, head, headId, preset, groups, hasProfile, lettering };
 
   const zeroSet = useFlow((s) => s.zeroSet);
   const reachable: JobStep[] = ["create", "prepare"];

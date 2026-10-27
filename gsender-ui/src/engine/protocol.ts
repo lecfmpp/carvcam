@@ -3,17 +3,17 @@ import type { GenerateOptions, GenerateResult, PlateSpecInput } from "@gsender-n
 export interface EngineRequest {
   id: number;
   spec: PlateSpecInput;
-  options: Omit<GenerateOptions, "fontes">;
-  /** Também simula o corte e devolve o mapa de alturas. */
+  options: Omit<GenerateOptions, "fonts">;
+  /** Also simulates the cut and returns the height map. */
   simulate: boolean;
   simRes?: number;
-  /** Modo Painel (gControl, processador modesto): simulação em resolução menor. */
+  /** Panel mode (gControl, modest CPU): lower-resolution simulation. */
   lowPower?: boolean;
-  /** Só aquece o motor (carrega fontes e roda uma peça mínima), na tela de entrada. */
+  /** Only warms up the engine (loads fonts and runs a minimal part), on the splash screen. */
   warmup?: boolean;
 }
 
-/** Mapa de alturas do material depois do corte: 0 = face intacta, negativo = usinado. */
+/** Height map of the stock after cutting: 0 = untouched face, negative = machined. */
 export interface SimGrid {
   x0: number;
   y0: number;

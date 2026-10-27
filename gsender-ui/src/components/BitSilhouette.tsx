@@ -1,8 +1,8 @@
 import type { BitProfile } from "../lib/catalog";
 
-/** Silhueta desenhada da fresa (reta, V, bola, compressão, aplainar), como nos cards do design. */
+/** Drawn bit silhouette (flat, V, ball, compression, surfacing), as in the design's cards. */
 export function BitSilhouette({ profile, d, size = 72 }: { profile: BitProfile; d: number; size?: number }) {
-  // Largura do corte em pixels, proporcional ao diâmetro (limitada para caber no card).
+  // Cut width in pixels, proportional to the diameter (capped to fit the card).
   const w = Math.max(6, Math.min(40, d * 2.6));
   const cx = 30;
   const shank = 12;

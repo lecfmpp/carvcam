@@ -21,8 +21,8 @@ function getWorker() {
   return worker;
 }
 
-/** Pede uma geração ao worker. */
-export function runEngine(spec: PlateSpecInput, options: Omit<GenerateOptions, "fontes">, simulate = true, simRes?: number): Promise<EngineResponse> {
+/** Asks the worker for a generation. */
+export function runEngine(spec: PlateSpecInput, options: Omit<GenerateOptions, "fonts">, simulate = true, simRes?: number): Promise<EngineResponse> {
   const id = nextId++;
   const req: EngineRequest = { id, spec, options, simulate, simRes, lowPower: isPanelMode() };
   return new Promise((resolve) => {
@@ -31,27 +31,27 @@ export function runEngine(spec: PlateSpecInput, options: Omit<GenerateOptions, "
   });
 }
 
-/** Aquece o motor no worker (tela de entrada). */
+/** Warms up the engine in the worker (splash screen). */
 export function warmEngine(): Promise<EngineResponse> {
   const id = nextId++;
   return new Promise((resolve) => {
     pending.set(id, resolve);
-    getWorker().postMessage({ id, warmup: true, spec: { largura: 1, altura: 1, espessura: 1 }, options: {}, simulate: false } satisfies EngineRequest);
+    getWorker().postMessage({ id, warmup: true, spec: { width: 1, height: 1, thickness: 1 }, options: {}, simulate: false } satisfies EngineRequest);
   });
 }
 
-/** Opções do motor para o projeto atual na máquina ativa. */
-export function engineOptions(design: Design, machineId: string, headId: string, preset: Preset): Omit<GenerateOptions, "fontes"> {
+/** Engine options for the current project on the active machine. */
+export function engineOptions(design: Design, machineId: string, headId: string, preset: Preset): Omit<GenerateOptions, "fonts"> {
   return {
     sienci: {
-      maquina: machineId as never,
-      cabecote: headId as never,
-      fresa: design.bit,
-      fresaRecorte: design.useBit2 && design.bit2 ? design.bit2 : undefined,
-      velocidade: PRESET_TO_SPEED[preset],
+      machine: machineId as never,
+      head: headId as never,
+      bit: design.bit,
+      cutoutBit: design.useBit2 && design.bit2 ? design.bit2 : undefined,
+      speed: PRESET_TO_SPEED[preset],
     },
-    abas: { quantidade: design.tabs.count, altura: design.tabs.height },
-    titulo: design.name,
+    tabs: { count: design.tabs.count, height: design.tabs.height },
+    title: design.name,
   };
 }
 
@@ -63,8 +63,8 @@ export interface EngineState {
 }
 
 /**
- * Regera o projeto sempre que ele muda (com um pequeno atraso para não regerar a cada tecla).
- * Só a resposta mais recente é aplicada.
+ * Regenerates the project whenever it changes (with a short delay so it doesn't regenerate on every keystroke).
+ * Only the latest response is applied.
  */
 export function useEngine(design: Design, opts: { simulate?: boolean; delay?: number; preset?: Preset } = {}): EngineState {
   const { machine, headId } = useActiveMachine();

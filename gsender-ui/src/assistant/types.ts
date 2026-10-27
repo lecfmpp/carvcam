@@ -1,12 +1,12 @@
 import type { PlateSpecInput } from "@gsender-next/cam-engine";
 
-/** O que o assistente sabe do projeto quando a pessoa pede uma mudança. */
+/** What the assistant knows about the project when the user asks for a change. */
 export interface AssistantContext {
   spec: PlateSpecInput;
   material: string;
   bitName: string;
   machineName: string;
-  /** Problemas atuais (em inglês, como aparecem no painel). */
+  /** Current issues (in English, as shown in the panel). */
   issues: string[];
 }
 
@@ -17,13 +17,13 @@ export interface ChatTurn {
 
 export interface AssistantReply {
   text: string;
-  /** Nova especificação completa, quando o pedido muda o desenho. */
+  /** Full new spec, when the request changes the design. */
   spec?: PlateSpecInput;
 }
 
 /**
- * Provedor do assistente. Ele só edita o desenho: nunca fala com a máquina,
- * e cortar sempre começa por uma ação da pessoa.
+ * Assistant provider. It only edits the design: it never talks to the machine,
+ * and cutting always starts with an action by the user.
  */
 export interface AssistantProvider {
   readonly name: string;

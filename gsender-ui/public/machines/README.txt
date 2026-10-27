@@ -1,1 +1,1 @@
-Fotos WebP das máquinas (npm run images:fetch). Sem a foto, o card mostra um desenho da máquina.
+WebP photos of the machines (npm run images:fetch). Without a photo, the card shows a drawing of the machine.

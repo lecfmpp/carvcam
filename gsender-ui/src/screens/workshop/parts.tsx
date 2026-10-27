@@ -1,7 +1,7 @@
 import { BitSilhouette } from "../../components/BitSilhouette";
 import { compat, type Bit, type HeadId } from "../../lib/catalog";
 
-/** Dial de velocidade do Makita (posições 1–6). `on` destaca a posição pedida. */
+/** Makita speed dial (settings 1–6). `on` highlights the requested setting. */
 export function Dial({ size = 96, on, labelSize = 12 }: { size?: number; on?: number; labelSize?: number }) {
   const c = size / 2;
   const r = size * 0.35;
@@ -35,7 +35,7 @@ export function bitSpecs(b: Bit) {
   return `Ø ${+b.d.toFixed(2)} mm${inch} · shank ${b.shank}″ · cut ${+b.cut.toFixed(1)} mm`;
 }
 
-/** Card de fresa com silhueta, dados e selo de compatibilidade. */
+/** Bit card with silhouette, specs and compatibility badge. */
 export function BitCardBody({ bit, head, corner }: { bit: Bit; head: HeadId; corner?: React.ReactNode }) {
   return (
     <>

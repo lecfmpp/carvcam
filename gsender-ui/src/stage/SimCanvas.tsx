@@ -3,16 +3,16 @@ import type { SimGrid } from "../engine/protocol";
 import { THROUGH_COLOR, type Material } from "../lib/catalog";
 
 /**
- * Vista de cima do corte simulado: cada célula do mapa de alturas vira um pixel, com a cor
- * do material (face, rebaixo, lateral) e um sombreamento de luz vindo do canto superior esquerdo.
+ * Top view of the simulated cut: each height-map cell becomes a pixel, colored by
+ * material (face, pocket floor, wall) and shaded by a light from the top-left corner.
  */
 export function SimCanvas(props: {
   sim: SimGrid;
   thickness: number;
   material: Material;
-  /** Pixels por mm na tela. */
+  /** Pixels per mm on screen. */
   scale: number;
-  /** Recorta o desenho à área do bloco (sem a borda extra da simulação). */
+  /** Clips the drawing to the stock area (without the simulation's extra border). */
   board: { width: number; height: number };
   style?: React.CSSProperties;
 }) {
@@ -33,7 +33,7 @@ export function SimCanvas(props: {
     const through = hex(THROUGH_COLOR);
     const deep = thickness * 0.55;
     for (let j = 0; j < rows; j++) {
-      // Canvas tem Y para baixo; a máquina, para cima.
+      // Canvas Y points down; the machine's points up.
       const jj = rows - 1 - j;
       for (let i = 0; i < cols; i++) {
         const k = jj * cols + i;
@@ -50,7 +50,7 @@ export function SimCanvas(props: {
         else if (v > -0.02) c = face;
         else if (-v > deep) c = side;
         else c = mix(face, recess, Math.min(1, -v / Math.max(0.5, Math.min(deep, 4))));
-        // Sombreado: compara com o vizinho de cima à esquerda.
+        // Shading: compare with the upper-left neighbor.
         const n = h[Math.min(rows - 1, jj + 1) * cols + Math.max(0, i - 1)];
         const slope = Math.max(-1, Math.min(1, (v - n) / Math.max(0.3, res * 2)));
         const light = 1 + 0.22 * slope;

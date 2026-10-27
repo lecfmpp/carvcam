@@ -6,15 +6,15 @@ import { sienciLink, type Placement } from "../lib/referral";
 import "./machine-card.css";
 
 /**
- * Card branco de uma máquina Sienci: foto (WebP), nome, frase curta, área de trabalho em
- * destaque e a ficha com rótulos. Clicar seleciona; o link abre a página do produto.
+ * White card for a Sienci machine: photo (WebP), name, short tagline, work area
+ * highlighted and the labeled spec sheet. Clicking selects it; the link opens the product page.
  */
 export function MachineCard(props: {
   id: MachineId;
   selected?: boolean;
   onSelect?(): void;
   placement?: Placement;
-  /** Horizontal, para Settings › My machine. */
+  /** Horizontal, for Settings › My machine. */
   wide?: boolean;
 }) {
   const m = machineInfo(props.id);
@@ -104,7 +104,7 @@ export function MachineCard(props: {
   );
 }
 
-/** Foto WebP da máquina; enquanto ela não existe, um desenho da máquina nas proporções reais. */
+/** WebP photo of the machine; until it exists, a drawing of the machine in its real proportions. */
 export function MachinePhoto({ info }: { info: MachineInfo }) {
   const [failed, setFailed] = useState(false);
   if (failed) return <MachineDrawing info={info} />;
@@ -112,8 +112,8 @@ export function MachinePhoto({ info }: { info: MachineInfo }) {
 }
 
 /**
- * Desenho em perspectiva oblíqua: mesa na proporção da área de trabalho, pórtico e cabeçote.
- * AltMill em pé (com pernas); LongMill de bancada.
+ * Oblique perspective drawing: bed in the work area's proportions, gantry and head.
+ * AltMill standing (with legs); LongMill on a bench.
  */
 function MachineDrawing({ info }: { info: MachineInfo }) {
   const alt = info.model.startsWith("AltMill");
@@ -123,11 +123,11 @@ function MachineDrawing({ info }: { info: MachineInfo }) {
   const D = wy * k;
   const ox = 200 - (W + D * 0.5) / 2;
   const oy = alt ? 190 : 215;
-  // (u, v) na mesa, h para cima → tela.
+  // (u, v) on the bed, h upward → screen.
   const p = (u: number, v: number, h = 0) => ({ x: ox + u + v * 0.5, y: oy - v * 0.42 - h });
   const poly = (...q: { x: number; y: number }[]) => q.map((a) => `${a.x.toFixed(1)},${a.y.toFixed(1)}`).join(" ");
   const H = alt ? 52 : 44;
-  const g = D * 0.42; // posição do pórtico ao longo de Y
+  const g = D * 0.42; // gantry position along Y
   const corners: [number, number][] = [
     [0, 0],
     [W, 0],

@@ -20,7 +20,7 @@ const STEPS: [View, string][] = [
   ["bits", "Bits"],
 ];
 
-/** Primeiro uso: máquina → o que gira a fresa → fresas → pronto. `?add=1` acrescenta outra máquina. */
+/** First run: machine → what spins the bit → bits → done. `?add=1` adds another machine. */
 export default function Onboarding() {
   const nav = useNavigate();
   const [params] = useSearchParams();
@@ -53,7 +53,7 @@ export default function Onboarding() {
       ws.addMachine(mId, hId);
       ws.setBits(bits);
     } else if (ws.onboarded) {
-      // Trocar a máquina ativa (Settings › Change machine).
+      // Switch the active machine (Settings › Change machine).
       useWorkshop.setState({ machines: ws.machines.map((m, i) => (i === ws.active ? { id: mId, head: hId } : m)), bits });
     } else ws.finishOnboarding(mId, hId, bits);
     setView("ready");
@@ -243,11 +243,11 @@ export default function Onboarding() {
                 <div className="ws-kicker">First step</div>
                 <div style={{ font: "600 22px/1.25 var(--font)" }}>Surface the bed</div>
                 <div style={{ font: "400 15px/1.5 var(--font)", color: "var(--text-2)" }}>Flattens the spoilboard so every carve has the same depth everywhere on the bed. Uses the 22 mm surfacing bit.</div>
-                {!bits.includes("aplainar-22mm") ? (
+                {!bits.includes("surfacing-22mm") ? (
                   <div className="ws-warn">
                     <AlertTriangle size={16} color="var(--paused)" strokeWidth={1.75} />
                     <span style={{ flex: 1 }}>You haven't marked the 22 mm surfacing bit.</span>
-                    <a href={sienciLink("https://sienci.com/product/22mm-surfacing-bit/", "onboarding", "aplainar-22mm")} target="_blank" rel="noreferrer">
+                    <a href={sienciLink("https://sienci.com/product/22mm-surfacing-bit/", "onboarding", "surfacing-22mm")} target="_blank" rel="noreferrer">
                       <button>See in store</button>
                     </a>
                   </div>
@@ -299,7 +299,7 @@ export function IntentChips({ value, onChange }: { value: Intent | null; onChang
   );
 }
 
-/** Ilustração em linha: fresa larga varrendo a mesa em passadas sobrepostas. */
+/** Inline illustration: a wide bit sweeping the bed in overlapping passes. */
 function SurfacingIllustration() {
   return (
     <svg width="220" height="140" viewBox="0 0 220 140" fill="none" stroke="#A4A29D" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">

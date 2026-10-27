@@ -1,37 +1,38 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { generatePlate } from "./generate.js";
+import { migrateLegacySpec } from "./migrate.js";
 import { loadFontsFromDisk } from "./node.js";
 
 /**
- * Uso: npm run generate -- examples/casa-da-ana.json [saida.nc]
- * O JSON pode ser só a especificação da placa, ou { "placa": {...}, "ferramenta": {...}, "maquina": {...} }.
+ * Usage: npm run generate -- examples/anas-house.json [output.nc]
+ * The JSON can be just the sign spec, or { "plate": {...}, "tool": {...}, "machine": {...} }.
  */
 async function main() {
   const [file, outFile] = process.argv.slice(2);
   if (!file) {
-    console.error("Uso: npm run generate -- <especificacao.json> [saida.nc]");
+    console.error("Usage: npm run generate -- <spec.json> [output.nc]");
     process.exit(2);
   }
-  const json = JSON.parse(await readFile(file, "utf8"));
-  const placa = json.placa ?? json;
-  const fontes = await loadFontsFromDisk();
-  const res = generatePlate(placa, { fontes, ferramenta: json.ferramenta, ferramentaRecorte: json.ferramentaRecorte, maquina: json.maquina });
+  const json = migrateLegacySpec<any>(JSON.parse(await readFile(file, "utf8")));
+  const plate = json.plate ?? json;
+  const fonts = await loadFontsFromDisk();
+  const res = generatePlate(plate, { fonts, tool: json.tool, cutoutTool: json.cutoutTool, machine: json.machine });
 
-  for (const a of res.avisos) console.error(`${a.severidade === "erro" ? "✖" : "⚠"} ${a.mensagem}${a.sugestao ? `\n    → ${a.sugestao}` : ""}`);
-  for (const p of res.verificacao?.problemas ?? []) console.error(`${p.severidade === "erro" ? "✖" : "⚠"} linha ${p.linha}: ${p.mensagem}`);
+  for (const a of res.warnings) console.error(`${a.severity === "error" ? "✖" : "⚠"} ${a.message}${a.suggestion ? `\n    → ${a.suggestion}` : ""}`);
+  for (const p of res.verification?.problems ?? []) console.error(`${p.severity === "error" ? "✖" : "⚠"} line ${p.line}: ${p.message}`);
   if (!res.gcode) process.exit(1);
 
-  const st = res.verificacao!.estatisticas;
-  const projetoOk = !res.avisos.some((a) => a.severidade === "erro");
-  if (!projetoOk) console.error("\n✖ O projeto tem erros e não pode ir para a máquina.");
-  console.error(`${res.verificacao!.ok ? "✔ G-code verificado" : "✖ G-code reprovado no verificador"}: ${st.linhas} linhas, ~${Math.ceil(st.tempoEstimadoSeg / 60)} min, ${(st.comprimentoCorte / 1000).toFixed(1)} m de corte`);
-  for (const o of res.operacoes) console.error(`  • ${o.nome} (T${o.ferramenta}, ${o.profundidade} mm)`);
-  for (const [nome, p] of Object.entries(res.parametros)) {
-    console.error(`  Parâmetros (${nome}): ${p.rpm} RPM, avanço ${p.avanco} mm/min, mergulho ${p.mergulho} mm/min, passada ${p.passada} mm`);
+  const st = res.verification!.stats;
+  const projectOk = !res.warnings.some((a) => a.severity === "error");
+  if (!projectOk) console.error("\n✖ The project has errors and cannot go to the machine.");
+  console.error(`${res.verification!.ok ? "✔ G-code verified" : "✖ G-code failed verification"}: ${st.lines} lines, ~${Math.ceil(st.estimatedTimeSec / 60)} min, ${(st.cutLength / 1000).toFixed(1)} m of cutting`);
+  for (const o of res.operations) console.error(`  • ${o.name} (T${o.tool}, ${o.depth} mm)`);
+  for (const [name, p] of Object.entries(res.params)) {
+    console.error(`  Parameters (${name}): ${p.rpm} RPM, feed ${p.feed} mm/min, plunge ${p.plunge} mm/min, stepdown ${p.stepdown} mm`);
   }
 
   if (!res.ok) {
-    console.error("Nada foi gravado em disco.");
+    console.error("Nothing was written to disk.");
     process.exit(1);
   }
   if (outFile) await writeFile(outFile, res.gcode);

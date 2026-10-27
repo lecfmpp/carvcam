@@ -1,4 +1,4 @@
-/* Assistente "Connect": mapa de cabos à esquerda, passo atual à direita. */
+/* "Connect" wizard: cable map on the left, current step on the right. */
 .cw { position: fixed; inset: 0; z-index: 900; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(8, 9, 10, 0.72); backdrop-filter: blur(6px); animation: cw-in 160ms var(--ease); }
 @keyframes cw-in { from { opacity: 0; } to { opacity: 1; } }
 .cw__card { width: min(1120px, 100%); max-height: calc(100vh - 48px); display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line-2); border-radius: 18px; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5); overflow: hidden; }
@@ -93,7 +93,7 @@
 .cw__yesno button[aria-pressed="true"] { border-color: var(--accent); color: var(--text); background: rgba(255, 91, 31, 0.1); }
 .cw__note { padding: 12px 14px; border-radius: 12px; background: rgba(255, 255, 255, 0.04); font: 400 13.5px/1.5 var(--font); color: var(--text-2); }
 
-/* Mapa */
+/* Map */
 .cw-map { width: 100%; height: auto; display: block; }
 .cw-dev rect, .cw-dev path, .cw-dev circle:not(.cw-led):not(.cw-estop) { fill: #26272b; stroke: #4a4b50; stroke-width: 1.5; }
 .cw-dev .cw-screen { fill: #1b2a33; stroke: #3d4a52; }
@@ -136,7 +136,7 @@
   .cw-cable.is-now { animation: none; }
 }
 
-/* Conexão real */
+/* Live connection */
 .cw__ip { display: flex; align-items: center; gap: 8px; margin-top: 6px; font: 500 12px var(--font); color: var(--text-3); }
 .cw__ip input { width: 150px; height: 32px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line-2); background: #0d0e10; color: var(--text); font-size: 13px; }
 .cw__port { cursor: pointer; border-color: var(--line-2); background: rgba(255, 255, 255, 0.03); }

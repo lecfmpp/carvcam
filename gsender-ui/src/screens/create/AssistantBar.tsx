@@ -8,7 +8,7 @@ import type { UiIssue } from "./issues";
 
 interface Msg extends ChatTurn {
   id: number;
-  /** Desfazer: a especificação de antes desta resposta. */
+  /** Undo: the spec from before this reply. */
   undo?: PlateSpecInput;
   undone?: boolean;
 }
@@ -16,8 +16,8 @@ interface Msg extends ChatTurn {
 let nextId = 1;
 
 /**
- * Barra do assistente no canto inferior esquerdo do palco. Só edita o desenho;
- * cortar sempre começa com a pessoa.
+ * Assistant bar in the bottom-left corner of the stage. It only edits the design;
+ * cutting always starts with the user.
  */
 export function AssistantBar(props: { inputRef: RefObject<HTMLInputElement>; issues: UiIssue[]; bitName: string; materialName: string; machineName: string }) {
   const { design, patchSpec } = useDesign();
@@ -62,7 +62,7 @@ export function AssistantBar(props: { inputRef: RefObject<HTMLInputElement>; iss
     }
   };
 
-  const chips = design.spec.tipo !== "letreiro" ? ["Thicker letters", "Add a heart", "Make it cut-out lettering"] : ["Make it a sign", "Thicker letters"];
+  const chips = design.spec.type !== "lettering" ? ["Thicker letters", "Add a heart", "Make it cut-out lettering"] : ["Make it a sign", "Thicker letters"];
 
   return (
     <div className={`create-ai ${open ? "is-open" : ""}`}>

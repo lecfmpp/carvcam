@@ -2,7 +2,7 @@
   "name": "@gsender-next/cam-engine",
   "version": "0.1.0",
   "private": true,
-  "description": "CAM 2.5D para placas e letreiros: especificação JSON → toolpaths → G-code GRBL verificado",
+  "description": "2.5D CAM for signs and cut-out lettering: JSON spec → toolpaths → verified GRBL G-code",
   "type": "module",
   "main": "src/index.ts",
   "scripts": {

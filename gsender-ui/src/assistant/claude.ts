@@ -3,9 +3,9 @@ import { PlateSpecSchema, type PlateSpecInput } from "@gsender-next/cam-engine";
 import type { AssistantContext, AssistantProvider, AssistantReply, ChatTurn } from "./types";
 
 /**
- * Assistente com o Claude, chamado direto do navegador com a chave que a pessoa colou.
- * Ele recebe a especificação atual e devolve a especificação inteira atualizada por uma
- * ferramenta; nunca envia nada para a máquina.
+ * Claude-powered assistant, called straight from the browser with the key the user pasted.
+ * It receives the current spec and returns the full updated spec through a tool call;
+ * it never sends anything to the machine.
  */
 const KEY = "gsender-anthropic-key";
 const MODEL = "claude-opus-5-5";
@@ -23,50 +23,50 @@ export function setClaudeKey(key: string) {
     if (key) localStorage.setItem(KEY, key.trim());
     else localStorage.removeItem(KEY);
   } catch {
-    /* armazenamento bloqueado: a chave vale só nesta sessão */
+    /* storage blocked: the key only lasts for this session */
   }
 }
 
 const num = { type: "number" } as const;
 const nullableNum = { type: ["number", "null"] } as const;
-const modo = { type: "string", enum: ["relevo", "gravado", "recorte"] } as const;
+const mode = { type: "string", enum: ["relief", "engrave", "cutout"] } as const;
 const obj = (properties: Record<string, unknown>) => ({ type: "object", additionalProperties: false, properties, required: Object.keys(properties) });
 
-/** Espelha PlateSpecSchema. Em modo estrito todo campo é obrigatório; x/y de texto aceitam null (posição automática). */
+/** Mirrors PlateSpecSchema. In strict mode every field is required; text x/y accept null (automatic position). */
 const SPEC_SCHEMA = obj({
-  tipo: { type: "string", enum: ["placa", "letreiro"], description: "placa = sign with a background; letreiro = cut-out lettering" },
-  largura: { ...num, description: "Width in mm" },
-  altura: { ...num, description: "Height in mm" },
-  espessura: { ...num, description: "Board thickness in mm. Keep the current value unless asked." },
-  material: { type: "string", enum: ["mdf", "compensado", "madeira_macia", "madeira_dura", "acrilico"] },
-  texto: {
+  type: { type: "string", enum: ["plate", "lettering"], description: "plate = sign with a background; lettering = cut-out lettering" },
+  width: { ...num, description: "Width in mm" },
+  height: { ...num, description: "Height in mm" },
+  thickness: { ...num, description: "Board thickness in mm. Keep the current value unless asked." },
+  material: { type: "string", enum: ["mdf", "plywood", "softwood", "hardwood", "acrylic"] },
+  texts: {
     type: "array",
     description: "Up to 6 lines of text",
     items: obj({
-      conteudo: { type: "string" },
-      fonte: { type: "string", enum: ["archivo-black", "pacifico", "bebas-neue"], description: "archivo-black bold and easiest to cut; bebas-neue condensed; pacifico script with joined letters" },
-      tamanho: { ...num, description: "Cap height in mm" },
-      modo,
-      profundidade: { ...num, description: "Depth in mm" },
-      x: { ...nullableNum, description: "Centre X from the left edge in mm, or null to auto-centre" },
-      y: { ...nullableNum, description: "Centre Y from the bottom edge in mm, or null to auto-stack" },
+      content: { type: "string" },
+      font: { type: "string", enum: ["archivo-black", "pacifico", "bebas-neue"], description: "archivo-black bold and easiest to cut; bebas-neue condensed; pacifico script with joined letters" },
+      size: { ...num, description: "Cap height in mm" },
+      mode,
+      depth: { ...num, description: "Depth in mm" },
+      x: { ...nullableNum, description: "Center X from the left edge in mm, or null to auto-center" },
+      y: { ...nullableNum, description: "Center Y from the bottom edge in mm, or null to auto-stack" },
     }),
   },
-  borda: obj({ tipo: { type: "string", enum: ["reta", "arredondada", "chanfrada"] }, raio: num }),
-  moldura: { ...num, description: "Raised frame width in mm; 0 = none, 6 = standard frame" },
-  icones: { type: "array", items: obj({ id: { type: "string", enum: ["coracao", "estrela", "casa", "folha"] }, x: num, y: num, tamanho: num, modo, profundidade: num }) },
-  formas: {
+  edge: obj({ type: { type: "string", enum: ["straight", "rounded", "chamfered"] }, radius: num }),
+  frame: { ...num, description: "Raised frame width in mm; 0 = none, 6 = standard frame" },
+  icons: { type: "array", items: obj({ id: { type: "string", enum: ["heart", "star", "house", "leaf"] }, x: num, y: num, size: num, mode, depth: num }) },
+  shapes: {
     type: "array",
     items: {
       anyOf: [
-        obj({ tipo: { type: "string", enum: ["retangulo"] }, x: num, y: num, largura: num, altura: num, raio: num, modo, profundidade: num }),
-        obj({ tipo: { type: "string", enum: ["circulo"] }, x: num, y: num, diametro: num, modo, profundidade: num }),
-        obj({ tipo: { type: "string", enum: ["linha"] }, x: num, y: num, x2: num, y2: num, espessura: num, modo, profundidade: num }),
+        obj({ type: { type: "string", enum: ["rectangle"] }, x: num, y: num, width: num, height: num, radius: num, mode, depth: num }),
+        obj({ type: { type: "string", enum: ["circle"] }, x: num, y: num, diameter: num, mode, depth: num }),
+        obj({ type: { type: "string", enum: ["line"] }, x: num, y: num, x2: num, y2: num, thickness: num, mode, depth: num }),
       ],
     },
   },
-  furos: { type: "array", items: obj({ x: num, y: num, diametro: num }) },
-  rasgos: { type: "array", items: obj({ x: num, y: num, comprimento: num, largura: num, angulo: num }) },
+  holes: { type: "array", items: obj({ x: num, y: num, diameter: num }) },
+  slots: { type: "array", items: obj({ x: num, y: num, length: num, width: num, angle: num }) },
 });
 
 const RESPONSE_SCHEMA = obj({
@@ -75,9 +75,9 @@ const RESPONSE_SCHEMA = obj({
 });
 
 const SYSTEM = `You are the design assistant inside CarvCAM, the app that designs signs and drives a hobby CNC router (it works alongside gSender).
-You edit the design of a flat sign ("placa") or cut-out lettering ("letreiro"). You cannot carve, move the machine or start a job: the person always does that themselves.
+You edit the design of a flat sign ("plate") or cut-out lettering ("lettering"). You cannot carve, move the machine or start a job: the person always does that themselves.
 When the person asks for a change, call the ${TOOL} tool once with the complete updated spec and a short reply. Keep every field you were not asked to change exactly as it is.
-Coordinates are millimetres from the bottom-left corner of the piece. Field values stay in the schema's Portuguese identifiers (relevo = raised, gravado = engraved, recorte = cut through).
+Coordinates are millimeters from the bottom-left corner of the piece. Field values use the schema's identifiers (relief = raised, engrave = engraved, cutout = cut through).
 Only flat 2.5D work is possible: text, the four icons, rectangles, circles, lines, holes and slots. If asked for a 3D carving, explain that briefly and offer the closest flat alternative instead of calling the tool.
 Prefer changes that fix the listed problems. If a request is unclear, answer with a short question instead of calling the tool.`;
 
@@ -89,12 +89,12 @@ function contextText(ctx: AssistantContext) {
   ].join("\n\n");
 }
 
-/** null → ausente, para o esquema do motor aplicar a posição automática. */
+/** null → absent, so the engine schema applies the automatic position. */
 function clean(spec: Record<string, unknown>, prev: PlateSpecInput): PlateSpecInput {
-  const texto = Array.isArray(spec.texto)
-    ? (spec.texto as Record<string, unknown>[]).map(({ x, y, ...t }) => ({ ...t, ...(x == null ? {} : { x }), ...(y == null ? {} : { y }) }))
-    : spec.texto;
-  return { recorteExterno: prev.recorteExterno, margem: prev.margem, ...spec, texto } as PlateSpecInput;
+  const text = Array.isArray(spec.texts)
+    ? (spec.texts as Record<string, unknown>[]).map(({ x, y, ...t }) => ({ ...t, ...(x == null ? {} : { x }), ...(y == null ? {} : { y }) }))
+    : spec.texts;
+  return { outerCutout: prev.outerCutout, margin: prev.margin, ...spec, texts: text } as PlateSpecInput;
 }
 
 export function makeClaudeAssistant(apiKey: string): AssistantProvider {
@@ -106,7 +106,7 @@ export function makeClaudeAssistant(apiKey: string): AssistantProvider {
         ...history.slice(-8).map((t) => ({ role: t.from === "user" ? ("user" as const) : ("assistant" as const), content: t.text })),
         { role: "user", content: `${contextText(ctx)}\n\nRequest: ${message}` },
       ];
-      // A conversa precisa começar pelo usuário.
+      // The conversation must start with a user turn.
       while (messages.length && messages[0].role !== "user") messages.shift();
       try {
         const res = await client.beta.messages.create({

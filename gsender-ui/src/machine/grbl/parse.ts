@@ -1,6 +1,6 @@
 /**
- * Leitura das linhas que uma placa grbl ou grblHAL manda (LongBoard, SuperLongBoard, SLB-EXT,
- * SLB-LITE). Formato da documentação oficial do grbl 1.1 e do grblHAL.
+ * Parses the lines a grbl or grblHAL controller sends (LongBoard, SuperLongBoard, SLB-EXT,
+ * SLB-LITE). Format from the official grbl 1.1 and grblHAL documentation.
  */
 export interface V3 {
   x: number;
@@ -12,18 +12,18 @@ export type GrblState = "Idle" | "Run" | "Hold" | "Jog" | "Alarm" | "Door" | "Ch
 
 export interface StatusReport {
   state: GrblState;
-  /** Subestado (Hold:0 = parado em espera, Hold:1 = desacelerando; Door:n). */
+  /** Substate (Hold:0 = held and stopped, Hold:1 = decelerating; Door:n). */
   sub?: number;
   mpos?: V3;
   wpos?: V3;
   wco?: V3;
   feed?: number;
   rpm?: number;
-  /** Overrides de avanço, rápido e rotação (%). */
+  /** Feed, rapid and spindle overrides (%). */
   ov?: [number, number, number];
-  /** Entradas ativas: X Y Z (fim de curso), P (sonda), D (porta), H (hold), R, S, E (E-stop no grblHAL). */
+  /** Active inputs: X Y Z (limit switches), P (probe), D (door), H (hold), R, S, E (E-stop on grblHAL). */
   pins?: string;
-  /** Blocos livres no planejador e bytes livres no buffer serial. */
+  /** Free planner blocks and free bytes in the serial buffer. */
   bf?: [number, number];
   line?: number;
 }
@@ -116,7 +116,7 @@ export function parseLine(raw: string): GrblMsg {
   return { type: "other", text: line };
 }
 
-/** Texto curto dos erros mais comuns (grbl 1.1 / grblHAL). */
+/** Short text for the most common errors (grbl 1.1 / grblHAL). */
 export const ERROR_TEXT: Record<number, string> = {
   1: "G-code words consist of a letter and a value",
   2: "Numeric value format is not valid",
@@ -132,7 +132,7 @@ export const ERROR_TEXT: Record<number, string> = {
   79: "Command not allowed while the E-stop is active",
 };
 
-/** Alarmes do grbl/grblHAL agrupados nas telas de alarme do CarvCAM. */
+/** grbl/grblHAL alarms grouped into CarvCAM's alarm screens. */
 export function alarmKind(code: number): "limit" | "lost" | "probe" | "estop" {
   if (code === 1 || code === 2) return "limit";
   if (code === 4 || code === 5) return "probe";
@@ -140,7 +140,7 @@ export function alarmKind(code: number): "limit" | "lost" | "probe" | "estop" {
   return "lost";
 }
 
-/** Linha de G-code pronta para enviar: sem comentários e espaços sobrando; vazia se não houver nada. */
+/** G-code line ready to send: no comments or extra whitespace; empty if nothing is left. */
 export function cleanLine(raw: string): string {
   return raw
     .replace(/\(.*?\)/g, "")
