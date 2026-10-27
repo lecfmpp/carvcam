@@ -1,73 +1,73 @@
-# CarvCAM (gsender-ui): design de placas, CAM e corte para máquinas Sienci Labs
+# CarvCAM (gsender-ui): sign design, CAM and carving for Sienci Labs machines
 
-Implementação do handoff do Claude Design ("Calm Precision") em React + TypeScript + Vite, sobre o motor de CAM em `../cam-engine`.
+Implementation of the Claude Design handoff ("Calm Precision") in React + TypeScript + Vite, on top of the CAM engine in `../cam-engine`.
 
-## Testar no seu computador
-Precisa só do [Node.js](https://nodejs.org) 18 ou mais novo (versão LTS). Na raiz do repositório:
+## Try it on your computer
+All you need is [Node.js](https://nodejs.org) 18 or newer (LTS version). From the repository root:
 
-- **Windows:** clique duas vezes em `try-carvcam.cmd`.
+- **Windows:** double-click `try-carvcam.cmd`.
 - **Mac / Linux:** `./try-carvcam.sh`
 
-Na primeira vez o script instala as dependências (precisa de internet só nesse momento). Depois gera a versão final e abre o CarvCAM em **http://localhost:4173**. Depois de aberto uma vez, o app também inicia **sem internet** nesse endereço: um service worker guarda todos os arquivos, e o motor de CAM, as fontes e a simulação rodam no próprio computador.
+The first time, the script installs the dependencies (internet is only needed at that point). Then it builds the production version and opens CarvCAM at **http://localhost:4173**. Once it has been opened once, the app also starts **offline** at that address: a service worker caches every file, and the CAM engine, the fonts and the simulation all run on your own computer.
 
-Para desenvolver (recarrega ao editar o código): `./try-carvcam.sh --dev` (http://localhost:5173).
+For development (reloads when you edit the code): `./try-carvcam.sh --dev` (http://localhost:5173).
 
 ```bash
-# o mesmo, à mão
+# the same thing, by hand
 cd cam-engine && npm install
 cd ../gsender-ui && npm install
 npm run local      # build + http://localhost:4173
-npm run dev        # desenvolvimento em http://localhost:5173
-npm run build      # typecheck + build de produção
+npm run dev        # development server at http://localhost:5173
+npm run build      # typecheck + production build
 ```
 
-## Máquinas, fresas e links da Sienci
-- **Cards de máquina** (onboarding e Settings › My machine): `src/components/MachineCard.tsx`, fichas em `src/lib/machineInfo.ts` (páginas de produto da Sienci, out/2026).
-- **Biblioteca de fresas** (My bits): as que o CarvCAM usa e "More from the Sienci store" (`src/lib/storeBits.ts`).
-- **Fotos:** WebP em `public/machines/` e `public/bits/`. `npm run images:fetch` baixa a foto principal de cada página de produto (`src/lib/sienciProducts.json`) e converte para WebP leve (precisa de acesso ao sienci.com). Sem a foto, o card mostra um desenho da máquina ou a silhueta da fresa.
-- **Links:** todo link para o sienci.com passa por `sienciLink()` (`src/lib/referral.ts`), que acrescenta `utm_source=carvcam&utm_medium=app&utm_campaign=<lugar>&utm_content=<produto>`. As UTMs só identificam a origem; a comissão vem do código de afiliado. Depois de aprovado no programa da Sienci, preencha `VITE_SIENCI_AFFILIATE_PARAM` e `VITE_SIENCI_AFFILIATE_ID` (veja `.env.example`).
+## Machines, bits and Sienci links
+- **Machine cards** (onboarding and Settings › My machine): `src/components/MachineCard.tsx`, spec sheets in `src/lib/machineInfo.ts` (Sienci product pages, Oct 2026).
+- **Bit library** (My bits): the bits CarvCAM uses, plus "More from the Sienci store" (`src/lib/storeBits.ts`).
+- **Photos:** WebP files in `public/machines/` and `public/bits/`. `npm run images:fetch` downloads the main photo from each product page (`src/lib/sienciProducts.json`) and converts it to a lightweight WebP (needs access to sienci.com). Without a photo, the card shows a drawing of the machine or the outline of the bit.
+- **Links:** every link to sienci.com goes through `sienciLink()` (`src/lib/referral.ts`), which adds `utm_source=carvcam&utm_medium=app&utm_campaign=<placement>&utm_content=<product>`. The UTMs only identify where the visit came from; the commission comes from the affiliate code. Once you're approved for the Sienci program, fill in `VITE_SIENCI_AFFILIATE_PARAM` and `VITE_SIENCI_AFFILIATE_ID` (see `.env.example`).
 
-## Marca e tela de entrada
-- Logo **CarvCAM** (`src/components/Brand.tsx`, `public/carvcam-icon.svg`) na barra do topo e como ícone da aba.
-- Tela de entrada (`index.html`): aparece antes de qualquer JavaScript, com a animação da logo e uma barra de progresso das etapas reais (interface, fontes, motor de CAM aquecido no worker, telas). Nada vem da internet. Se algo demorar mais de 15 s, avisa; se falhar, o app abre assim mesmo.
+## Brand and splash screen
+- **CarvCAM** logo (`src/components/Brand.tsx`, `public/carvcam-icon.svg`) in the top bar and as the tab icon.
+- Splash screen (`index.html`): shows up before any JavaScript, with the logo animation and a progress bar for the real loading stages (UI, fonts, CAM engine warmed up in the worker, screens). Nothing comes from the internet. If something takes longer than 15 s it says so; if something fails, the app opens anyway.
 
-## Telas
-| Rota | Tela |
+## Screens
+| Route | Screen |
 |---|---|
-| `#/workshop/onboarding` | Minha oficina: máquina → router/spindle → fresas |
-| `#/workshop`, `#/workshop/bits`, `#/workshop/settings` | Primeiros cortes (prévias simuladas pelo motor), biblioteca de fresas, minha máquina |
-| `#/surfacing` | Aplainar a mesa (G-code de aplainamento gerado pelo motor) |
-| `#/create` | Criar: editor + assistente (parser local offline; Claude API opcional com a chave do usuário). Texto (reto ou em arco), formas, curvas livres (caneta), biblioteca de elementos, importar SVG/DXF, imagem de decalque e conversão de imagem em vetor, alinhar/distribuir, contorno, subtrair/máscara, V-carve e hachura |
-| `#/prepare` | Preparar: velocidades da tabela Sienci, abas, segunda fresa, G-code verificado, **Download G-code (.nc)** |
-| `#/position`, `#/carve` | Posicionar e Cortar (máquina **simulada** por enquanto) |
+| `#/workshop/onboarding` | My workshop: machine → router/spindle → bits |
+| `#/workshop`, `#/workshop/bits`, `#/workshop/settings` | First cuts (previews simulated by the engine), bit library, my machine |
+| `#/surfacing` | Surface the bed (surfacing G-code generated by the engine) |
+| `#/create` | Create: editor + assistant (offline local parser; optional Claude API with the user's own key). Text (straight or on an arc), shapes, freehand curves (pen), element library, SVG/DXF import, tracing image and image-to-vector conversion, align/distribute, offset, subtract/mask, V-carve and hatching |
+| `#/prepare` | Prepare: speeds from the Sienci table, tabs, second bit, verified G-code, **Download G-code (.nc)** |
+| `#/position`, `#/carve` | Position and Carve (**simulated** machine for now) |
 
-## Modo Painel (gControl)
-Para a tela touch de 15,6″ do gControl. Liga sozinho quando o dispositivo principal é touch (`pointer: coarse`), em Settings (Automatic / Always on / Off) ou com `?panel=1` na URL.
-- **Tamanho:** o layout cabe em 1280×720 (Windows a 150%) e os controles principais crescem para 48–60 px.
-- **Tela cheia:** botão no topo (quiosque).
-- **Desempenho:** simulação e malha 3D mais leves para o processador N150.
-- **Início:** com um projeto aberto, o app inicia direto em Posicionar.
+## Panel mode (gControl)
+For the 15.6″ gControl touchscreen. Turns on by itself when the primary pointer is touch (`pointer: coarse`), from Settings (Automatic / Always on / Off), or with `?panel=1` in the URL.
+- **Size:** the layout fits in 1280×720 (Windows at 150%) and the main controls grow to 48–60 px.
+- **Full screen:** button in the top bar (kiosk).
+- **Performance:** lighter simulation and 3D mesh for the N150 processor.
+- **Startup:** with a project open, the app starts straight in Position.
 
-## Arquitetura
-- `src/lib/catalog.ts`: catálogo da interface derivado do catálogo Sienci do motor (máquinas, cabeçotes, fresas, projetos).
-- `src/engine/`: o motor roda num Web Worker (`generatePlate` + simulação do corte).
-- `src/stage/`: palco com vista de cima (mapa de alturas) e 3D (three.js).
-- `src/machine/store.ts`: estado da máquina. Com uma controladora conectada, as ações vão para `src/machine/real.ts`; sem ela, o simulador interno anima tudo.
-- `src/machine/grbl/`: protocolo grbl/grblHAL (leitura das respostas, envio por contagem de caracteres, home, jog, zero, placa de toque, overrides, troca de ferramenta, parada segura, retomada no meio) e os transportes (Web Serial e bridge).
-- `bridge/server.mjs`: o carvcam-bridge, que abre a porta USB ou a conexão Ethernet da controladora para o app.
-- `src/assistant/`: provedores do assistente (local e Claude). A IA só edita o projeto; nunca move a máquina.
+## Architecture
+- `src/lib/catalog.ts`: UI catalog derived from the engine's Sienci catalog (machines, routers/spindles, bits, projects).
+- `src/engine/`: the engine runs in a Web Worker (`generatePlate` + carve simulation).
+- `src/stage/`: stage with a top view (heightmap) and 3D (three.js).
+- `src/machine/store.ts`: machine state. With a controller connected, the actions go to `src/machine/real.ts`; without one, the built-in simulator animates everything.
+- `src/machine/grbl/`: grbl/grblHAL protocol (reply parsing, character-counting streaming, home, jog, zero, touch plate, overrides, tool change, safe stop, resume mid-job) and the transports (Web Serial and bridge).
+- `bridge/server.mjs`: carvcam-bridge, which opens the controller's USB port or Ethernet connection for the app.
+- `src/assistant/`: assistant providers (local and Claude). The AI only edits the project; it never moves the machine.
 
-## Conectar na máquina
-O CarvCAM fala direto com a controladora (LongBoard, SuperLongBoard, SLB-EXT, SLB-LITE), sem o gSender aberto. Feche o gSender antes: só um programa pode usar a conexão.
+## Connecting to the machine
+CarvCAM talks straight to the controller (LongBoard, SuperLongBoard, SLB-EXT, SLB-LITE), without gSender open. Close gSender first: only one program can use the connection.
 
-- **USB:** `npm run local` (ou `try-carvcam`) inicia o app e o **carvcam-bridge** juntos. No assistente **Connect**, a placa aparece sozinha na lista. No Chrome/Edge também funciona sem o bridge (o navegador pede para escolher a porta).
-- **Ethernet (SLB/SLB-EXT):** escolha Ethernet no assistente e informe o IP da placa (padrão `192.168.5.1`, porta 23). Precisa do bridge.
-- O bridge só aceita conexões do próprio computador e de páginas servidas por ele (`localhost`), para nenhum site da internet conseguir mandar na máquina.
-- **Sem máquina:** escolha **Simulator** no assistente.
+- **USB:** `npm run local` (or `try-carvcam`) starts the app and **carvcam-bridge** together. In the **Connect** assistant, the controller shows up in the list by itself. Chrome/Edge also work without the bridge (the browser asks you to pick the port).
+- **Ethernet (SLB/SLB-EXT):** choose Ethernet in the assistant and enter the controller's IP (default `192.168.5.1`, port 23). Needs the bridge.
+- The bridge only accepts connections from this computer and from pages it serves (`localhost`), so no website on the internet can control the machine.
+- **No machine:** choose **Simulator** in the assistant.
 
-Para testar a conexão real sem máquina, há uma placa falsa na rede: `npx vite-node scripts/fake-grbl.ts` e, no assistente, Ethernet com o IP `127.0.0.1:2323`.
+To test the real connection without a machine, there's a fake controller on the network: `npx vite-node scripts/fake-grbl.ts`, then in the assistant choose Ethernet with the IP `127.0.0.1:2323`.
 
-## Limites conhecidos
-- A conexão real foi testada contra uma placa grbl/grblHAL simulada, ainda não numa LongMill ou AltMill de verdade. No primeiro uso, faça um corte no ar (fresa acima do material) e fique com a mão no E-stop.
-- O assistente via Claude nunca foi testado contra a API (falta uma chave neste ambiente).
-- Os vídeos tutoriais são placeholders (`src/lib/videos.ts`).
+## Known limitations
+- The real connection has been tested against a simulated grbl/grblHAL controller, not yet on an actual LongMill or AltMill. The first time, do an air cut (bit above the material) and keep a hand on the E-stop.
+- The Claude assistant has never been tested against the API (there's no key in this environment).
+- The tutorial videos are placeholders (`src/lib/videos.ts`).

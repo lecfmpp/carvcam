@@ -1,7 +1,7 @@
-// Compila o app (gsender-ui) e copia para dentro do pacote do desktop:
+// Builds the app (gsender-ui) and copies it into the desktop package:
 //   ../gsender-ui/dist        -> app/
 //   ../gsender-ui/bridge/*.mjs -> bridge/
-// Rode antes do electron-builder (os scripts "start" e "dist:win" já chamam).
+// Run it before electron-builder (the "start" and "dist:win" scripts already call it).
 import { execSync } from "node:child_process";
 import { cpSync, rmSync, mkdirSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";

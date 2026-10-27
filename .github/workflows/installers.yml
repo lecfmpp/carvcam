@@ -1,9 +1,9 @@
-# Instaladores do CarvCAM (Electron), no mesmo formato do CI do gSender:
-#   Windows: NSIS (.exe) · Linux: AppImage e .deb (x64) · Raspberry Pi: AppImage e .deb (arm64, armv7l)
-#   Mac: .dmg (Intel e Apple Silicon)
-# Em todo push na branch e em PRs: gera os instaladores sem assinatura e guarda como artefatos.
-# Numa tag v1.2.3: gera, assina (se os segredos existirem), publica na Release do GitHub (de onde o
-# app instalado baixa as atualizações) e sobe também cópias com nome fixo, que o site usa:
+# CarvCAM installers (Electron), in the same shape as gSender's CI:
+#   Windows: NSIS (.exe) · Linux: AppImage and .deb (x64) · Raspberry Pi: AppImage and .deb (arm64, armv7l)
+#   Mac: .dmg (Intel and Apple Silicon)
+# On every push to the branch and on PRs: builds unsigned installers and keeps them as artifacts.
+# On a v1.2.3 tag: builds, signs (if the secrets exist), publishes to the GitHub Release (where the
+# installed app downloads its updates from) and also uploads fixed-name copies the website uses:
 #   https://github.com/lecfmpp/carvcam/releases/latest/download/CarvCAM-Windows-64Bit.exe
 #   .../CarvCAM-Linux-x86_64.AppImage · .../CarvCAM-Linux-amd64.deb
 #   .../CarvCAM-Linux-arm64.AppImage · .../CarvCAM-Linux-arm64.deb · .../CarvCAM-Linux-armv7l.AppImage · .../CarvCAM-Linux-armv7l.deb
@@ -16,8 +16,8 @@ on:
     branches: [main, feat/windows-installer]
   pull_request:
     paths: ["desktop/**", "gsender-ui/**", "cam-engine/**", ".github/workflows/installers.yml"]
-  # Publicar uma versão sem empurrar a tag pelo git: Actions › Installers › Run workflow, com a
-  # versão (ex.: 0.1.0). O job cria a tag v0.1.0 no commit escolhido e segue como numa tag.
+  # Publish a version without pushing the tag through git: Actions › Installers › Run workflow, with the
+  # version (e.g. 0.1.0). The job creates the v0.1.0 tag on the chosen commit and continues as for a tag.
   workflow_dispatch:
     inputs:
       version:
@@ -29,7 +29,7 @@ permissions:
   contents: write
 
 env:
-  # Versão a publicar: a tag empurrada (v1.2.3) ou a informada ao rodar à mão. Vazio = só teste.
+  # Version to publish: the pushed tag (v1.2.3) or the one entered on a manual run. Empty = test build only.
   RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || (github.event_name == 'workflow_dispatch' && inputs.version != '' && format('v{0}', inputs.version) || '') }}
 
 jobs:
@@ -64,7 +64,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           WIN_PUBLISHER_NAME: ${{ secrets.WIN_PUBLISHER_NAME }}
-          # Escolha um serviço de assinatura (veja docs/code-signing.md).
+          # Pick a signing service (see docs/code-signing.md).
           WIN_SIGN_PROVIDER: ${{ env.RELEASE_TAG != '' && secrets.WIN_SIGN_PROVIDER || '' }}
           # Azure Artifact Signing
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
@@ -105,7 +105,7 @@ jobs:
             desktop/release/latest.yml
           retention-days: 14
 
-  # Linux depois do Windows: na tag, o primeiro job cria a Release e os outros só acrescentam arquivos.
+  # Linux after Windows: on a tag, the first job creates the Release and the others only add files to it.
   build-linux:
     needs: build-windows
     runs-on: ubuntu-latest
@@ -151,7 +151,7 @@ jobs:
             desktop/release/latest-linux*.yml
           retention-days: 14
 
-  # Mac ainda é "em breve" no site: este job só guarda o .dmg de teste e não bloqueia os outros.
+  # Mac is still "coming soon" on the website: this job only keeps the test .dmg and doesn't block the others.
   build-mac:
     needs: build-windows
     runs-on: macos-latest
@@ -182,9 +182,9 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: ${{ env.HAS_MAC_CERT }}
         run: |
           cd desktop
-          # Sem certificado da Apple o .dmg sai sem assinatura e só como artefato (não vai para a Release).
-          # Segredos que não existem chegam como texto vazio; o electron-builder leria o CSC_LINK vazio
-          # como caminho de certificado, então eles saem do ambiente.
+          # Without an Apple certificate the .dmg is unsigned and only kept as an artifact (it doesn't go to the Release).
+          # Secrets that don't exist arrive as empty strings; electron-builder would read an empty CSC_LINK
+          # as a certificate path, so they are removed from the environment.
           if [[ "$HAS_MAC_CERT" != "true" ]]; then unset CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; fi
           PUBLISH=never
           if [[ -n "$RELEASE_TAG" && "$HAS_MAC_CERT" == "true" ]]; then PUBLISH=always; fi

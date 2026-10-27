@@ -2,20 +2,20 @@ import type { MachineId } from "./catalog";
 import products from "./sienciProducts.json";
 
 /**
- * Ficha de cada máquina para os cards (texto da interface em inglês). Números das páginas de
- * produto da Sienci Labs (out/2026); a geometria que o motor usa para checar se o projeto cabe
- * continua no catálogo do motor (cam-engine/src/catalog/sienci/machines.ts).
+ * Spec sheet for each machine, shown on the cards. Numbers from the Sienci Labs product pages
+ * (Oct 2026); the geometry the engine uses to check whether a project fits still lives in the
+ * engine catalog (cam-engine/src/catalog/sienci/machines.ts).
  */
 export interface MachineInfo {
   id: MachineId;
-  /** Linha do produto como a Sienci escreve ("AltMill MK2"). */
+  /** Product line as Sienci writes it ("AltMill MK2"). */
   model: string;
   size: string;
   status: "current" | "discontinued";
   tagline: string;
-  /** Área de trabalho X × Y em polegadas (como a Sienci divulga). */
+  /** Work area X × Y in inches (as Sienci publishes it). */
   workIn: [number, number];
-  /** Altura útil em Z, em polegadas. */
+  /** Usable Z height, in inches. */
   zIn: number;
   zLabel: string;
   speed: string;
@@ -92,7 +92,7 @@ export const MACHINE_INFO: Record<MachineId, MachineInfo> = {
 
 export const machineInfo = (id: MachineId) => MACHINE_INFO[id];
 
-/** Grupos na ordem em que aparecem no onboarding. */
+/** Groups in the order they appear in onboarding. */
 export const MACHINE_GROUPS: { title: string; note: string; ids: MachineId[]; collapsed?: boolean }[] = [
   { title: "AltMill", note: "Prosumer and production. Spindle, ball screws, closed loop on every axis.", ids: ["altmill-2x4", "altmill-4x4", "altmill-4x8"] },
   { title: "LongMill MK3", note: "Benchtop and beginner friendly. Pre-assembled, automatic speed with the AutoSpin.", ids: ["longmill-mk3-30x30", "longmill-mk3-48x30"] },

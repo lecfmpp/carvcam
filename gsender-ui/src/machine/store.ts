@@ -3,9 +3,9 @@ import { create } from "zustand";
 import * as R from "./real";
 
 /**
- * Estado da máquina. Com conn === "real" as ações vão para a controladora de verdade (real.ts,
- * protocolo grbl/grblHAL por USB ou Ethernet); com "sim" ou sem conexão, o simulador interno
- * anima tudo para testar a interface sem CNC.
+ * Machine state. With conn === "real" the actions go to the actual controller (real.ts,
+ * grbl/grblHAL protocol over USB or Ethernet); with "sim" or no connection, the built-in simulator
+ * animates everything so the UI can be tested without a CNC.
  */
 export type MachineStatus = "disconnected" | "connecting" | "idle" | "homing" | "running" | "paused" | "toolchange" | "alarm" | "done";
 
@@ -64,14 +64,14 @@ export interface Job {
   name: string;
   gcode: string;
   segs: Segment[];
-  /** Tempo acumulado (s) no fim de cada segmento. */
+  /** Cumulative time (s) at the end of each segment. */
   times: number[];
   total: number;
-  /** Índices de segmento onde há troca de ferramenta (T# M6) antes. */
+  /** Segment indices preceded by a tool change (T# M6). */
   toolChanges: { seg: number; tool: number }[];
   tools: Tool[];
   board: { width: number; height: number; thickness: number };
-  /** Segmento → nome da operação (dos comentários "; --- nome ---"). */
+  /** Segment → operation name (from the "; --- name ---" comments). */
   opOfSeg: number[];
   ops: string[];
 }
@@ -79,27 +79,27 @@ export interface Job {
 interface MachineState {
   status: MachineStatus;
   port: string | null;
-  /** "real": controladora de verdade; "sim": simulador; null: desconectado. */
+  /** "real": actual controller; "sim": simulator; null: disconnected. */
   conn: "real" | "sim" | null;
-  /** Firmware e versão informados pela placa (só conexão real). */
+  /** Firmware and version reported by the controller (real connection only). */
   firmware: string;
-  /** A máquina tem sensores de home ($22). Sem eles, a posição ao ligar já vale. */
+  /** The machine has homing switches ($22). Without them, the power-on position is taken as valid. */
   homingEnabled: boolean;
   lastError: string | null;
-  /** Conversa com a placa (console). */
+  /** Traffic with the controller (console). */
   log: { dir: "in" | "out"; text: string; t: number }[];
-  /** Avanço (mm/min) e rotação reais informados pela placa. */
+  /** Actual feed rate (mm/min) and spindle speed reported by the controller. */
   liveFeed: number;
   liveRpm: number;
   homed: boolean;
-  /** Posição da fresa em coordenadas de máquina (mm). */
+  /** Bit position in machine coordinates (mm). */
   pos: Vec3;
-  /** Zero do trabalho em coordenadas de máquina. */
+  /** Work zero in machine coordinates. */
   workZero: Vec3 | null;
   zMeasured: boolean;
   bed: { x: number; y: number; z: number };
   job: Job | null;
-  /** Tempo de job simulado (s). */
+  /** Simulated job time (s). */
   elapsed: number;
   feedOverride: number;
   rpmOverride: number;
@@ -107,12 +107,12 @@ interface MachineState {
   pendingTool: number | null;
   activeTool: number;
   carved: Heightmap | null;
-  /** Fator de aceleração da simulação (1 = tempo real). */
+  /** Simulation speed-up factor (1 = real time). */
   speedup: number;
 
   setBed(b: { x: number; y: number; z: number }): void;
   connect(port: string): Promise<void>;
-  /** Conecta numa controladora de verdade (USB pelo navegador ou pelo bridge, ou Ethernet). */
+  /** Connects to an actual controller (USB through the browser or the bridge, or Ethernet). */
   connectReal(target: R.ConnTarget): Promise<void>;
   disconnect(): void;
   home(): Promise<void>;
@@ -130,7 +130,7 @@ interface MachineState {
   setRpmOverride(v: number): void;
   raiseAlarm(code: AlarmCode): void;
   clearAlarm(): void;
-  /** Retoma o trabalho a partir de um instante (s), ex.: o início da operação interrompida por um alarme. */
+  /** Resumes the job from a point in time (s), e.g. the start of the operation an alarm interrupted. */
   restartFrom(elapsed: number): void;
   reset(): void;
 }
@@ -169,7 +169,7 @@ export const useMachine = create<MachineState>()((set, get) => ({
     await R.disconnectReal();
     set({ status: "connecting", port, conn: "sim", firmware: "Simulator", homingEnabled: true });
     await sleep(700);
-    // Ao ligar, a máquina não sabe onde está até achar o home.
+    // At power-on the machine doesn't know where it is until it homes.
     set({ status: "idle", homed: false, pos: { x: get().bed.x / 2, y: get().bed.y / 2, z: SAFE_Z } });
   },
   connectReal: (target) => R.connectReal(target),
@@ -184,7 +184,7 @@ export const useMachine = create<MachineState>()((set, get) => ({
     if (get().conn === "real") return R.homeReal();
     set({ status: "homing" });
     const from = get().pos;
-    // Home das LongMill e AltMill: canto de trás à direita, Z no alto.
+    // LongMill and AltMill home: back right corner, Z at the top.
     const to = { x: get().bed.x, y: get().bed.y, z: 0 };
     await animate(from, to, 1400, (p) => set({ pos: p }));
     set({ status: "idle", homed: true });
@@ -213,10 +213,10 @@ export const useMachine = create<MachineState>()((set, get) => ({
   },
   probeZ: async (plate = 15) => {
     const s = get();
-    // Na troca de ferramenta a fila está parada e a máquina, em repouso: dá para medir.
+    // During a tool change the queue is held and the machine is at rest, so probing is allowed.
     if (s.conn === "real" && (s.status === "idle" || s.status === "toolchange")) return R.probeZReal(plate);
     if (s.status !== "idle") return;
-    // Desce até tocar a placa (simulada a 40 mm abaixo) e volta 5 mm.
+    // Moves down until it touches the plate (simulated 40 mm below) and backs off 5 mm.
     const touch = { ...s.pos, z: Math.max(-s.bed.z, s.pos.z - 40) };
     await animate(s.pos, touch, 900, (p) => set({ pos: p }));
     const zero = touch.z - plate;
@@ -236,7 +236,7 @@ export const useMachine = create<MachineState>()((set, get) => ({
       t += (len / (s.rapid ? maxRate : Math.max(1, s.feed))) * 60;
       times.push(t);
     }
-    // Trocas de ferramenta e nomes de operação, lidos do texto do G-code.
+    // Tool changes and operation names, read from the G-code text.
     const toolChanges: Job["toolChanges"] = [];
     const ops: string[] = [];
     const opAtLine: number[] = [];
@@ -299,7 +299,7 @@ export const useMachine = create<MachineState>()((set, get) => ({
   clearAlarm: () => {
     if (get().conn === "real") return void R.clearAlarmReal();
     const code = get().alarm;
-    // Fim de curso, emergência e posição perdida exigem achar o home de novo.
+    // Limit, E-stop and lost position all require homing again.
     const needsHome = code === "limit" || code === "estop" || code === "lost";
     set({ alarm: null, status: get().job && get().elapsed > 0 && code === "door" ? "paused" : "idle", homed: needsHome ? false : get().homed });
   },
@@ -319,7 +319,7 @@ export const useMachine = create<MachineState>()((set, get) => ({
   },
 }));
 
-/** Posição atual da fresa em coordenadas do trabalho. */
+/** Current bit position in work coordinates. */
 export function workPos(s: { pos: Vec3; workZero: Vec3 | null }): Vec3 {
   const z = s.workZero ?? { x: 0, y: 0, z: 0 };
   return { x: s.pos.x - z.x, y: s.pos.y - z.y, z: s.pos.z - z.z };
@@ -337,7 +337,7 @@ function startTimer() {
     if (s.status !== "running" || !s.job) return;
     const job = s.job;
     let elapsed = s.elapsed + dt * s.speedup * (s.feedOverride / 100);
-    // Troca de ferramenta: para no primeiro segmento depois do M6.
+    // Tool change: stop at the first segment after the M6.
     const tc = job.toolChanges.find((c) => c.tool !== s.activeTool && job.times[c.seg - 1] <= elapsed && c.seg > segIdx - 1);
     if (tc) {
       elapsed = job.times[tc.seg - 1];
@@ -366,7 +366,7 @@ function stopTimer() {
   timer = null;
 }
 
-/** Carimba no mapa de alturas os segmentos percorridos desde o último quadro. */
+/** Stamps the segments traveled since the last frame onto the heightmap. */
 function stamp(job: Job, hm: Heightmap | null, from: number, to: number, f: number) {
   if (!hm) return;
   const tool = job.tools.find((t) => t.id === useMachine.getState().activeTool) ?? job.tools[0] ?? ToolSchema.parse({});
@@ -417,5 +417,5 @@ function animate(from: Vec3, to: Vec3, ms: number, onFrame: (p: Vec3) => void): 
   });
 }
 
-// Em desenvolvimento, o estado da máquina fica acessível no console do navegador (__machine.getState()).
+// In development, the machine state is reachable from the browser console (__machine.getState()).
 if (import.meta.env.DEV && typeof window !== "undefined") (window as unknown as { __machine: typeof useMachine }).__machine = useMachine;

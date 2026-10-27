@@ -1,42 +1,42 @@
-# CarvCAM para Windows (Electron)
+# CarvCAM for Windows (Electron)
 
-O mesmo formato do gSender 1.6.4: um app Electron com instalador NSIS, que traz junto o
-carvcam-bridge (USB pelo `serialport` e Ethernet na porta 23 da SLB). Quem instala não precisa
-de Node.js nem de nada além do instalador.
+The same setup as gSender 1.6.4: an Electron app with an NSIS installer that bundles
+carvcam-bridge (USB through `serialport`, and Ethernet on the SLB's port 23). Users don't need
+Node.js or anything other than the installer.
 
 | | gSender 1.6.4 | CarvCAM |
 |---|---|---|
 | App | Electron | Electron 33 |
-| Instalador | NSIS assistido, por máquina (Program Files) | Igual (`electron-builder.config.cjs`) |
-| Páginas | Licença, pasta, instalação, final com atalho e "Abrir" | Igual (`build/installer.nsh`) |
-| Abre depois de instalar | Como usuário normal (via explorer.exe) | Igual |
-| Módulos nativos | `asarUnpack` dos `.node` | Igual (serialport, binário N-API pronto) |
-| Atualização | electron-updater + Releases do GitHub | Igual (`lecfmpp/carvcam`) |
-| Assinatura | DigiCert KeyLocker no CI | DigiCert, SSL.com eSigner ou Azure (`build/sign.cjs`) |
-| Nome do arquivo | `gSender-1.6.4-Windows-64Bit.exe` | `CarvCAM-0.1.0-Windows-64Bit.exe` |
-| Linux | AppImage e .deb | AppImage e .deb, com regra udev para a USB (sem grupo dialout) |
-| Raspberry Pi | arm64 e armv7l | arm64 e armv7l (AppImage e .deb) |
-| Mac | .dmg assinado e notarizado | .dmg (Intel e Apple Silicon); assinatura com os segredos da Apple |
+| Installer | Assisted NSIS, per machine (Program Files) | Same (`electron-builder.config.cjs`) |
+| Pages | License, folder, install, finish page with shortcut and "Run" | Same (`build/installer.nsh`) |
+| Launch after install | As the normal user (through explorer.exe) | Same |
+| Native modules | `asarUnpack` of the `.node` files | Same (serialport, prebuilt N-API binary) |
+| Updates | electron-updater + GitHub Releases | Same (`lecfmpp/carvcam`) |
+| Signing | DigiCert KeyLocker in CI | DigiCert, SSL.com eSigner or Azure (`build/sign.cjs`) |
+| File name | `gSender-1.6.4-Windows-64Bit.exe` | `CarvCAM-0.1.0-Windows-64Bit.exe` |
+| Linux | AppImage and .deb | AppImage and .deb, with a udev rule for USB (no dialout group) |
+| Raspberry Pi | arm64 and armv7l | arm64 and armv7l (AppImage and .deb) |
+| Mac | Signed and notarized .dmg | .dmg (Intel and Apple Silicon); signed with the Apple secrets |
 
-## Como funciona
-`main.mjs` sobe o bridge em `127.0.0.1:8765`, serve o app compilado em `http://127.0.0.1:4173`
-(sempre a mesma porta, porque projetos e oficina ficam no armazenamento do navegador, separado
-por endereço) e abre a janela. Links externos abrem no navegador do sistema. Uma instância só.
+## How it works
+`main.mjs` starts the bridge on `127.0.0.1:8765`, serves the built app at `http://127.0.0.1:4173`
+(always the same port, because projects and the workshop live in browser storage, which is
+separate per address) and opens the window. External links open in the system browser. Single instance.
 
-## Rodar e gerar o instalador
+## Run it and build the installer
 ```
 cd desktop
 npm install
-npm start            # compila o gsender-ui e abre o app
-npm run dist:win     # gera release/CarvCAM-<versão>-Windows-64Bit.exe
-npm run dist:linux   # AppImage e .deb (LINUX_ARCHS=x64,arm64,armv7l para incluir o Raspberry Pi)
-npm run dist:mac     # .dmg (só num Mac)
+npm start            # builds gsender-ui and opens the app
+npm run dist:win     # builds release/CarvCAM-<version>-Windows-64Bit.exe
+npm run dist:linux   # AppImage and .deb (LINUX_ARCHS=x64,arm64,armv7l to include the Raspberry Pi)
+npm run dist:mac     # .dmg (on a Mac only)
 ```
-No Linux, o `dist:win` precisa do Wine (o NSIS gera o desinstalador com ele). O caminho normal é
-o GitHub Actions (`.github/workflows/installers.yml`), que roda no Windows: cada push gera
-os instaladores como artefatos, e uma tag `v*` publica na Release, assinado se os segredos existirem,
-com cópias de nome fixo (`CarvCAM-Windows-64Bit.exe`, `CarvCAM-Linux-x86_64.AppImage`...) para os
-links do site em `releases/latest/download/`.
+On Linux, `dist:win` needs Wine (NSIS uses it to build the uninstaller). The usual route is
+GitHub Actions (`.github/workflows/installers.yml`), which runs on Windows: every push builds
+the installers as artifacts, and a `v*` tag publishes them to the Release, signed if the secrets exist,
+with fixed-name copies (`CarvCAM-Windows-64Bit.exe`, `CarvCAM-Linux-x86_64.AppImage`...) for the
+website links under `releases/latest/download/`.
 
-## Assinatura
-Ver [docs/code-signing.md](../docs/code-signing.md).
+## Signing
+See [docs/code-signing.md](../docs/code-signing.md).

@@ -1,8 +1,8 @@
 import { sienci, type MaterialId, type PlateSpecInput } from "@gsender-next/cam-engine";
 
 /**
- * Catálogo no formato da interface. Os dados vêm do motor (catálogo Sienci verificado);
- * aqui só ficam rótulos em inglês (o design é em inglês), cores e textos de apoio.
+ * Catalog in the shape the UI needs. The data comes from the engine (verified Sienci catalog);
+ * this file only adds labels, colors and helper text.
  */
 
 export type MachineId = sienci.MachineId;

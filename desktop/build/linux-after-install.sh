@@ -1,8 +1,8 @@
 #!/bin/bash
-# Pós-instalação do .deb: o mesmo que o modelo do electron-builder (atalho no PATH, sandbox do
-# Chromium, menus) e mais uma regra udev que dá acesso às controladoras de CNC por USB a quem está
-# logado, sem precisar do grupo dialout. Chips: a mesma lista que o gSender aceita (STM32 das
-# SuperLongBoard/SLB-EXT/SLB-LITE, CH340 e Arduino da LongBoard, FTDI, CP210x, Teensy, RP2040...).
+# .deb post-install: the same as electron-builder's template (link on the PATH, Chromium sandbox,
+# menus) plus a udev rule that gives the logged-in user access to USB CNC controllers, without
+# needing the dialout group. Chips: the same list gSender accepts (STM32 on the
+# SuperLongBoard/SLB-EXT/SLB-LITE, CH340 and Arduino on the LongBoard, FTDI, CP210x, Teensy, RP2040...).
 APP=/opt/CarvCAM/carvcam
 
 if type update-alternatives >/dev/null 2>&1; then
@@ -25,7 +25,7 @@ hash update-desktop-database 2>/dev/null && update-desktop-database /usr/share/a
 
 mkdir -p /etc/udev/rules.d
 cat > /etc/udev/rules.d/60-carvcam.rules <<'RULES'
-# CarvCAM: controladoras de CNC por USB acessíveis para o usuário logado
+# CarvCAM: USB CNC controllers accessible to the logged-in user
 SUBSYSTEM=="tty", ATTRS{idVendor}=="0483", TAG+="uaccess"
 SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", TAG+="uaccess"
 SUBSYSTEM=="tty", ATTRS{idVendor}=="2341", TAG+="uaccess"

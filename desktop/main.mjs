@@ -1,8 +1,8 @@
-// CarvCAM para desktop (Electron), no mesmo formato do gSender: um processo principal que
-//  1. sobe o carvcam-bridge (USB pelo serialport e Ethernet na porta 23 da SLB) em 127.0.0.1:8765;
-//  2. serve o app já compilado (app/) em http://127.0.0.1:4173, sempre na mesma porta, porque os
-//     projetos e a oficina ficam no armazenamento do navegador, que é separado por endereço;
-//  3. abre a janela. Links externos (loja da Sienci, docs) abrem no navegador do sistema.
+// CarvCAM for desktop (Electron), in the same shape as gSender: a main process that
+//  1. starts carvcam-bridge (USB through serialport, and Ethernet on the SLB's port 23) on 127.0.0.1:8765;
+//  2. serves the built app (app/) at http://127.0.0.1:4173, always on the same port, because
+//     projects and the workshop live in browser storage, which is separate per address;
+//  3. opens the window. External links (Sienci store, docs) open in the system browser.
 import { app, BrowserWindow, Menu, shell, dialog, session } from "electron";
 import { createServer } from "node:http";
 import { readFile, stat } from "node:fs/promises";
@@ -16,7 +16,7 @@ const APP_DIR = join(here, "app");
 const PORTS = [4173, 4183, 4193];
 const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".mjs": "text/javascript", ".css": "text/css", ".json": "application/json", ".svg": "image/svg+xml", ".png": "image/png", ".webp": "image/webp", ".jpg": "image/jpeg", ".woff2": "font/woff2", ".woff": "font/woff", ".ttf": "font/ttf", ".wasm": "application/wasm", ".ico": "image/x-icon", ".txt": "text/plain" };
 
-// Uma janela só: abrir o atalho de novo traz a janela que já existe.
+// Single window: opening the shortcut again brings up the existing window.
 if (!app.requestSingleInstanceLock()) app.quit();
 
 let win = null;
@@ -44,7 +44,7 @@ function serveApp(port) {
 }
 
 async function start() {
-  // Bridge: se a porta já estiver em uso (outro CarvCAM, ou o modo de desenvolvimento), segue sem ele.
+  // Bridge: if the port is already in use (another CarvCAM, or dev mode), carry on without it.
   try {
     const wss = startBridge({ log: (m) => console.log(m) });
     wss.on("error", (e) => console.warn("[bridge]", e.message));
@@ -57,7 +57,7 @@ async function start() {
       origin = `http://127.0.0.1:${p}`;
       break;
     } catch {
-      /* porta ocupada: tenta a próxima */
+      /* port in use: try the next one */
     }
   }
   if (!origin) {
@@ -66,12 +66,12 @@ async function start() {
     return;
   }
 
-  // Web Serial (alternativa ao bridge): o Electron não mostra a lista de portas sozinho, então
-  // escolhemos a primeira controladora conhecida (mesma lista de chips do gSender) e liberamos o acesso.
+  // Web Serial (alternative to the bridge): Electron doesn't show a port picker by itself, so we
+  // pick the first known controller (same chip list as gSender) and grant access.
   const KNOWN_VIDS = ["2E8A", "16C0", "1D50", "0403", "2341", "0042", "1A86", "10C4", "067B", "03EB", "16D0", "0483"];
   session.defaultSession.on("select-serial-port", (e, ports, _wc, pick) => {
     e.preventDefault();
-    // O Electron entrega o vendorId como texto; aceita decimal ("9025") ou hexadecimal ("2341").
+    // Electron passes vendorId as a string; accept decimal ("9025") or hexadecimal ("2341").
     const known = (v) => !!v && (KNOWN_VIDS.includes(String(v).toUpperCase()) || KNOWN_VIDS.includes(Number(v).toString(16).padStart(4, "0").toUpperCase()));
     const best = ports.find((p) => known(p.vendorId)) || ports[0];
     pick(best ? best.portId : "");
@@ -95,7 +95,7 @@ async function start() {
     win.maximize();
     win.show();
   });
-  // Tudo que não é o próprio app abre no navegador do sistema.
+  // Anything that isn't the app itself opens in the system browser.
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (/^https?:/.test(url)) shell.openExternal(url);
     return { action: "deny" };
@@ -109,7 +109,7 @@ async function start() {
   win.on("closed", () => (win = null));
   await win.loadURL(origin + "/");
 
-  // Atualizações automáticas pelas releases do GitHub (só no app instalado).
+  // Automatic updates from GitHub Releases (installed app only).
   if (app.isPackaged) {
     updater.autoUpdater.checkForUpdatesAndNotify().catch((e) => console.warn("[update]", e.message));
   }

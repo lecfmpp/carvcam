@@ -1,7 +1,7 @@
-// Empacotamento do CarvCAM, espelhando o package.json "build" do gSender 1.6.4:
-// NSIS assistido, instalação para todos os usuários (Program Files), asar com os módulos nativos
-// (serialport) fora dele, atualizações pelas releases do GitHub e assinatura de código opcional.
-// Assinatura: veja docs/code-signing.md. Sem as variáveis, o instalador sai sem assinatura.
+// CarvCAM packaging, mirroring the "build" section of gSender 1.6.4's package.json:
+// assisted NSIS installer, per-machine install (Program Files), asar with the native modules
+// (serialport) unpacked, updates from GitHub Releases and optional code signing.
+// Signing: see docs/code-signing.md. Without the variables, the installer is built unsigned.
 const azure = process.env.AZURE_SIGNING_ENDPOINT && process.env.AZURE_SIGNING_ACCOUNT && process.env.AZURE_SIGNING_PROFILE;
 
 /** @type {import("electron-builder").Configuration} */
@@ -14,7 +14,7 @@ module.exports = {
   files: ["main.mjs", "app/**", "bridge/**", "package.json", "LICENSE"],
   directories: { buildResources: "build", output: "release" },
   compression: "normal",
-  npmRebuild: false, // o serialport usa N-API (binários prontos para win32-x64, sem compilar)
+  npmRebuild: false, // serialport uses N-API (prebuilt win32-x64 binaries, nothing to compile)
   win: {
     target: [{ target: "nsis", arch: ["x64"] }],
     artifactName: "${productName}-${version}-Windows-64Bit.${ext}",
@@ -30,7 +30,7 @@ module.exports = {
         }
       : { signtoolOptions: { sign: "./build/sign.cjs", ...(process.env.WIN_PUBLISHER_NAME ? { publisherName: process.env.WIN_PUBLISHER_NAME } : {}) } }),
   },
-  // Linux como o gSender: AppImage e .deb. x64 para PCs; arm64 e armv7l para o Raspberry Pi.
+  // Linux like gSender: AppImage and .deb. x64 for PCs; arm64 and armv7l for the Raspberry Pi.
   linux: {
     target: [
       { target: "AppImage", arch: (process.env.LINUX_ARCHS || "x64").split(",") },
@@ -44,7 +44,7 @@ module.exports = {
     executableName: "carvcam",
     desktop: { Name: "CarvCAM", StartupWMClass: "CarvCAM", Keywords: "CNC;router;LongMill;AltMill;gcode;" },
   },
-  // .deb instala uma regra udev para a controladora USB funcionar sem entrar no grupo dialout.
+  // The .deb installs a udev rule so the USB controller works without joining the dialout group.
   deb: { afterInstall: "build/linux-after-install.sh", afterRemove: "build/linux-after-remove.sh" },
   mac: {
     target: [{ target: "dmg", arch: ["x64", "arm64"] }],
@@ -64,7 +64,7 @@ module.exports = {
     uninstallerIcon: "build/icon.ico",
     installerSidebar: "build/sidebar.bmp",
     uninstallerSidebar: "build/sidebar.bmp",
-    createDesktopShortcut: false, // a página final pergunta (build/installer.nsh)
+    createDesktopShortcut: false, // the finish page asks (build/installer.nsh)
     createStartMenuShortcut: true,
     shortcutName: "CarvCAM",
     include: "build/installer.nsh",

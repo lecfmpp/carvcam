@@ -1,9 +1,9 @@
 import type { HeadId, MachineId } from "./catalog";
 
 /**
- * Perfil de máquina já escolhido no gSender (Config › Machine profile). Hoje devolve null:
- * quando o adaptador real do gSender existir, ele lê o perfil pelo servidor
- * (`GET /api/state` → workspace.machineProfile) e traduz para o catálogo.
+ * Machine profile already chosen in gSender (Config › Machine profile). Returns null for now:
+ * once the real gSender adapter exists, it will read the profile from the server
+ * (`GET /api/state` → workspace.machineProfile) and map it to the catalog.
  */
 export function detectGsenderProfile(): { machine: MachineId; head?: HeadId } | null {
   return null;

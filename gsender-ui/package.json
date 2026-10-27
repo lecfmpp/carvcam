@@ -2,7 +2,7 @@
   "name": "@gsender-next/ui",
   "version": "0.1.0",
   "private": true,
-  "description": "CarvCAM: interface (design Calm Precision) e motor de CAM de placas e letreiros para máquinas Sienci Labs",
+  "description": "CarvCAM: UI (Calm Precision design) and CAM engine for signs and plaques on Sienci Labs machines",
   "type": "module",
   "scripts": {
     "dev": "node scripts/local.mjs --dev",

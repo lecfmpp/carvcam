@@ -1,4 +1,4 @@
-/** Vídeos tutoriais por instrução. Cole o link do YouTube em `url` e o início em `start` ("m:ss"). */
+/** Tutorial videos per instruction. Paste the YouTube link into `url` and the start time into `start` ("m:ss"). */
 export interface Video { title: string; url: string; start: string }
 
 export const VIDEOS: Record<string, Video> = {

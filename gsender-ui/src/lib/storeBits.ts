@@ -2,19 +2,19 @@ import type { BitProfile } from "./catalog";
 import products from "./sienciProducts.json";
 
 /**
- * Fresas da loja Sienci que o CarvCAM ainda não usa nos cálculos (3D, bowls, DLC…). Aparecem na
- * biblioteca em "More from the Sienci store", só com a ficha e o link (com UTM e afiliado).
- * Medidas das páginas de produto (out/2026).
+ * Bits from the Sienci store that CarvCAM doesn't use in its calculations yet (3D, bowls, DLC…).
+ * They appear in the library under "More from the Sienci store", with just the spec sheet and the
+ * link (with UTM and affiliate code). Measurements from the product pages (Oct 2026).
  */
 export interface StoreBit {
   id: string;
   name: string;
   kind: string;
   profile: BitProfile;
-  /** Diâmetro de corte em mm (na ponta, para as cônicas). */
+  /** Cutting diameter in mm (at the tip, for tapered bits). */
   d: number;
   shank: "1/8" | "1/4";
-  /** Comprimento de corte em mm, quando a Sienci informa. */
+  /** Cutting length in mm, when Sienci lists it. */
   cut?: number;
   flutes: number;
   use: string;
@@ -42,5 +42,5 @@ export const STORE_BITS: StoreBit[] = [
 
 export const STORE_CATEGORY_URL = "https://sienci.com/product-category/end-mills-bits/";
 
-/** Foto WebP de uma fresa do catálogo do CarvCAM (mesmo arquivo de produtos). */
+/** WebP photo of a bit from the CarvCAM catalog (same products file). */
 export const bitImage = (id: string) => P[id]?.image;

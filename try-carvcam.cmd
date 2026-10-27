@@ -1,20 +1,20 @@
 @echo off
-rem CarvCAM: instala (so na primeira vez), gera a versao final e abre no navegador.
-rem Uso: clique duas vezes neste arquivo (precisa do Node.js 18 ou mais novo).
-rem      try-carvcam.cmd --dev   (modo desenvolvimento)
+rem CarvCAM: installs (first run only), builds the production version and opens it in the browser.
+rem Usage: double-click this file (needs Node.js 18 or newer).
+rem        try-carvcam.cmd --dev   (development mode)
 setlocal
 cd /d "%~dp0"
 
 where node >nul 2>nul
 if errorlevel 1 (
-  echo Node.js nao encontrado. Instale a versao LTS em https://nodejs.org e rode de novo.
+  echo Node.js not found. Install the LTS version from https://nodejs.org and run this again.
   pause
   exit /b 1
 )
 
 for %%D in (cam-engine gsender-ui) do (
   if not exist "%%D\node_modules" (
-    echo ==^> Instalando dependencias de %%D ^(so na primeira vez^)...
+    echo ==^> Installing dependencies for %%D ^(first run only^)...
     pushd %%D
     call npm install --no-audit --no-fund || (popd & pause & exit /b 1)
     popd
@@ -23,11 +23,11 @@ for %%D in (cam-engine gsender-ui) do (
 
 cd gsender-ui
 if "%~1"=="--dev" (
-  echo ==^> Modo desenvolvimento em http://localhost:5173
+  echo ==^> Development mode at http://localhost:5173
   call npx vite --open
 ) else (
-  echo ==^> Gerando a versao final e abrindo em http://localhost:4173
-  echo     Depois da primeira abertura, o CarvCAM tambem abre sem internet nesse endereco.
+  echo ==^> Building the production version and opening http://localhost:4173
+  echo     After the first launch, CarvCAM also opens offline at that address.
   call npm run local
 )
 pause

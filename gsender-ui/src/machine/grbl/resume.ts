@@ -1,8 +1,8 @@
 /**
- * Linhas para recomeçar um trabalho no meio (depois de um alarme, por exemplo). Lê o estado das
- * linhas anteriores: unidades, avanço, rotação e a última posição. Sobe ao Z seguro, liga o
- * spindle e espera ele acelerar, vai por cima até o último X/Y e desce no avanço até o último Z.
- * Assim a linha seguinte continua exatamente de onde o corte estava. Supõe G90 (o CarvCAM só gera G90).
+ * Lines to restart a job partway through (after an alarm, for example). Reads the modal state from
+ * the earlier lines: units, feed rate, spindle speed and the last position. Lifts to safe Z, starts
+ * the spindle and waits for it to spin up, travels over to the last X/Y and plunges at feed rate to
+ * the last Z, so the next line continues exactly where the cut was. Assumes G90 (CarvCAM only emits G90).
  */
 export function resumePreamble(lines: string[], fromLine: number): string[] {
   let units = "G21";
@@ -19,7 +19,7 @@ export function resumePreamble(lines: string[], fromLine: number): string[] {
     if (/M5\b/.test(l)) spindle = "";
     const f = /F([\d.]+)/.exec(l);
     if (f) feed = Number(f[1]);
-    if (/G53\b/.test(l)) continue; // movimento em coordenadas de máquina não conta como posição do trabalho
+    if (/G53\b/.test(l)) continue; // a move in machine coordinates doesn't count as a work position
     for (const m of l.matchAll(/([XYZ])(-?[\d.]+)/g)) pos[m[1].toLowerCase() as "x" | "y" | "z"] = Number(m[2]);
     const z = /G0\b.*Z([\d.]+)/.exec(l);
     if (z) safeZ = Math.max(safeZ, Number(z[1]));

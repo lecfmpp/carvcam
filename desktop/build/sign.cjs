@@ -1,9 +1,9 @@
-// Assinatura de cada .exe do pacote (o app e o instalador), chamada pelo electron-builder.
-// Escolha o serviço com WIN_SIGN_PROVIDER; sem ele (ou fora do Windows) não assina.
-//   digicert : DigiCert KeyLocker, igual ao gSender (SM_KEYPAIR_ALIAS + smctl no PATH)
+// Signs each .exe in the package (the app and the installer); called by electron-builder.
+// Pick the service with WIN_SIGN_PROVIDER; without it (or off Windows) nothing is signed.
+//   digicert : DigiCert KeyLocker, same as gSender (SM_KEYPAIR_ALIAS + smctl on the PATH)
 //   sslcom   : SSL.com eSigner (CodeSignTool; ESIGNER_USERNAME, ESIGNER_PASSWORD,
 //              ESIGNER_CREDENTIAL_ID, ESIGNER_TOTP_SECRET, CODESIGNTOOL_DIR)
-// Azure Artifact Signing não passa por aqui: é configurado em electron-builder.config.cjs.
+// Azure Artifact Signing doesn't go through here: it's configured in electron-builder.config.cjs.
 const { execFileSync } = require("node:child_process");
 const path = require("node:path");
 

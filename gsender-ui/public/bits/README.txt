@@ -1,1 +1,1 @@
-Fotos WebP das fresas (npm run images:fetch). Sem a foto, o card mostra a silhueta da fresa.
+WebP photos of the bits (npm run images:fetch). Without a photo, the card shows the bit's outline.

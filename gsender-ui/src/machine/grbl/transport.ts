@@ -1,11 +1,11 @@
 /**
- * Caminhos até a controladora. Todos entregam texto e aceitam texto ou bytes (comandos de tempo
- * real, como "?" e 0x18, vão como bytes soltos, fora da fila de linhas).
+ * Ways to reach the controller. All of them deliver text and accept text or bytes (real-time
+ * commands such as "?" and 0x18 go out as single bytes, outside the line queue).
  *
- * - WebSerial: USB direto do Chrome/Edge, sem instalar nada.
- * - Bridge: o "carvcam-bridge" (bridge/server.mjs) roda no computador junto do app e abre a porta
- *   USB ou a conexão Ethernet (TCP, porta 23 da SLB). Serve para qualquer navegador e para Ethernet,
- *   que o navegador não consegue abrir sozinho.
+ * - WebSerial: USB straight from Chrome/Edge, nothing to install.
+ * - Bridge: "carvcam-bridge" (bridge/server.mjs) runs on the computer next to the app and opens the
+ *   USB port or the Ethernet connection (TCP, port 23 on the SLB). Works with any browser and with
+ *   Ethernet, which a browser can't open on its own.
  */
 export interface Transport {
   readonly label: string;
@@ -18,7 +18,7 @@ export interface Transport {
 
 /* ---------------- Web Serial ---------------- */
 
-// Tipos mínimos da Web Serial API (não estão no lib.dom do TypeScript).
+// Minimal Web Serial API types (not in TypeScript's lib.dom).
 export interface SerialPortLike {
   open(o: { baudRate: number }): Promise<void>;
   close(): Promise<void>;
@@ -82,12 +82,12 @@ export class WebSerialTransport implements Transport {
     try {
       await this.reader?.cancel();
     } catch {
-      /* já fechado */
+      /* already closed */
     }
     try {
       await this.port.close();
     } catch {
-      /* já fechado */
+      /* already closed */
     }
   }
   onData(cb: (t: string) => void) {
@@ -108,13 +108,13 @@ export interface BridgePort {
   vendorId?: string;
   productId?: string;
   serialNumber?: string;
-  /** Chip USB usado por controladoras de CNC (mesma lista do gSender). */
+  /** USB chip used by CNC controllers (same list as gSender). */
   known?: boolean;
 }
 
 export type BridgeTarget = { kind: "serial"; path: string; baud?: number } | { kind: "tcp"; host: string; port: number };
 
-/** Lista as portas USB pelo bridge; null se o bridge não estiver rodando. */
+/** Lists the USB ports through the bridge; null if the bridge isn't running. */
 export function bridgePorts(timeoutMs = 1200): Promise<BridgePort[] | null> {
   return new Promise((resolve) => {
     let ws: WebSocket;

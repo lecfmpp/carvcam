@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { useWorkshop } from "../state/workshop";
 
 /**
- * Modo Painel: interface para a tela touch do gControl (15,6″, 1920×1080, Windows com escala
- * de 125–150%). Liga sozinho quando o dispositivo principal é touch, ou pela opção em Settings,
- * ou com `?panel=1` na URL.
+ * Panel mode: UI for the gControl touchscreen (15.6″, 1920×1080, Windows at 125–150% scaling).
+ * Turns on by itself when the primary pointer is touch, via the option in Settings, or with
+ * `?panel=1` in the URL.
  */
 export function detectTouchPanel() {
   if (typeof window === "undefined") return false;
@@ -16,7 +16,7 @@ export function isPanelMode(setting = useWorkshop.getState().panel) {
   return setting === "on" || (setting === "auto" && detectTouchPanel());
 }
 
-/** Aplica o modo no documento (`html[data-panel="1"]`) e devolve o estado atual. */
+/** Applies the mode to the document (`html[data-panel="1"]`) and returns the current state. */
 export function usePanelMode() {
   const setting = useWorkshop((s) => s.panel);
   const [on, setOn] = useState(() => isPanelMode(setting));

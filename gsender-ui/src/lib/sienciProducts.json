@@ -1,5 +1,5 @@
 {
-  "_comment": "Produtos Sienci Labs usados nos cards (fichas em src/lib/machineInfo.ts e src/lib/storeBits.ts). 'image' é o arquivo WebP em public/; scripts/fetch-sienci-images.mjs baixa a foto oficial de cada 'url' e salva nesse caminho.",
+  "_comment": "Sienci Labs products used on the cards (spec sheets in src/lib/machineInfo.ts and src/lib/storeBits.ts). 'image' is the WebP file in public/; scripts/fetch-sienci-images.mjs downloads the official photo from each 'url' and saves it to that path.",
   "machines": [
     { "id": "altmill-2x4", "url": "https://sienci.com/product/altmill-2x4/", "image": "machines/altmill-2x4.webp" },
     { "id": "altmill-4x4", "url": "https://sienci.com/product/altmill-mk2-4x4/", "image": "machines/altmill-4x4.webp" },

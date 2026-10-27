@@ -7,9 +7,9 @@ import { BridgeTransport, WebSerialTransport, type SerialPortLike, type Transpor
 import { useMachine, type AlarmCode, type MachineStatus, type Vec3 } from "./store";
 
 /**
- * Máquina de verdade por trás do mesmo estado (useMachine) que as telas já usam. Converte as
- * coordenadas da placa para as do CarvCAM (X/Y de 0 até o tamanho da mesa, home atrás à direita,
- * Z 0 no alto) e traduz o estado do grbl para o do app.
+ * The real machine behind the same state (useMachine) the screens already use. Converts the
+ * controller's coordinates to CarvCAM's (X/Y from 0 to the bed size, home at the back right,
+ * Z 0 at the top) and maps the grbl state to the app's.
  */
 export type ConnTarget =
   | { kind: "webserial"; port: SerialPortLike; label: string }
@@ -17,7 +17,7 @@ export type ConnTarget =
   | { kind: "tcp"; host: string; port: number; label: string };
 
 let ctl: GrblController | null = null;
-/** Coordenadas de máquina negativas (homing no canto de trás à direita, padrão Sienci). */
+/** Negative machine coordinates (homing to the back right corner, the Sienci default). */
 let negSpace = true;
 let jobFinishing = false;
 let lastSeg = 0;
@@ -28,7 +28,7 @@ export const realController = () => ctl;
 const set = (p: Partial<ReturnType<typeof useMachine.getState>>) => useMachine.setState(p);
 const get = () => useMachine.getState();
 
-/** Coordenada da placa → coordenada do CarvCAM. */
+/** Controller coordinate → CarvCAM coordinate. */
 function toUi(p: V3): Vec3 {
   if (p.x > 1 || p.y > 1) negSpace = false;
   const b = get().bed;
@@ -88,7 +88,7 @@ export async function connectReal(target: ConnTarget, onLog?: (dir: "in" | "out"
   }
   ctl = c;
   negSpace = true;
-  // Sem sensores de fim de curso ($22=0) não há home: a posição atual vale.
+  // Without limit switches ($22=0) there is no homing: the current position is taken as valid.
   const homingEnabled = (Number(c.settings["22"] ?? "1") & 1) === 1;
   set({ firmware: `${c.firmware ?? "grbl"} ${c.version}`.trim(), homed: !homingEnabled, homingEnabled, lastError: null, workZero: null, zMeasured: false });
   if (c.last) onStatus(c.last);
@@ -156,7 +156,7 @@ function onStatus(s: StatusReport) {
   set(patch);
 }
 
-/** Linha confirmada → segmento → tempo decorrido e mapa de alturas cortado. */
+/** Acknowledged line → segment → elapsed time and carved heightmap. */
 function onJobLine(line: number) {
   const st = get();
   const job = st.job;
@@ -187,9 +187,9 @@ function stampCarved(from: number, to: number) {
   }
 }
 
-/* ---------------- ações ---------------- */
+/* ---------------- actions ---------------- */
 
-/** Executa e avisa se falhar. Devolve true quando deu certo. */
+/** Runs the action and shows a toast if it fails. Returns true on success. */
 async function guard(p: Promise<unknown>, what: string): Promise<boolean> {
   try {
     await p;
@@ -237,7 +237,7 @@ export async function probeZReal(plate: number) {
   const ok = await guard(ctl.probeZ(plate), "Measuring failed");
   if (!ok) return;
   const s = get();
-  // Zero de Z = ponto de toque − espessura da placa. A posição de toque fica 5 mm abaixo de onde a fresa está agora.
+  // Z zero = touch point − plate thickness. The touch point is 5 mm below where the bit is now.
   const touchZ = s.pos.z - 5;
   set({ workZero: { ...(s.workZero ?? s.pos), z: touchZ - plate }, zMeasured: true });
 }
