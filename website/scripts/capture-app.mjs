@@ -263,18 +263,9 @@ export const SHOTS = [
   },
   {
     name: "workshop",
-    what: "First cuts: Start here track and project cards (Name tags ×6 and Heart inlay coaster moved to the first row)",
+    what: "First cuts: Start here track and project cards (Name tags ×6 and Heart inlay coaster first)",
     run: async (h) => {
       await h.go("workshop", 1000);
-      // Screenshot only: bring the two newest projects to the first row so they're in frame.
-      await h.p.evaluate(() => {
-        const grid = document.querySelector(".ws-projects");
-        const cards = [...grid.querySelectorAll(".ws-proj")];
-        const pick = (t) => cards.find((c) => c.textContent.includes(t));
-        grid.prepend(pick("Coaster with"));
-        grid.prepend(pick("Heart inlay"));
-        grid.prepend(pick("Name tags"));
-      });
       await h.p.waitForFunction(() => document.querySelectorAll(".ws-skel").length === 0, null, { timeout: 60000 }).catch(() => {});
       await h.p.waitForTimeout(1500);
     },
@@ -325,8 +316,12 @@ export const SHOTS = [
   // ---------------- create
   {
     name: "design",
-    what: "Create: the Raised door sign with the simulated cut and the panel",
-    run: (h) => h.make("Raised door sign", 4500),
+    what: "Create: Name tags ×6 (ready to carve, no warnings) with the AVA text selected: font and letter height",
+    run: async (h) => {
+      await h.make("Name tags", 4500);
+      await h.pickRow("AVA");
+      await h.p.waitForTimeout(1500);
+    },
   },
   {
     name: "name-tags",
