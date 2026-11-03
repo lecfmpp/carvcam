@@ -57,3 +57,39 @@
   for = "/assets/js/*"
   [headers.values]
     Cache-Control = "public, max-age=3600, stale-while-revalidate=86400"
+
+# Installer downloads: carvcam.com/download/<platform> always serves the newest release. The files
+# live in the public Supabase Storage bucket "downloads" (uploaded by the Installers workflow on each
+# release tag, desktop/scripts/upload-downloads.mjs). 302 so browsers never cache an old target.
+[[redirects]]
+  from = "/download/windows"
+  to = "https://zveqsvizefgbicwvjvdu.supabase.co/storage/v1/object/public/downloads/latest/CarvCAM-Windows-64Bit.exe"
+  status = 302
+[[redirects]]
+  from = "/download/mac-apple-silicon"
+  to = "https://zveqsvizefgbicwvjvdu.supabase.co/storage/v1/object/public/downloads/latest/CarvCAM-Mac-arm64.dmg"
+  status = 302
+[[redirects]]
+  from = "/download/mac-intel"
+  to = "https://zveqsvizefgbicwvjvdu.supabase.co/storage/v1/object/public/downloads/latest/CarvCAM-Mac-x64.dmg"
+  status = 302
+[[redirects]]
+  from = "/download/linux-appimage"
+  to = "https://zveqsvizefgbicwvjvdu.supabase.co/storage/v1/object/public/downloads/latest/CarvCAM-Linux-x86_64.AppImage"
+  status = 302
+[[redirects]]
+  from = "/download/linux-deb"
+  to = "https://zveqsvizefgbicwvjvdu.supabase.co/storage/v1/object/public/downloads/latest/CarvCAM-Linux-amd64.deb"
+  status = 302
+[[redirects]]
+  from = "/download/raspberry-pi-deb"
+  to = "https://zveqsvizefgbicwvjvdu.supabase.co/storage/v1/object/public/downloads/latest/CarvCAM-Linux-arm64.deb"
+  status = 302
+[[redirects]]
+  from = "/download/raspberry-pi-appimage"
+  to = "https://zveqsvizefgbicwvjvdu.supabase.co/storage/v1/object/public/downloads/latest/CarvCAM-Linux-arm64.AppImage"
+  status = 302
+[[redirects]]
+  from = "/download/raspberry-pi-32bit-deb"
+  to = "https://zveqsvizefgbicwvjvdu.supabase.co/storage/v1/object/public/downloads/latest/CarvCAM-Linux-armv7l.deb"
+  status = 302
