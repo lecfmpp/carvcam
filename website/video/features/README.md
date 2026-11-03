@@ -9,7 +9,7 @@ The last frame returns to the pose of the first, so the loop doesn't jump.
 | Clip | Shows |
 |---|---|
 | design | Name tags: type the name, pick Archivo Black, size it, one name per linked copy |
-| prepare | play the toolpath, 3D, Send to gSender (no post-processor to pick) |
+| prepare | play the toolpath, 3D, then the panel: verified, Download G-code, no post-processor to pick |
 | connect | cable by cable, *Choose the USB port*, then the real tests |
 | carve | checklist, start, live preview, guided bit change, cut-outs, finished piece |
 

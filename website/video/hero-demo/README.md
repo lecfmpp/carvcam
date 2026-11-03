@@ -29,7 +29,7 @@ Playwright on the simulator and saves each state to `assets/shots/*.jpg` (1440×
 box of every button it clicks to `capture/targets.json` and `assets/targets.js`; both compositions (this
 one and `../features/clip.html`) read `assets/targets.js`, so the cursor lands on the right spot after a
 re-capture without editing coordinates by hand. Video-only edits: the simulator fault bar and the text caret
-are hidden, "Send to gSender" talks to a stub, and the wizard's port step shows *Choose the USB port* (the
+are hidden, and the wizard's port step shows *Choose the USB port* (the
 simulator runs underneath).
 
 ```

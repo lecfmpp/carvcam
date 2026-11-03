@@ -89,7 +89,7 @@ const { open } = require("./lib.cjs");
   console.log("design:", await status());
   await bb("continue", btn(/Continue to Prepare/));
 
-  // ===== B: prepare (toolpath, 3D, Send to gSender) =====
+  // ===== B: prepare (toolpath, 3D, no post-processor) =====
   await btn(/Continue to Prepare/).click();
   await p.getByText(/G-code verified/).first().waitFor({ timeout: 60000 });
   await p.waitForTimeout(1200);
@@ -97,8 +97,9 @@ const { open } = require("./lib.cjs");
   await bb("play", btn(/Play toolpath/));
   await bb("btn3d", p.getByRole("button", { name: "3D", exact: true }));
   await bb("contPos", btn(/Continue to Position/));
-  await bb("gsender", btn("Send to gSender"));
   await bb("noPost", p.getByText(/No post-processor to pick/));
+  await bb("checked", p.getByText(/Everything below is checked/));
+  await bb("download", btn(/Download G-code/));
   await bb("pill", btn(/Not connected/));
   await btn(/Play toolpath/).click();
   for (let i = 1; i <= 7; i++) await shot("b1-play" + i, 600);
@@ -106,11 +107,6 @@ const { open } = require("./lib.cjs");
   await shot("b1-playend");
   await p.getByRole("button", { name: "3D", exact: true }).click();
   await shot("b2-3d", 1800);
-  await btn("Send to gSender").click();
-  await shot("b3-sending", 150);
-  await p.getByText(/Loaded as/).waitFor({ timeout: 15000 });
-  await shot("b3-sent", 700);
-  await bb("sentNote", p.getByText(/Loaded as/));
 
   // ===== C: connect (cables, port, real tests) =====
   await btn(/Not connected/).click();
