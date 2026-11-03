@@ -7,7 +7,10 @@
     "build": "node build.mjs",
     "images": "node scripts/images.mjs",
     "capture": "node scripts/capture-app.mjs",
-    "serve": "node scripts/serve.mjs"
+    "serve": "node scripts/serve.mjs",
+    "video:capture": "node video/hero-demo/capture/cap.cjs",
+    "video:hero": "node video/hero-demo/render.mjs",
+    "video:clips": "node video/features/render.mjs"
   },
   "devDependencies": {
     "sharp": "^0.33.5"

@@ -1,110 +1,242 @@
-const { open } = require('./lib.cjs');
+// Captures every frame of the hero video and the home page feature clips from the current app.
+//   node cap.cjs --app <checkout>/app        (starts the app's Vite dev server itself)
+//   node cap.cjs --url http://localhost:5173 (uses an app that is already running)
+// Writes ../assets/shots/*.jpg (1440×900 @2x), targets.json and ../assets/targets.js (button boxes in app CSS px, which the
+// compositions use for the cursor and the clicks). The simulator plays the machine.
+const path = require("path");
+const { open } = require("./lib.cjs");
+
 (async () => {
-  const { browser, page: p, bb, shot, save } = await open();
-  await p.goto('http://localhost:5173/#/create', { waitUntil: 'networkidle' }); await p.waitForTimeout(3000);
-  await shot('a0-blank');
-  await bb('addText', p.getByRole('button', { name: '+ Text' }));
-  await p.getByRole('button', { name: '+ Text' }).click(); await p.waitForTimeout(700);
-  await shot('a1-text');
-  const content = p.locator('.create-inspector .create-input').first();
-  await bb('content', content);
+  const { base, page: p, bb, shot, save, close, T } = await open(path.join(__dirname, "../assets/shots"));
+  const boot = async () => {
+    await p.waitForSelector("#boot", { state: "detached", timeout: 90000 });
+    await p.waitForTimeout(600);
+  };
+  const status = () => p.locator(".create-panel, aside").first().innerText().then((t) => t.split("\n").slice(0, 4).join(" | ")).catch(() => "");
+  const btn = (name) => p.getByRole("button", { name });
+  const prim = () => p.locator(".btn--primary.btn--lg").first();
+  const pill = () => p.locator(".pill").first().innerText().catch(() => "");
+  const setRange = (loc, v) =>
+    loc.evaluate((el, v) => {
+      const s = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set;
+      s.call(el, v);
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+      el.dispatchEvent(new Event("change", { bubbles: true }));
+    }, String(v));
+  // waits for the simulated cut to settle after a change ("Re-checking…" gone)
+  const settle = async (min = 500) => {
+    await p.waitForTimeout(min);
+    for (let i = 0; i < 40; i++) {
+      if (!(await p.getByText(/Re-checking/).count())) break;
+      await p.waitForTimeout(150);
+    }
+    await p.waitForTimeout(250);
+  };
+
+  // ===== A: design (Name tags: type the name, pick the font, size it, one name per copy) =====
+  await p.goto(`${base}/#/create`);
+  await boot();
+  await settle(2500);
+  await shot("a0-start");
+  T.tagText = [205, 345, 110, 40]; // the first tag's text on the canvas
+  await p.mouse.click(260, 365);
+  await settle(700);
+  await shot("a1-select");
+  const content = p.locator(".create-input").first();
+  await bb("content", content);
   await content.click();
-  for (const [k, t] of [['t1','W'],['t2','Wel'],['t3','Welco'],['t4','Welcome']]) { await content.fill(t); await shot('a2-' + k, 1000); }
-  const slider = p.locator('.create-inspector input[type=range]').first();
-  await bb('height', slider);
-  const setR = (v) => slider.evaluate((el, v) => { const s = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set; s.call(el, v); el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); }, v);
-  console.log('range', await slider.evaluate((el) => [el.min, el.max, el.value]));
-  // wait for the cut preview to settle (the new font loads and the "≈N% stays" drops)
-  const settle = async () => { let last = '', same = 0; for (let i = 0; i < 8 && same < 3; i++) { await p.waitForTimeout(350); const v = await p.getByText(/stays/).first().innerText().catch(() => ''); const n = parseInt((v.match(/(\d+)%/) || [])[1] || '0'); if (v === last && n < 10) same++; else same = 0; last = v; } };
-  const font = p.locator('.create-font').nth(2);
-  await bb('fontScript', font);
-  await font.click(); await settle(); await shot('a3-font');
-  for (const [k, v] of [['h1', 25], ['h2', 30], ['h3', 34]]) { await setR(String(v)); await settle(); await shot('a3-' + k); }
-  await p.mouse.click(500, 780); await shot('a4-done', 500);
-  await bb('continue', p.getByRole('button', { name: /Continue to Prepare/ }));
-  console.log(await p.locator('.sidepanel').innerText().then((t) => t.slice(0, 300)));
-  await p.locator('.sidepanel').evaluate(() => 0);
-  console.log(await p.locator('.sidepanel').innerText().then((t) => t.slice(0, 400)));
-  // ===== B: prepare =====
-  await p.getByRole('button', { name: /Continue to Prepare/ }).click(); await p.waitForTimeout(3500);
-  await shot('b0-prepare');
-  await bb('play', p.getByRole('button', { name: /Play toolpath/ }));
-  await bb('detailed', p.locator('button', { hasText: 'Detailed' }));
-  await bb('btn3d', p.getByRole('button', { name: '3D', exact: true }));
-  await bb('contPos', p.getByRole('button', { name: /Continue to Position/ }));
-  await bb('pill', p.locator('.pill--button'));
-  await p.getByRole('button', { name: /Play toolpath/ }).click();
-  for (let i = 1; i <= 6; i++) await shot('b1-play' + i, 450);
-  await p.waitForTimeout(4000); await shot('b1-playend');
-  await p.getByRole('button', { name: '3D', exact: true }).click(); await shot('b2-3d', 1500);
-  // ===== C: connect =====
-  await p.locator('.pill--button').click(); await p.waitForTimeout(800);
-  await shot('c0-wiz');
-  await bb('cables', p.getByRole('button', { name: 'Show me the cables' }));
-  await p.getByRole('button', { name: 'Show me the cables' }).click(); await p.waitForTimeout(500);
-  let i = 0;
-  while (await p.locator('.cw__tick').count()) {
-    await shot('c1-step' + i, 300);
-    const ticks = await p.locator('.cw__tick input').all();
-    for (let j = 0; j < ticks.length; j++) { await bb('tick' + i + '_' + j, p.locator('.cw__tick').nth(j)); await ticks[j].check({ force: true }); await shot('c1-step' + i + '-t' + j, 150); }
-    await bb('next' + i, p.locator('.cw__nav .btn--primary'));
-    await p.locator('.cw__nav .btn--primary').click(); await p.waitForTimeout(450); i++;
+  for (const [k, t] of [["t1", "A"], ["t2", "AV"], ["t3", "AVA"]]) {
+    await content.fill(t);
+    await settle(400);
+    await shot("a2-" + k);
   }
-  await p.waitForTimeout(1500);
-  // video only: the simulator card becomes the detected USB port (the simulator runs underneath)
-  await p.evaluate(() => {
-    const ports = document.querySelector('.cw__ports');
-    [...ports.querySelectorAll('.cw__port:not(.cw__port--sim)')].forEach((e) => e.remove());
-    const sim = ports.querySelector('.cw__port--sim');
-    sim.classList.remove('cw__port--sim');
-    sim.querySelector('.cw__port-name').textContent = 'STM32 (SuperLongBoard)';
-    const sub = sim.querySelector('.cw__port-sub'); sub.textContent = 'USB · COM3'; sub.classList.add('mono');
-    sim.querySelector('svg').outerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="7" r="1"/><circle cx="4" cy="20" r="1"/><path d="M4.7 19.3 19 5"/><path d="m21 3-3 1 2 2Z"/><path d="M9.26 7.68 5 12l2 5"/><path d="m10 14 5 2 3.5-3.5"/><path d="m18 12 1-1 1 1-1 1Z"/></svg>';
-    const dot = document.createElement('span'); dot.className = 'cw__port-dot'; sim.appendChild(dot);
-    sim.id = 'fakeport';
-  });
-  await shot('c2-ports');
-  await bb('port', p.locator('#fakeport'));
-  await p.locator('#fakeport').click(); await shot('c2-pick', 300);
-  await bb('connect', p.locator('.cw__nav .btn--primary'));
-  await p.locator('.cw__nav .btn--primary').click();
-  await shot('c3-connecting', 500);
-  await p.waitForTimeout(2200);
-  await p.evaluate(() => window.__machine.setState({ speedup: 3 }));
-  await shot('c4-verify');
-  await bb('moveUp', p.getByRole('button', { name: /Move up 2 mm/ }));
-  await p.getByRole('button', { name: /Move up 2 mm/ }).click(); await p.waitForTimeout(500);
-  await bb('yes1', p.getByRole('button', { name: 'Yes' }).first());
-  await p.getByRole('button', { name: 'Yes' }).first().click(); await shot('c5-yes1');
-  await bb('spin', p.getByRole('button', { name: /Spin for 3 s/ }));
-  await p.getByRole('button', { name: /Spin for 3 s/ }).click(); await shot('c6-spinning', 700);
+  const font = p.locator("button", { hasText: "Archivo Black" }).first();
+  await bb("fontArchivo", font);
+  await font.click();
+  await settle(900);
+  await shot("a3-font");
+  const slider = p.locator('input[type="range"]').first();
+  await bb("height", slider);
+  console.log("height range", await slider.evaluate((el) => [el.min, el.max, el.value]));
+  for (const [k, v] of [["h1", 9], ["h2", 10]]) {
+    await setRange(slider, v);
+    await settle(600);
+    await shot("a3-" + k);
+  }
+  const copiesBtn = p.locator('button[aria-label="Make copies"]').first();
+  await bb("copies", copiesBtn);
+  await copiesBtn.click();
+  await settle(900);
+  await shot("a4-copies");
+  const ta = p.locator(".copies-pop textarea");
+  await bb("names", ta);
+  await ta.click();
+  const names = ["AVA", "BEN", "CLARA", "DEV", "ELLA", "FINN"];
+  for (let i = 2; i <= names.length; i++) {
+    await ta.fill(names.slice(0, i).join("\n"));
+    await settle(500);
+    await shot("a5-n" + i);
+  }
+  const done = p.locator(".copies-pop").getByRole("button", { name: "Done", exact: true });
+  await bb("copiesDone", done);
+  await done.click();
+  await settle(700);
+  T.blank = [800, 640, 40, 40]; // empty canvas next to the board: clears the selection
+  await p.mouse.click(820, 660);
+  await p.keyboard.press("Escape");
+  await settle(800);
+  await shot("a6-done");
+  console.log("design:", await status());
+  await bb("continue", btn(/Continue to Prepare/));
+
+  // ===== B: prepare (toolpath, 3D, Send to gSender) =====
+  await btn(/Continue to Prepare/).click();
+  await p.getByText(/G-code verified/).first().waitFor({ timeout: 60000 });
+  await p.waitForTimeout(1200);
+  await shot("b0-prepare");
+  await bb("play", btn(/Play toolpath/));
+  await bb("btn3d", p.getByRole("button", { name: "3D", exact: true }));
+  await bb("contPos", btn(/Continue to Position/));
+  await bb("gsender", btn("Send to gSender"));
+  await bb("noPost", p.getByText(/No post-processor to pick/));
+  await bb("pill", btn(/Not connected/));
+  await btn(/Play toolpath/).click();
+  for (let i = 1; i <= 7; i++) await shot("b1-play" + i, 600);
+  await p.waitForTimeout(3500);
+  await shot("b1-playend");
+  await p.getByRole("button", { name: "3D", exact: true }).click();
+  await shot("b2-3d", 1800);
+  await btn("Send to gSender").click();
+  await shot("b3-sending", 150);
+  await p.getByText(/Loaded as/).waitFor({ timeout: 15000 });
+  await shot("b3-sent", 700);
+  await bb("sentNote", p.getByText(/Loaded as/));
+
+  // ===== C: connect (cables, port, real tests) =====
+  await btn(/Not connected/).click();
+  await p.waitForTimeout(800);
+  await shot("c0-wiz");
+  await bb("cables", btn("Show me the cables"));
+  await btn("Show me the cables").click();
+  await p.waitForTimeout(600);
+  let i = 0;
+  while (await p.locator(".cw__tick").count()) {
+    await shot("c1-step" + i, 300);
+    const ticks = await p.locator(".cw__tick input").all();
+    for (let j = 0; j < ticks.length; j++) {
+      await bb("tick" + i + "_" + j, p.locator(".cw__tick").nth(j));
+      await ticks[j].check({ force: true });
+      await shot("c1-step" + i + "-t" + j, 150);
+    }
+    await bb("next" + i, p.locator(".cw__nav .btn--primary"));
+    await p.locator(".cw__nav .btn--primary").click();
+    await p.waitForTimeout(500);
+    i++;
+  }
+  T.steps = i;
+  await p.waitForTimeout(1200);
+  // "Choose the USB port" is picked by default: that is what the video shows. The simulator runs underneath.
+  await shot("c2-ports");
+  await bb("connect", p.locator(".cw__nav .btn--primary"));
+  await p.getByText("Simulator", { exact: true }).click();
+  await p.locator(".cw__nav .btn--primary").click();
+  await p.waitForTimeout(2600);
+  await p.evaluate(() => window.__machine?.setState({ speedup: 3 }));
+  await shot("c4-verify");
+  await bb("moveUp", btn(/Move up 2 mm/));
+  await btn(/Move up 2 mm/).click();
+  await p.waitForTimeout(600);
+  await bb("yes1", btn("Yes").first());
+  await btn("Yes").first().click();
+  await shot("c5-yes1");
+  await bb("spin", btn(/Spin for 3 s/));
+  await btn(/Spin for 3 s/).click();
+  await shot("c6-spinning", 700);
   await p.waitForTimeout(3000);
-  await bb('yes2', p.getByRole('button', { name: 'Yes' }).nth(1));
-  await p.getByRole('button', { name: 'Yes' }).nth(1).click(); await shot('c7-ok');
-  await bb('allgood', p.getByRole('button', { name: /All good/ }));
-  await p.getByRole('button', { name: /All good/ }).click(); await p.waitForTimeout(900);
-  await shot('c8-connected');
-  // ===== D: position + carve =====
-  await p.goto('http://localhost:5173/#/position'); await p.waitForTimeout(1800);
-  await shot('d0-home');
-  const prim = () => p.locator('.sidepanel .btn--primary.btn--lg').first();
-  await bb('prim', prim());
-  await prim().click(); await shot('d1-homing', 700); await p.waitForTimeout(1500); await shot('d1-homed');
-  await prim().click(); await p.waitForTimeout(800); await shot('d2-plate');
-  await bb('touch', p.locator('button', { hasText: 'Use touch plate' }));
-  await p.locator('button', { hasText: 'Use touch plate' }).first().click(); await shot('d3-touch', 400);
-  await prim().click(); await shot('d4-probing', 600); await p.waitForTimeout(1500); await shot('d4-probed');
-  await prim().click(); await p.waitForTimeout(600); await shot('d5-zero');
-  await prim().click(); await p.waitForTimeout(1400); await shot('d6-check');
-  for (const label of ["It's in", "It's on"]) { const x = p.locator('button', { hasText: label }); if (await x.count()) { await bb('chk' + label.slice(5), x); await x.first().click(); await shot('d6-check-' + label.slice(5), 300); } }
-  await bb('start', prim());
-  await prim().click();
+  await bb("yes2", btn("Yes").nth(1));
+  await btn("Yes").nth(1).click();
+  await shot("c7-ok");
+  await bb("allgood", btn(/All good/));
+  await btn(/All good/).click();
+  await p.waitForTimeout(900);
+  await shot("c8-connected");
+  await bb("pillReady", p.locator(".pill").first());
+
+  // ===== D: position =====
+  await p.evaluate(() => (location.hash = "#/position"));
+  await p.waitForTimeout(2000);
+  await shot("d0-home");
+  await bb("prim", prim());
+  await prim().click(); // Find home
+  await shot("d1-homing", 700);
+  await p.waitForTimeout(1800);
+  await shot("d1-homed");
+  await bb("prim2", prim());
+  await prim().click(); // board clamped
+  await p.waitForTimeout(900);
+  await btn("Use plate").first().evaluate((e) => e.scrollIntoView({ block: "center" }));
+  await shot("d2-plate", 600);
+  await bb("touch", btn("Use plate").first());
+  await btn("Use plate").first().click();
+  await shot("d3-touch", 500);
+  await bb("measure", prim());
+  await prim().click(); // Measure height
+  await shot("d4-probing", 700);
+  await p.waitForTimeout(1800);
+  await shot("d4-probed");
+  await bb("setZero", prim());
+  await prim().click(); // Set zero here
+  await p.waitForTimeout(800);
+  await shot("d5-zero");
+  await bb("toCarve", prim());
+  await prim().click(); // Continue to Carve
+  await p.waitForTimeout(1800);
+  await shot("d6-check");
+  await bb("chkin", btn("It's in"));
+  await btn("It's in").click();
+  await shot("d6-check-in", 400);
+
+  // ===== E: carve (V-bit, guided bit change, cut-outs, done) =====
+  await bb("start", prim());
+  await prim().click(); // Start carving
   await p.waitForTimeout(300);
-  await p.evaluate(() => window.__machine.setState({ speedup: 7 }));
-  for (let k = 1; k <= 30; k++) { await shot('e-run' + String(k).padStart(2, '0'), 450); if (/Done/.test(await p.locator('.pill').first().innerText())) break; }
-  await p.evaluate(() => window.__machine.setState({ speedup: 200 }));
-  for (let k = 0; k < 60; k++) { if (/Done|Change bit/.test(await p.locator('.pill').first().innerText())) break; await p.waitForTimeout(1000); }
-  await shot('e-done', 1200);
-  await bb('btn3dDone', p.getByRole('button', { name: '3D', exact: true }));
-  save(); await browser.close();
-})().catch((e) => { console.error("ERR", e.message); process.exit(1); });
+  await p.evaluate(() => window.__machine?.setState({ speedup: 45 }));
+  let k = 1;
+  for (; k <= 24; k++) {
+    await shot("e-run" + String(k).padStart(2, "0"), 380);
+    if (/Change|Done/.test(await pill())) break;
+  }
+  T.runFrames = k;
+  await p.evaluate(() => window.__machine?.setState({ speedup: 200 }));
+  for (let w = 0; w < 120 && !/Change|Done/.test(await pill()); w++) await p.waitForTimeout(500);
+  await p.waitForTimeout(1500);
+  await shot("e-change");
+  await bb("swapped", prim());
+  await prim().click(); // Bit is swapped
+  await shot("e-change1", 900);
+  await bb("measure2", prim());
+  await prim().click(); // Measure height
+  await p.waitForTimeout(2500);
+  await shot("e-change2");
+  await bb("continue2", prim());
+  await p.evaluate(() => window.__machine?.setState({ speedup: 12 }));
+  await prim().click(); // Done, continue
+  let m = 1;
+  for (; m <= 12; m++) {
+    await shot("e-cut" + String(m).padStart(2, "0"), 450);
+    if (/Done/.test(await pill())) break;
+  }
+  T.cutFrames = m;
+  await p.evaluate(() => window.__machine?.setState({ speedup: 200 }));
+  for (let w = 0; w < 120 && !/Done/.test(await pill()); w++) await p.waitForTimeout(500);
+  await shot("e-done", 2500);
+  await bb("doneCard", p.locator("aside, .sidepanel").first());
+  save(path.join(__dirname, "targets.json"));
+  // the compositions (../index.html, ../../features/clip.html) load the same boxes from here
+  require("fs").writeFileSync(path.join(__dirname, "../assets/targets.js"), "// written by capture/cap.cjs: button boxes [x, y, w, h] in app CSS px (1440x900)\nwindow.TARGETS = " + JSON.stringify(T) + ";\n");
+  console.log(JSON.stringify(T));
+  await close();
+})().catch((e) => {
+  console.error("ERR", e.message);
+  process.exit(1);
+});

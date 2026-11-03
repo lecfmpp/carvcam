@@ -33,8 +33,9 @@ kit by default; AltMill or MK2 for some wiring steps), drives the app with Playw
 PNGs to `.capture/`; `--convert` turns them into the WebP pairs. One table (`SHOTS`) lists every
 shot: name, what it shows and the steps. `--list` prints it, `--only a,b` re-shoots a few.
 
-The home page clips and the hero video (`video/`) are built from their own captured frames
-(`video/hero-demo/capture`) and are not updated by this script.
+The hero video and the home page clips (`video/`) are built from their own captured frames:
+`npm run video:capture -- --app <checkout>/app`, then `npm run video:hero` and `npm run video:clips`
+(see `video/hero-demo/README.md` and `video/features/README.md`).
 
 ## Accounts
 `/signup/`, `/login/`, `/reset-password/`, `/onboarding/` and `/account/` are built by

@@ -199,7 +199,7 @@ function home() {
 <h1>From blank board to finished sign. <span class="mark">One app.</span></h1>
 <p class="lede">You bought a CNC to make things, not to learn four programs. CarvCAM designs the sign, works out every feed and speed for your machine, walks you through the cables and carves it. All in one window.</p>
 ${downloadCta()}
-<div class="shot shot--video"><video autoplay muted loop playsinline preload="auto" width="1280" height="800" poster="${asset("/assets/video/hero-demo-poster.webp")}" aria-label="CarvCAM in use: typing a sign, planning the cuts, connecting a LongMill and carving it"><source src="${asset("/assets/video/hero-demo.mp4")}" type="video/mp4"></video></div>
+<div class="shot shot--video"><video autoplay muted loop playsinline preload="auto" width="1280" height="800" poster="${asset("/assets/video/hero-demo-poster.webp")}" aria-label="CarvCAM in use: typing names on six tags, planning the cuts, connecting a LongMill and carving them"><source src="${asset("/assets/video/hero-demo.mp4")}" type="video/mp4"></video></div>
 <script>if (matchMedia("(prefers-reduced-motion: reduce)").matches) document.querySelectorAll(".shot--video video").forEach((v) => { v.removeAttribute("autoplay"); v.pause(); v.controls = true; });</script>
 </div></section>
 

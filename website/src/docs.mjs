@@ -147,7 +147,7 @@ export const docs = {
     description: "Design a sign in CarvCAM: tools on the left, the board in the middle with rulers and snapping, the panel on the right, and live warnings when a detail is too fine for your bit.",
     lead: "Create is where you design. The preview shows the wood already carved, and CarvCAM warns you right away if something won't come out well.",
     blocks: [
-      ["clip", "design", "Add text, pick a font and size it."],
+      ["clip", "design", "Type a name, pick a font, size it, then one name per copy."],
       ["h2", "The layout"],
       ["table", ["Area", "What's there"], [["Left", "Tools: select, text, rectangle, circle, polygon, star, line, curve (pen) and **Import SVG file**"], ["Middle", "The board, drawn as carved wood, with rulers and a legend that says what each color means. Drag items to move them"], ["Right", "The design name, its status, then four sections: **Wood & bit**, **Shape**, **Upload design** and **Elements**"], ["Bottom", "Zoom, and the **Watch how** video for the step"]]],
       ["h2", "Make a sign in four steps"],
@@ -354,7 +354,7 @@ export const docs = {
     description: "The pre-carve checklist, what you can do during the carve (pause, stop, speed overrides) and how to finish the piece.",
     lead: "Before you start, a checklist has to turn green: size, zero, bit, speed and hold-down. Then you watch.",
     blocks: [
-      ["clip", "carve", "Start, watch the live preview, and the finished piece."],
+      ["clip", "carve", "Start, watch the live preview, change the bit when asked, and the finished piece."],
       ["steps", [["Check the list", "Fix anything marked. For the bit, confirm with **It's in** once it's installed.", "carve-checklist"], ["Start", "Glasses on, then **Start carving**.", null], ["Watch", "The preview carves on screen together with the machine. The panel shows progress, time left and the current operation.", "carving"]]],
       ["h2", "During the carve"],
       ["table", ["You want to", "Do this"], [["Pause", "Press the space bar or **Pause**. **Resume** continues from the same point"], ["Stop", "Press Esc or **Stop**. Everything stops safely and the position is kept"], ["Go faster or slower", "Move **Feed speed** or **Bit rotation**, from 50% to 150%"]]],
