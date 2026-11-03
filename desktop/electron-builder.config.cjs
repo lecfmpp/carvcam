@@ -78,6 +78,6 @@ module.exports = {
     shortcutName: "CarvCAM",
     include: "build/installer.nsh",
   },
-  // Installers live in a separate public repository; this source repository is private.
-  publish: [{ provider: "github", owner: "lecfmpp", repo: "carvcam-releases", releaseType: "release" }],
+  // Releases of this (public) repository: the in-app updater reads latest*.yml from them.
+  publish: [{ provider: "github", owner: "lecfmpp", repo: "carvcam", releaseType: "release" }],
 };
