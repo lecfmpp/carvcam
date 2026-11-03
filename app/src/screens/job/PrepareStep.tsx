@@ -4,6 +4,7 @@ import { templateFields } from "@carvcam/cam-engine";
 import { ProBadge } from "../../account/ProGate";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { SendToGsender } from "../../components/SendToGsender";
 import { AccItem, Seg, SidePanel, Stepper } from "../../components/ui";
 import { engineKey, engineOptions, runEngine, tabCount } from "../../engine/useEngine";
 import { BITS, bitById, machineName, materialById, PRESET_LABEL, type Preset } from "../../lib/catalog";
@@ -90,24 +91,32 @@ export function PrepareStep({ ctx }: { ctx: JobCtx }) {
     return () => cancelAnimationFrame(raf);
   }, [playing]);
 
-  // Second bit: the finer one engraves the details, the other does the rest.
+  // Second bit: the finer one engraves the details, the other does the rest. With a V-bit, the
+  // V-bit always carves the detail and a flat bit cuts out (and clears flat areas).
   const second = useMemo(() => {
     const main = bitById(design.bit);
     if (!main) return null;
+    const b2 = design.bit2 ? bitById(design.bit2) : undefined;
+    const v = main.profile === "v" ? main : b2?.profile === "v" ? b2 : undefined;
+    if (v) {
+      const flat = b2 && b2 !== v ? b2 : main !== v ? main : BITS.filter((b) => ownBits.includes(b.id) && b.profile === "flat" && !b.notForSigns).sort((a, b) => Math.abs(a.d - 3.175) - Math.abs(b.d - 3.175))[0];
+      return flat ? { fine: v, coarse: flat, vbit: true } : null;
+    }
     const hasDetail = [...(design.spec.texts ?? []), ...(design.spec.icons ?? []), ...(design.spec.shapes ?? [])].some((e) => (e.mode ?? "relief") !== "cutout");
     if (design.bit2 && bitById(design.bit2)) {
       const b2 = bitById(design.bit2)!;
       const [fine, coarse] = main.d <= b2.d ? [main, b2] : [b2, main];
-      return { fine, coarse };
+      return { fine, coarse, vbit: false };
     }
     if (!hasDetail) return null;
     const fine = BITS.filter((b) => ownBits.includes(b.id) && b.profile === "flat" && !b.notForSigns && b.d < main.d - 0.1).sort((a, b) => a.d - b.d)[0];
-    return fine ? { fine, coarse: main } : null;
+    return fine ? { fine, coarse: main, vbit: false } : null;
   }, [design, ownBits]);
 
   const toggleSecond = () => {
     if (!second) return;
-    if (design.useBit2) patch({ bit: second.coarse.id, bit2: second.fine.id, useBit2: false });
+    if (second.vbit) patch({ bit: second.fine.id, bit2: second.coarse.id, useBit2: !design.useBit2 });
+    else if (design.useBit2) patch({ bit: second.coarse.id, bit2: second.fine.id, useBit2: false });
     else patch({ bit: second.fine.id, bit2: second.coarse.id, useBit2: true });
   };
 
@@ -219,10 +228,12 @@ export function PrepareStep({ ctx }: { ctx: JobCtx }) {
             <button className="btn btn--primary btn--lg" disabled={!verified} onClick={() => nav("/position")}>
               Continue to Position →
             </button>
+            <SendToGsender name={design.name} gcode={result?.gcode} disabled={!verified} />
             <button className="btn btn--outline" disabled={!verified || !result?.gcode} onClick={() => result && downloadGcode(design.name, result.gcode)}>
               <Download size={16} strokeWidth={1.75} />
               Download G-code (.nc)
             </button>
+            <div className="sidepanel__hint">No post-processor to pick: the G-code is written for your {machine.controller} and checked line by line.</div>
           </>
         }
       >
@@ -329,15 +340,18 @@ export function PrepareStep({ ctx }: { ctx: JobCtx }) {
         ) : null}
 
         {second ? (
-          <AccItem n={ctx.hasProfile ? 3 : 2} title="Second bit" summary={design.useBit2 ? `${second.fine.name} for the detail` : "Off · one bit for everything"} open={sec === "second"} onToggle={() => toggle("second")}>
+          <AccItem n={ctx.hasProfile ? 3 : 2} title="Second bit" summary={design.useBit2 ? (second.vbit ? `${second.coarse.name} for the cut-outs` : `${second.fine.name} for the detail`) : "Off · one bit for everything"} open={sec === "second"} onToggle={() => toggle("second")}>
           <section className="job-sec">
             <label className="job-check">
               <input type="checkbox" checked={design.useBit2} onChange={toggleSecond} />
               <span>
-                <span className="job-check__title">Use the {second.fine.name} for the fine detail</span>
+                <span className="job-check__title">{second.vbit ? `Use the ${second.coarse.name} for cut-outs and flat areas` : `Use the ${second.fine.name} for the fine detail`}</span>
                 <span className="job-check__sub">
-                  Engraves the details with {second.fine.inch} flat, cuts the rest with {second.coarse.name}. Adds one bit change.
+                  {second.vbit
+                    ? `The ${second.fine.name} carves the V-work; the ${second.coarse.inch} flat bit cuts out, drills and clears flat bottoms. Adds one bit change.`
+                    : `Engraves the details with ${second.fine.inch} flat, cuts the rest with ${second.coarse.name}. Adds one bit change.`}
                 </span>
+
               </span>
             </label>
           </section>
@@ -353,7 +367,7 @@ export function PrepareStep({ ctx }: { ctx: JobCtx }) {
             </div>
             {result ? (
               verified ? (
-                <span className="job-verified">
+                <span className="job-verified" title="Every line checked against your machine's travel, bits, feeds and controller. No post-processor needed.">
                   <Check size={13} strokeWidth={2.2} />
                   G-code verified
                 </span>

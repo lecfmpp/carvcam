@@ -27,7 +27,7 @@ export function legendRows(input: { result: GenerateResult | null; thickness: nu
     rows.push({ key: "lowered", label: hi - lo < 0.05 ? `Carved down ${fmt(hi)} mm` : `Carved down ${fmt(lo)}–${fmt(hi)} mm` });
   }
 
-  const through = !!L.profile || L.cutouts.length > 0 || L.holes.length > 0 || L.engraved.some((g) => g.depth >= T);
+  const through = !!L.profile || L.cutouts.length > 0 || (L.parts?.length ?? 0) > 0 || L.holes.length > 0 || L.engraved.some((g) => g.depth >= T);
   if (through) rows.push({ key: "through", label: "Cut all the way through" });
 
   if (L.profile && input.tabs > 0) rows.push({ key: "tabs", label: input.tabs === 1 ? "1 tab keeps the piece attached" : `${input.tabs} tabs keep the piece attached` });

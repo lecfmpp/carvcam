@@ -1,5 +1,5 @@
 import type { PlateSpecInput } from "@carvcam/cam-engine";
-import { AlertCircle, AlertTriangle, ArrowRight, CheckCircle2, ChevronDown, ChevronRight, ChevronUp, Circle, Copy, FileUp, Heart, Hexagon, ImagePlus, Layers, Move, Wand2, Minus, MoveVertical, PenTool, Shapes, Square, Star, Trash2, Type, XCircle } from "lucide-react";
+import { AlertCircle, AlertTriangle, ArrowRight, CheckCircle2, ChevronDown, ChevronRight, ChevronUp, Circle, Copy, FileUp, Grid3x3, Heart, Hexagon, ImagePlus, Layers, Move, Wand2, Minus, MoveVertical, PenTool, Shapes, Square, Star, Trash2, Type, XCircle } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { AccItem, Seg, Stepper, useSheet } from "../../components/ui";
@@ -15,9 +15,12 @@ import { TraceDialog } from "./traceDialog";
 import { ProjectActions } from "./ProjectActions";
 import { addLibraryElement, LibraryDialog } from "./libraryDialog";
 import { tracingFromFile, useTracingUi } from "./tracing";
+import { InlayCard } from "./inlayWizard";
 import type { TracingImage } from "../../state/design";
 
-type Mode = "relief" | "engrave" | "cutout";
+type Mode = "relief" | "engrave" | "cutout" | "part";
+/** Modes that go all the way through the board (no depth to choose). */
+const through = (m?: string) => m === "cutout" || m === "part";
 
 interface Props {
   issues: UiIssue[];
@@ -32,6 +35,8 @@ interface Props {
   setFocusKey(k: string | null): void;
   onDuplicate(id: ElementId): void;
   onDelete(id: ElementId): void;
+  onCopies(id: ElementId): void;
+  onInlay(id: ElementId): void;
 }
 
 /** Panel on the right of the Create screen: material, bit, issues, shape and elements. */
@@ -95,6 +100,7 @@ export function CreatePanel(p: Props) {
       </div>
 
       <div className="sidepanel__body create-panel__body">
+        {spec.inlay ? <InlayCard /> : null}
         <AccItem n={1} title="Wood & bit" summary={`${material.id} · ${spec.thickness} mm · ${bit?.name ?? "pick a bit"}`} open={sec === "wood"} onToggle={() => toggle("wood")}>
           <Chips material={material.id} thickness={spec.thickness} bitId={design.bit} onMaterial={(id) => setMaterial(id)} onThickness={(t) => setMaterial(material.id, t)} onBit={(id) => patch({ bit: id })} />
         </AccItem>
@@ -120,9 +126,19 @@ export function CreatePanel(p: Props) {
                   {open ? (
                     <span className="create-row__tools" onClick={(e) => e.stopPropagation()}>
                       {r.kind !== "holes" ? (
-                        <button aria-label="Duplicate" title="Duplicate (Ctrl+D)" onClick={() => p.onDuplicate(r.id)}>
-                          <Copy size={14} />
-                        </button>
+                        <>
+                          <button aria-label="Duplicate" title="Duplicate (Ctrl+D)" onClick={() => p.onDuplicate(r.id)}>
+                            <Copy size={14} />
+                          </button>
+                          <button aria-label="Make copies" title="Make copies (grid)" onClick={() => p.onCopies(r.id)}>
+                            <Grid3x3 size={14} />
+                          </button>
+                          {sign ? (
+                            <button aria-label="Guided inlay" title="Guided inlay (Pro)" onClick={() => p.onInlay(r.id)}>
+                              <Layers size={14} />
+                            </button>
+                          ) : null}
+                        </>
                       ) : null}
                       <button aria-label="Delete" title="Delete (Del)" onClick={() => p.onDelete(r.id)}>
                         <Trash2 size={14} />
@@ -273,7 +289,7 @@ function ShapeSection({ n, open, onToggle, spec, patchSpec }: { n: number; open:
                 set((s) => ({
                   ...s,
                   type: t,
-                  texts: s.texts?.map((x) => ({ ...x, mode: t === "lettering" ? "cutout" : x.mode === "cutout" ? "relief" : x.mode })),
+                  texts: s.texts?.map((x) => ({ ...x, mode: t === "lettering" ? "cutout" : through(x.mode) ? "relief" : x.mode })),
                 }))
               }
               options={[
@@ -474,11 +490,15 @@ function DepthSlider({ mode, value, min, max, onChange }: { mode: Mode; value: n
 
 function ModeSeg({ value, sign, onChange, allowThrough = true }: { value: Mode; sign: boolean; onChange(m: Mode): void; allowThrough?: boolean }) {
   if (!sign) return <div className="tiny muted">Cut-out lettering: every element is cut all the way through.</div>;
-  const opts: [Mode, string][] = [
+  const opts: [Mode, ReactNode][] = [
     ["relief", "Raised"],
     ["engrave", "Engraved"],
   ];
-  if (allowThrough) opts.push(["cutout", "Cut through"]);
+  if (allowThrough)
+    opts.push(
+      ["cutout", <span title="Cuts a hole along the inside (stencil)">Cut through</span>],
+      ["part", <span title="Cuts it out along the outside, with holding tabs, as a loose part">Part</span>],
+    );
   return (
     <Field label="Style">
       <Seg<Mode> label="Style" value={value} onChange={onChange} options={opts} />
@@ -657,7 +677,7 @@ function InspectorBody({ id, spec, patchSpec, sign }: { id: ElementId; spec: Pla
         <Slider label="Letter height" value={t.size} min={8} max={70} step={1} onChange={(v) => setT({ size: v })} />
         <Slider label="Curve" unit="%" value={bendOf(t)} min={-100} max={100} step={5} onChange={(v) => setT({ arc: arcFromBend(t, v) })} />
         <ModeSeg value={t.mode ?? "relief"} sign={sign} onChange={(m) => setT({ mode: m })} />
-        {sign && (t.mode ?? "relief") !== "cutout" ? <DepthSlider mode={t.mode ?? "relief"} value={t.depth ?? 3} min={1} max={12} onChange={(v) => setT({ depth: v })} /> : null}
+        {sign && !through(t.mode ?? "relief") ? <DepthSlider mode={t.mode ?? "relief"} value={t.depth ?? 3} min={1} max={12} onChange={(v) => setT({ depth: v })} /> : null}
         <Field label="Position">
           <Seg<"auto" | "drag">
             label="Position"
@@ -711,7 +731,7 @@ function InspectorBody({ id, spec, patchSpec, sign }: { id: ElementId; spec: Pla
               <Seg<"closed" | "open">
                 label="Shape"
                 value={f.closed ?? true ? "closed" : "open"}
-                onChange={(v) => setF({ closed: v === "closed", ...(v === "open" && f.mode === "cutout" ? { mode: "engrave" } : {}) })}
+                onChange={(v) => setF({ closed: v === "closed", ...(v === "open" && through(f.mode) ? { mode: "engrave" } : {}) })}
                 options={[
                   ["closed", "Closed shape"],
                   ["open", "Open line"],
@@ -755,7 +775,7 @@ function InspectorBody({ id, spec, patchSpec, sign }: { id: ElementId; spec: Pla
           </div>
         )}
         <ModeSeg value={f.mode ?? "engrave"} sign={sign} onChange={(m) => setF({ mode: m })} allowThrough={f.type !== "line" && !(f.type === "curve" && f.closed === false)} />
-        {sign && (f.mode ?? "engrave") !== "cutout" ? <DepthSlider mode={f.mode ?? "engrave"} value={f.depth ?? 2} min={0.5} max={8} onChange={(v) => setF({ depth: v })} /> : null}
+        {sign && !through(f.mode ?? "engrave") ? <DepthSlider mode={f.mode ?? "engrave"} value={f.depth ?? 2} min={0.5} max={8} onChange={(v) => setF({ depth: v })} /> : null}
       </div>
     );
   }
@@ -784,7 +804,8 @@ function InspectorBody({ id, spec, patchSpec, sign }: { id: ElementId; spec: Pla
           <Stepper label="Width" value={v.width} step={2} min={5} max={1000} unit="mm" onChange={(w) => setV({ width: w })} />
         </Field>
         <ModeSeg value={v.mode ?? "engrave"} sign={sign} onChange={(m) => setV({ mode: m })} />
-        {sign && (v.mode ?? "engrave") !== "cutout" ? <DepthSlider mode={v.mode ?? "engrave"} value={v.depth ?? 2} min={0.5} max={8} onChange={(d) => setV({ depth: d })} /> : null}
+        {sign && !through(v.mode ?? "engrave") ? <DepthSlider
+ mode={v.mode ?? "engrave"} value={v.depth ?? 2} min={0.5} max={8} onChange={(d) => setV({ depth: d })} /> : null}
         <div className="tiny muted">Filled areas are carved; lines without fill are carved as wide as their stroke. Text must be converted to outlines before export.</div>
       </div>
     );

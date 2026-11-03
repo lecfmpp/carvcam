@@ -21,3 +21,5 @@ export { migrateLegacySpec, migrateLegacyBitId, migrateLegacyProjectId, LEGACY_B
 export { type KeepOutZone, DEFAULT_KEEP_OUT_CLEARANCE, KEEP_OUT_MARGIN } from "./keepout.js";
 export { parseCsv, templateFields, fillTemplate, generateBatch, slug, type BatchItem, type BatchResult } from "./batch.js";
 export { estimateCost, type CostInputs, type CostBreakdown } from "./cost.js";
+export { buildInlay, inlayNumbers, type InlayParams, type ElementBox, type BuiltInlay, type InlayNumbers } from "./cam/inlay.js";
+export * as copiesGrid from "./cam/copies.js";

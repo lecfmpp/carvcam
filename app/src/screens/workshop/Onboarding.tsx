@@ -6,7 +6,7 @@ import { HeadCard } from "../../components/HeadCard";
 import { MachineCard } from "../../components/MachineCard";
 import { TopBar } from "../../components/TopBar";
 import { MACHINE_GROUPS } from "../../lib/machineInfo";
-import { BITS, HEADS, INTENTS, KIT, MACHINES, machineById, type HeadId, type Intent, type MachineId } from "../../lib/catalog";
+import { BIT_KITS, BITS, HEADS, INTENTS, KIT, kitBitIds, kitsForFamily, MACHINES, machineById, type HeadId, type Intent, type MachineId } from "../../lib/catalog";
 import { toast } from "../../state/ui";
 import { useWorkshop } from "../../state/workshop";
 import { BitCardBody, cm, Dial } from "./parts";
@@ -69,7 +69,9 @@ export default function Onboarding() {
   const next = () => (view === "bits" ? finish() : setView(STEPS[obi + 1][0]));
   const footHint = view === "machine" ? (M ? `${M.family} ${M.size} · ${cm(M.area)}` : "Pick your machine to continue") : view === "head" ? (H?.name ?? "") : `${bits.length} bits selected`;
   const toggleBit = (id: string) => setBits((b) => (b.includes(id) ? b.filter((x) => x !== id) : [...b, id]));
-  const filtered = BITS.filter((b) => !intent || b.uses.includes(intent));
+  // Bits CarvCAM plans toolpaths with, plus anything in a Sienci set for this machine or already marked.
+  const familyBits = new Set(M ? kitsForFamily(M.family).flatMap((k) => kitBitIds(k.id)) : []);
+  const filtered = BITS.filter((b) => (b.carvcam || familyBits.has(b.id) || bits.includes(b.id)) && (!intent || b.uses.includes(intent)));
 
   return (
     <div className="app app--plain">
@@ -162,15 +164,27 @@ export default function Onboarding() {
               <h1 className="ws-title">Which bits do you have?</h1>
               <p className="ws-lead">When you design, we only offer the bits you have and that fit your {H?.name}. You can change this any time in My bits.</p>
             </div>
-            <button className="ws-card ws-kit" aria-pressed={kitOn} onClick={() => setBits(kitOn ? bits.filter((b) => !KIT.includes(b)) : [...new Set([...bits, ...KIT])])}>
-              <span className={`ws-check ${kitOn ? "is-on" : ""}`} style={{ width: 28, height: 28, borderRadius: 8, fontSize: 15 }}>
-                {kitOn ? "✓" : ""}
-              </span>
-              <span style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2, textAlign: "left" }}>
-                <span style={{ font: "600 16px var(--font)" }}>I have the Starter End Mill Set (Beginner's Kit)</span>
-                <span className="small muted">Marks the {KIT.length} bits in the kit at once</span>
-              </span>
-            </button>
+            <div className="ws-kits">
+              {(M ? kitsForFamily(M.family) : BIT_KITS.filter((k) => k.id === "starter-end-mill-set")).map((k) => {
+                const ids = kitBitIds(k.id);
+                const on = ids.every((id) => bits.includes(id));
+                const beginner = k.id === "starter-end-mill-set";
+                return (
+                  <button key={k.id} className="ws-card ws-kit" aria-pressed={on} onClick={() => setBits(on ? bits.filter((b) => !ids.includes(b)) : [...new Set([...bits, ...ids])])}>
+                    <span className={`ws-check ${on ? "is-on" : ""}`} style={{ width: 28, height: 28, borderRadius: 8, fontSize: 15 }}>
+                      {on ? "✓" : ""}
+                    </span>
+                    <span style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2, textAlign: "left" }}>
+                      <span style={{ font: "600 16px var(--font)" }}>
+                        I have the {k.name}
+                        {beginner ? " (Beginner's Kit)" : ""}
+                      </span>
+                      <span className="small muted">Marks the {ids.length} bits in the set at once</span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
               <IntentChips value={intent} onChange={setIntent} />
               <span style={{ font: "500 13px var(--font)", color: "var(--text-2)" }}>{bits.length} selected</span>

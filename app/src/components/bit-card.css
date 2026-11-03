@@ -1,0 +1,13 @@
+/* Bit card: Sienci sets and the feeds badge (official vs estimated). Uses the light colors from machine-card.css. */
+.bcard__kits { margin: 2px 0 0; font: 400 12.5px/1.4 var(--font); color: var(--pc-ink-3); text-wrap: pretty; }
+.bcard__kits a { color: var(--pc-ink-2); text-decoration: underline; text-decoration-color: var(--pc-line); text-underline-offset: 2px; }
+.bcard__kits a:hover { color: var(--pc-accent); }
+
+.bcard__feeds { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; padding-top: 10px; border-top: 1px solid var(--pc-line); }
+.bcard__feedsbadge { align-self: flex-start; min-height: 22px; display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px; font: 600 11px var(--font); letter-spacing: 0.02em; }
+.bcard__feedsbadge--official { background: var(--pc-ok-bg); color: var(--pc-ok); }
+.bcard__feedsbadge--estimated { background: #e9eefb; color: #2f4c8f; }
+.bcard__feedsbadge--not-recommended,
+.bcard__feedsbadge--no-fit { background: var(--pc-old-bg); color: var(--pc-old); }
+.bcard__feedsnums { font: 500 12.5px var(--mono); font-variant-numeric: tabular-nums; color: var(--pc-ink); overflow-wrap: anywhere; }
+.bcard__feedswhy { font: 400 12px/1.4 var(--font); color: var(--pc-ink-3); text-wrap: pretty; }

@@ -12,7 +12,8 @@
     "test": "vitest run",
     "local": "vite build && node scripts/local.mjs",
     "images:fetch": "node scripts/fetch-sienci-images.mjs",
-    "bridge": "node bridge/server.mjs"
+    "bridge": "node bridge/server.mjs",
+    "eval:assistant": "vite-node src/assistant/evals/run.ts --"
   },
   "license": "UNLICENSED",
   "dependencies": {

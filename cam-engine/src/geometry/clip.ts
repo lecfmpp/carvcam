@@ -117,3 +117,13 @@ export function unreachable(r: Region, toolRadius: number): Region {
   // Small allowance so the polygonal approximation of arcs is not flagged.
   return offset(offset(difference(r, reach), -0.02), 0.02);
 }
+
+/** Mirrors left to right around the line x = ax (reverses the point order to keep the orientation). */
+export function mirrorX(r: Region, ax: number): Region {
+  return r.map((p) => p.map((q) => ({ x: 2 * ax - q.x, y: q.y })).reverse());
+}
+
+/** Turns 180° around (cx, cy). */
+export function rotate180(r: Region, cx: number, cy: number): Region {
+  return r.map((p) => p.map((q) => ({ x: 2 * cx - q.x, y: 2 * cy - q.y })));
+}

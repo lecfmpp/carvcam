@@ -34,6 +34,8 @@ export interface WorkshopState {
   /** Wizard choices per machine: controller (MK2 has two) and cable. */
   link: Record<string, { controller: string; link: "usb" | "ethernet" }>;
   cost: ShopCost;
+  /** gSender address for "Send to gSender" (Remote Mode IP:port). Empty: this computer. */
+  gsenderAddress: string;
 
   finishOnboarding(machine: MachineId, head: HeadId, bits: string[]): void;
   skipOnboarding(): void;
@@ -49,6 +51,7 @@ export interface WorkshopState {
   markWired(key: string): void;
   setLink(machine: string, v: { controller: string; link: "usb" | "ethernet" }): void;
   setCost(p: Partial<ShopCost>): void;
+  setGsenderAddress(address: string): void;
 }
 
 export const useWorkshop = create<WorkshopState>()(
@@ -64,6 +67,7 @@ export const useWorkshop = create<WorkshopState>()(
       wired: [],
       link: {},
       cost: DEFAULT_SHOP_COST,
+      gsenderAddress: "",
 
       finishOnboarding: (machine, head, bits) => set({ onboarded: true, machines: [{ id: machine, head }], active: 0, bits }),
       skipOnboarding: () => set({ onboarded: true }),
@@ -93,6 +97,7 @@ export const useWorkshop = create<WorkshopState>()(
       },
       setLink: (machine, v) => set({ link: { ...get().link, [machine]: v } }),
       setCost: (p) => set({ cost: { ...DEFAULT_SHOP_COST, ...get().cost, ...p } }),
+      setGsenderAddress: (address) => set({ gsenderAddress: address.trim() }),
     }),
     {
       name: "carvcam-workshop",

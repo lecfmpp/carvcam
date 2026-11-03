@@ -97,10 +97,10 @@ const isFlat = (b: Bit) => b.profile === "flat" || b.profile === "compression";
 const bitIn = (ctx: IssueCtx, slot: Slot) => (slot === "cutout" && ctx.useBit2 && ctx.bit2 ? ctx.bit2 : ctx.bit);
 
 /** The design has something that is not cut through (engraving or relief). */
-const hasDetail = (spec: PlateSpecInput) => [...(spec.texts ?? []), ...(spec.icons ?? []), ...(spec.shapes ?? []), ...(spec.svgs ?? [])].some((e) => (e.mode ?? "relief") !== "cutout");
+const hasDetail = (spec: PlateSpecInput) => [...(spec.texts ?? []), ...(spec.icons ?? []), ...(spec.shapes ?? []), ...(spec.svgs ?? [])].some((e) => (e.mode ?? "relief") !== "cutout" && e.mode !== "part");
 /** The design cuts something through (outline, lettering, stencil or holes). */
 const hasCut = (spec: PlateSpecInput) =>
-  spec.type === "lettering" || (spec.outerCutout ?? true) || !!spec.holes?.length || !!spec.slots?.length || [...(spec.texts ?? []), ...(spec.icons ?? []), ...(spec.shapes ?? []), ...(spec.svgs ?? [])].some((e) => e.mode === "cutout");
+  spec.type === "lettering" || (spec.outerCutout ?? true) || !!spec.holes?.length || !!spec.slots?.length || [...(spec.texts ?? []), ...(spec.icons ?? []), ...(spec.shapes ?? []), ...(spec.svgs ?? [])].some((e) => e.mode === "cutout" || e.mode === "part");
 
 /** The slot to change for a cut-through problem: a second bit when the main one also does the detail. */
 const cutSlot = (ctx: IssueCtx): Slot => (ctx.useBit2 || hasDetail(ctx.spec) ? "cutout" : "main");
@@ -287,6 +287,11 @@ export const MAPPED_CODES = [
   "KEEP_OUT_TOO_TALL",
   "INVALID_SPEC",
   "FONT_UNAVAILABLE",
+  "COPIES_DO_NOT_FIT",
+  "INLAY_NEEDS_VBIT",
+  "INLAY_BIT_TOO_SMALL",
+  "INLAY_BOARD_TOO_THIN",
+  "INLAY_NO_CLEARING",
 ] as const;
 
 function mapWarning(a: Warning, k: number, ctx: IssueCtx): UiIssue {
@@ -526,7 +531,9 @@ function mapWarning(a: Warning, k: number, ctx: IssueCtx): UiIssue {
     case "COMPRESSION_STEPDOWN":
       return { ...base, title: "Deeper first pass for the compression bit", detail: "The first pass goes past the up-cut part of the bit so both faces stay clean.", alts: [] };
     case "NO_SIENCI_TABLE":
-      return { ...base, level: "info", title: "No official speeds for this combination", detail: "We use conservative calculated values instead.", alts: [] };
+      return a.data?.origin === "estimated"
+        ? { ...base, level: "info", title: "Estimated speeds for this bit", detail: a.data?.reason === "head" ? "Your router or spindle can't reach the table's RPM, so CarvCAM slows the feed to keep the same chip load. Test on scrap first." : "Sienci's table doesn't list this exact bit, so CarvCAM scales the closest row of it. Test on scrap first.", alts: [] }
+        : { ...base, level: "info", title: "No official speeds for this combination", detail: "We use conservative calculated values instead.", alts: [] };
     case "NOTHING_TO_CUT": {
       const only = /subtract or mask/.test(a.message);
       const [withText] = addElement(spec, "text", spec.width / 2, spec.height / 2);
@@ -600,6 +607,44 @@ function mapWarning(a: Warning, k: number, ctx: IssueCtx): UiIssue {
       };
     case "INVALID_SPEC":
       return { ...base, title: "Some values aren't valid", detail: a.message, alts: select ? [select] : [] };
+    case "COPIES_DO_NOT_FIT":
+      return {
+        ...base,
+        title: `Copies of ${q} run past the edge`,
+        detail: "Use fewer rows or columns, a smaller gap or a bigger board. Select it and open Make copies to adjust.",
+        apply: target ? { kind: "spec", label: "Remove the copies", spec: patchElement(spec, target, { copies: undefined }) } : undefined,
+        alts: select ? [select] : [],
+      };
+    case "INLAY_NEEDS_VBIT": {
+      const offer = offerBit(ctx, a.code, "main", (b) => b.profile === "v", (x, y) => Math.abs((x.angle ?? 60) - 60) - Math.abs((y.angle ?? 60) - 60) || y.d - x.d, "An inlay's walls are carved by the V-bit's cone; the flat bit only clears the flat areas.");
+      return { ...base, title: "An inlay needs a V-bit", detail: "Pick a 60° or 90° V-bit as the main bit. A flat bit can still clear the flat areas as the second bit.", alts: offer.alts, rec: offer.rec };
+    }
+    case "INLAY_BIT_TOO_SMALL": {
+      const need = Number(a.data?.depth ?? 0);
+      const reach = (b: Bit) => Math.min(b.d / 2 / Math.tan(((b.angle ?? 60) * Math.PI) / 360), b.cut);
+      const offer = offerBit(ctx, a.code, "main", (b) => b.profile === "v" && reach(b) >= need, (x, y) => reach(x) - reach(y), `Its cone reaches ${fmt(need)} mm or more, deep enough for this inlay.`);
+      return {
+        ...base,
+        title: `The ${bitName} is too small for this inlay`,
+        detail: `Its cone reaches ${fmt(Number(a.data?.limit ?? 0))} mm; this part needs ${fmt(need)} mm. Use a shallower pocket or a bigger V-bit.`,
+        alts: offer.alts,
+        rec: offer.rec,
+      };
+    }
+    case "INLAY_BOARD_TOO_THIN": {
+      const t = Math.ceil(Number(a.data?.depth ?? 0) + 1);
+      return {
+        ...base,
+        title: "The board is too thin for this inlay",
+        detail: "At least 1 mm of wood must stay under the cut. Use a thicker board or a shallower pocket.",
+        apply: t > spec.thickness ? { kind: "spec", label: `Use a ${t} mm board`, spec: { ...spec, thickness: t } } : undefined,
+      };
+    }
+    case "INLAY_NO_CLEARING": {
+      const offer = offerBit(ctx, a.code, "cutout", (b) => b.profile === "flat", closestTo(6.35), "A flat bit clears the flat bottom of the inlay much faster than the V-bit.");
+      return { ...base, title: "The V-bit clears the flat areas too", detail: "That works but takes longer. Add a flat bit as the second bit to clear them faster.", alts: offer.alts, rec: offer.rec };
+    }
+
     case "FONT_UNAVAILABLE": {
       const t = target ? (elementOf(spec, target) as { font?: string } | null) : null;
       return {

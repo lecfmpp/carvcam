@@ -1,4 +1,4 @@
-# CarvCAM for Windows (Electron)
+# CarvCAM desktop (Electron): Windows, Mac, Linux and Raspberry Pi
 
 An Electron app with an NSIS installer that bundles carvcam-bridge (USB through `serialport`,
 and Ethernet on the SLB's port 23). Users don't need Node.js or anything other than the installer.
@@ -15,7 +15,7 @@ and Ethernet on the SLB's port 23). Users don't need Node.js or anything other t
 | File name | `CarvCAM-0.1.0-Windows-64Bit.exe` |
 | Linux | AppImage and .deb, with a udev rule for USB (no dialout group) |
 | Raspberry Pi | arm64 and armv7l (AppImage and .deb) |
-| Mac | .dmg (Intel and Apple Silicon); signed with the Apple secrets |
+| Mac | .dmg + .zip (Intel and Apple Silicon); signed and notarized with the Apple secrets, otherwise ad-hoc signed |
 
 ## How it works
 `main.mjs` starts the bridge on `127.0.0.1:8765`, serves the built app at `http://127.0.0.1:4173`
@@ -36,6 +36,17 @@ GitHub Actions (`.github/workflows/installers.yml`), which runs on Windows: ever
 the installers as artifacts, and a `v*` tag publishes them to the Release, signed if the secrets exist,
 with fixed-name copies (`CarvCAM-Windows-64Bit.exe`, `CarvCAM-Linux-x86_64.AppImage`...) for the
 website links under `releases/latest/download/`.
+
+## Mac without an Apple certificate
+Until the Apple Developer secrets exist (see below), the Mac build is ad-hoc signed and not notarized.
+It runs on Intel and Apple Silicon, but the first open needs one confirmation:
+1. Open the `.dmg` and drag CarvCAM to Applications.
+2. Open CarvCAM. macOS says it can't check it for malicious software: click **Done** (or Cancel).
+3. Open **System Settings › Privacy & Security**, scroll to "CarvCAM was blocked…" and click **Open Anyway**,
+   then confirm. (On macOS 14 and older, right-click the app › Open › Open also works.)
+
+Automatic updates on Mac need the real signature (Squirrel.Mac checks it), so until then Mac users
+download new versions from the website.
 
 ## Signing
 See [docs/code-signing.md](../docs/code-signing.md).

@@ -28,6 +28,11 @@ export interface Design {
   jobCost?: JobCost;
   /** Id in My projects once saved; later changes are saved there automatically. */
   savedId?: string;
+  /**
+   * V-carve inlay: the other part of the pair (the plug when this is the pocket, and the other way
+   * round). They are two separate jobs; the panel's Inlay card switches between them.
+   */
+  inlayOther?: Design;
 }
 
 /**
@@ -92,6 +97,8 @@ interface DesignState {
   /** Bumped on every spec change, so the UI knows when to regenerate. */
   rev: number;
   setDesign(d: Design): void;
+  /** Replaces the design as its own undo step (never merged with a change made just before it). The assistant uses it: one reply = one undo step. */
+  commit(d: Design): void;
   patch(p: Partial<Design>): void;
   patchSpec(fn: (s: PlateSpecInput) => PlateSpecInput): void;
   newBlank(): void;
@@ -100,6 +107,8 @@ interface DesignState {
   /** Records the My projects id without counting as a design change. */
   markSaved(id: string | undefined): void;
   openProject(id: string): void;
+  /** Switches to the other part of the inlay (keeping this one as the other). */
+  switchInlayPart(): void;
   setMaterial(id: string, thickness?: number): void;
   setKeepOut(zones: KeepOutZone[]): void;
   /** Saves cost inputs without counting as a design change (no regeneration, checklist kept). */
@@ -148,6 +157,11 @@ export const useDesign = create<DesignState>()(
         return true;
       },
       setDesign: (design) => set({ design, rev: get().rev + 1 }),
+      commit: (design) => {
+        // The next edit starts its own step too (it is not merged into this one).
+        lastPush = 0;
+        rawSet({ design, rev: get().rev + 1, past: [...get().past, get().design].slice(-MAX_UNDO) });
+      },
       patch: (p) => set({ design: { ...get().design, ...p }, rev: get().rev + 1 }),
       patchSpec: (fn) => set({ design: { ...get().design, spec: fn(structuredClone(get().design.spec)) }, rev: get().rev + 1 }),
       newBlank: () => set({ design: structuredClone(BLANK), rev: get().rev + 1 }),
@@ -160,22 +174,32 @@ export const useDesign = create<DesignState>()(
       openProject: (id) => {
         const p = PROJECTS.find((x) => x.id === id);
         if (!p) return;
-        const m = materialById(p.material);
-        set({
-          design: {
-            name: p.title,
+        const fromProject = (x: Pick<typeof p, "title" | "material" | "spec" | "bits" | "speed">): Design => {
+          const m = materialById(x.material);
+          return {
+            name: x.title,
             projectId: p.id,
             material: m.id,
-            spec: { ...structuredClone(p.spec), material: m.engine },
-            bit: p.bits[0],
-            bit2: p.bits[1],
-            useBit2: p.bits.length > 1,
-            preset: p.speed,
-            tabs: defaultTabs(p.spec.thickness),
-          },
-          rev: get().rev + 1,
-        });
+            spec: { ...structuredClone(x.spec), material: m.engine },
+            bit: x.bits[0],
+            bit2: x.bits[1],
+            useBit2: x.bits.length > 1,
+            preset: x.speed,
+            tabs: defaultTabs(x.spec.thickness),
+          };
+        };
+        const design = fromProject(p);
+        if (p.inlayPlug) design.inlayOther = fromProject({ ...p.inlayPlug, speed: p.speed });
+        set({ design, rev: get().rev + 1 });
       },
+      switchInlayPart: () => {
+        const d = get().design;
+        if (!d.inlayOther) return;
+        // Both parts live in one My projects entry: the saved id stays with whichever part is open.
+        const { inlayOther, savedId, ...rest } = d;
+        set({ design: { ...inlayOther, inlayOther: rest, savedId }, rev: get().rev + 1 });
+      },
+
       setMaterial: (id, thickness) => {
         const m = materialById(id);
         const d = get().design;

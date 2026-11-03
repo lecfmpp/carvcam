@@ -103,3 +103,22 @@ The installer works just the same. For people downloading it:
 - [SmartScreen reputation with EV (Microsoft Tech Community)](https://techcommunity.microsoft.com/discussions/microsoftdefenderthreatintelligence/smartscreen-reputation-issue-for-ev-code-signed-windows-application/4537122)
 - [Reputation after renewing an EV certificate (Microsoft Q&A)](https://learn.microsoft.com/en-us/answers/questions/5900208/smartscreen-reputation-reset-following-ev-certific)
 - [EV or OV? (SSL.com)](https://www.ssl.com/fr/faq/quel-certificat-de-signature-de-code-ai-je-besoin-d%27ev-ov/)
+
+## Mac (Developer ID + notarization)
+Needs an [Apple Developer Program](https://developer.apple.com/programs/) membership (US$ 99/year).
+1. In Xcode or developer.apple.com, create a **Developer ID Application** certificate and export it
+   from Keychain Access as a `.p12` with a password.
+2. Create an app-specific password at appleid.apple.com (Sign-In and Security › App-Specific Passwords).
+3. Add these repository secrets (Settings › Secrets and variables › Actions):
+
+| Secret | Value |
+|---|---|
+| `MAC_CERT_P12_BASE64` | `base64 -i DeveloperID.p12` |
+| `MAC_CERT_PASSWORD` | the `.p12` password |
+| `APPLE_ID` | the Apple ID e-mail of the developer account |
+| `APPLE_APP_SPECIFIC_PASSWORD` | the app-specific password |
+| `APPLE_TEAM_ID` | the 10-character Team ID |
+
+With them, the `build-mac` job signs with hardened runtime, notarizes and staples the `.dmg`, so it
+opens with no warning and automatic updates work. Without them, the build is ad-hoc signed
+(see `desktop/README.md`).
