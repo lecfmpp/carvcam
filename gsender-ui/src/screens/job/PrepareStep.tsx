@@ -2,6 +2,7 @@ import type { CutParams } from "@gsender-next/cam-engine";
 import { AlertTriangle, Check, Download, Pause, Play, XCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { SendToGsender } from "../../components/SendToGsender";
 import { Issue, SidePanel, Stepper, VideoCard } from "../../components/ui";
 import { engineOptions, runEngine } from "../../engine/useEngine";
 import { BITS, bitById, machineName, materialById, PRESET_LABEL, type Preset } from "../../lib/catalog";
@@ -137,6 +138,7 @@ export function PrepareStep({ ctx }: { ctx: JobCtx }) {
             <button className="btn btn--primary btn--lg" disabled={!verified} onClick={() => nav("/position")}>
               Continue to Position →
             </button>
+            <SendToGsender name={design.name} gcode={result?.gcode} disabled={!verified} />
             <button className="btn btn--outline" disabled={!verified || !result?.gcode} onClick={() => result && downloadGcode(design.name, result.gcode)}>
               <Download size={16} strokeWidth={1.75} />
               Download G-code (.nc)

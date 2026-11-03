@@ -38,7 +38,7 @@ npm run build      # typecheck + build de produção
 | `#/workshop`, `#/workshop/bits`, `#/workshop/settings` | Primeiros cortes (prévias simuladas pelo motor), biblioteca de fresas, minha máquina |
 | `#/surfacing` | Aplainar a mesa (G-code de aplainamento gerado pelo motor) |
 | `#/create` | Criar: editor + assistente (parser local offline; Claude API opcional com a chave do usuário). Texto (reto ou em arco), formas, curvas livres (caneta), biblioteca de elementos, importar SVG/DXF, imagem de decalque e conversão de imagem em vetor, alinhar/distribuir, contorno, subtrair/máscara, V-carve e hachura |
-| `#/prepare` | Preparar: velocidades da tabela Sienci, abas, segunda fresa, G-code verificado, **Download G-code (.nc)** |
+| `#/prepare` | Preparar: velocidades da tabela Sienci, abas, segunda fresa, G-code verificado, **Send to gSender** (carrega o arquivo num gSender aberto, ver `docs/gsender-reverse-engineering/07-enviar-para-gsender.md`) e **Download G-code (.nc)** |
 | `#/position`, `#/carve` | Posicionar e Cortar (máquina **simulada** por enquanto) |
 
 ## Modo Painel (gControl)
@@ -56,6 +56,6 @@ Para a tela touch de 15,6″ do gControl. Liga sozinho quando o dispositivo prin
 - `src/assistant/`: provedores do assistente (local e Claude). A IA só edita o projeto; nunca move a máquina.
 
 ## Limites conhecidos
-- A conexão com a máquina real ainda não existe; para cortar hoje, use **Download G-code** e abra o arquivo no gSender.
+- A conexão com a máquina real ainda não existe; para cortar hoje, use **Send to gSender** (gSender com Remote Mode ligado; endereço em Settings) ou **Download G-code** e abra o arquivo no gSender. O envio nunca foi testado contra um gSender de verdade.
 - O assistente via Claude nunca foi testado contra a API (falta uma chave neste ambiente).
 - Os vídeos tutoriais são placeholders (`src/lib/videos.ts`).

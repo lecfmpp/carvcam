@@ -16,6 +16,8 @@ export interface WorkshopState {
   wired: string[];
   /** Escolhas do assistente por máquina: controladora (MK2 tem duas) e cabo. */
   link: Record<string, { controller: string; link: "usb" | "ethernet" }>;
+  /** Endereço do gSender para "Send to gSender" (IP:porta do Remote Mode). Vazio: este computador. */
+  gsenderAddress: string;
 
   finishOnboarding(machine: MachineId, head: HeadId, bits: string[]): void;
   skipOnboarding(): void;
@@ -30,6 +32,7 @@ export interface WorkshopState {
   setPanel(panel: "auto" | "on" | "off"): void;
   markWired(key: string): void;
   setLink(machine: string, v: { controller: string; link: "usb" | "ethernet" }): void;
+  setGsenderAddress(address: string): void;
 }
 
 export const useWorkshop = create<WorkshopState>()(
@@ -44,6 +47,7 @@ export const useWorkshop = create<WorkshopState>()(
       panel: "auto",
       wired: [],
       link: {},
+      gsenderAddress: "",
 
       finishOnboarding: (machine, head, bits) => set({ onboarded: true, machines: [{ id: machine, head }], active: 0, bits }),
       skipOnboarding: () => set({ onboarded: true }),
@@ -72,6 +76,7 @@ export const useWorkshop = create<WorkshopState>()(
         if (!get().wired.includes(key)) set({ wired: [...get().wired, key] });
       },
       setLink: (machine, v) => set({ link: { ...get().link, [machine]: v } }),
+      setGsenderAddress: (address) => set({ gsenderAddress: address.trim() }),
     }),
     { name: "gsender-workshop", version: 1 },
   ),
