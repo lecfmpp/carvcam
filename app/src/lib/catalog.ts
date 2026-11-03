@@ -331,13 +331,7 @@ const withTexts = (id: string, texts: string[]): PlateSpecInput => {
 };
 
 export const PROJECTS: Project[] = [
-  { id: "depth-test", title: "Depth test", level: "First cut", learn: "What 1, 2 and 3 mm deep look and sound like", material: "MDF", bits: ["flat-1-8-upcut"], speed: "detailed", spec: P["depth-test"].plate, track: 1 },
-  { id: "coaster", title: "Coaster with an initial", level: "First cut", learn: "Cutting a shape out with holding tabs", material: "MDF", bits: ["flat-1-8-upcut"], spec: withTexts("coaster", ["M"]), track: 2 },
-  { id: "door-sign", title: "Raised door sign", level: "Easy", learn: "Lowering the background around raised letters", material: "MDF", bits: ["flat-1-8-upcut"], spec: withTexts("door-sign", ["The Millers"]), track: 3 },
-  { id: "pet-plaque", title: "Pet name plaque", level: "Intermediate", learn: "Changing the bit in the middle of a job", material: "Pine", bits: ["flat-1-16-downcut", "flat-1-8-upcut"], spec: withTexts("pet-plaque", ["BISCUIT", "since 2024"]) },
-  { id: "welcome-sign", title: "“Welcome” script lettering", level: "Intermediate", learn: "Clean plywood edges with a compression bit", material: "Birch plywood", bits: ["flat-1-8-compression"], speed: "balanced", spec: withTexts("welcome-sign", ["Welcome"]) },
-  { id: "acrylic-keychain", title: "Acrylic keychain", level: "Intermediate", learn: "V-carving and cutting plastic cleanly", material: "Acrylic", bits: ["vbit-30-1-8", "flat-1-8-1flute"], spec: withTexts("acrylic-keychain", ["JO"]) },
-  { id: "address-sign", title: "Large address sign", level: "Intermediate", learn: "Planning a job that fills a big machine", material: "MDF", bits: ["flat-1-4-upcut"], spec: withTexts("address-sign", ["1428"]) },
+  // Copies and inlay first: they show what CarvCAM does that other free tools don't.
   { id: "name-tags", title: "Name tags ×6", level: "Easy", learn: "Making copies: one tag designed, six cut, one bit change", material: "Birch plywood", bits: ["vbit-60-15mm", "flat-1-8-upcut"], spec: P["name-tags"].plate },
   {
     id: "heart-inlay",
@@ -349,6 +343,13 @@ export const PROJECTS: Project[] = [
     spec: P["heart-inlay"].plate,
     inlayPlug: { title: "Heart inlay coaster · plug", material: "Pine", bits: ["vbit-60-15mm", "flat-1-4-upcut"], spec: P["heart-inlay-plug"].plate },
   },
+  { id: "depth-test", title: "Depth test", level: "First cut", learn: "What 1, 2 and 3 mm deep look and sound like", material: "MDF", bits: ["flat-1-8-upcut"], speed: "detailed", spec: P["depth-test"].plate, track: 1 },
+  { id: "coaster", title: "Coaster with an initial", level: "First cut", learn: "Cutting a shape out with holding tabs", material: "MDF", bits: ["flat-1-8-upcut"], spec: withTexts("coaster", ["M"]), track: 2 },
+  { id: "door-sign", title: "Raised door sign", level: "Easy", learn: "Lowering the background around raised letters", material: "MDF", bits: ["flat-1-8-upcut"], spec: withTexts("door-sign", ["The Millers"]), track: 3 },
+  { id: "pet-plaque", title: "Pet name plaque", level: "Intermediate", learn: "Changing the bit in the middle of a job", material: "Pine", bits: ["flat-1-16-downcut", "flat-1-8-upcut"], spec: withTexts("pet-plaque", ["BISCUIT", "since 2024"]) },
+  { id: "welcome-sign", title: "“Welcome” script lettering", level: "Intermediate", learn: "Clean plywood edges with a compression bit", material: "Birch plywood", bits: ["flat-1-8-compression"], speed: "balanced", spec: withTexts("welcome-sign", ["Welcome"]) },
+  { id: "acrylic-keychain", title: "Acrylic keychain", level: "Intermediate", learn: "V-carving and cutting plastic cleanly", material: "Acrylic", bits: ["vbit-30-1-8", "flat-1-8-1flute"], spec: withTexts("acrylic-keychain", ["JO"]) },
+  { id: "address-sign", title: "Large address sign", level: "Intermediate", learn: "Planning a job that fills a big machine", material: "MDF", bits: ["flat-1-4-upcut"], spec: withTexts("address-sign", ["1428"]) },
 ];
 
 
