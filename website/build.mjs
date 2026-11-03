@@ -37,6 +37,7 @@ const clip = (name, alt) =>
   `<div class="shot shot--video"><video class="lazyclip" muted loop playsinline preload="none" width="1280" height="800" poster="${asset(`/assets/video/feature-${name}-poster.webp`)}" data-src="${asset(`/assets/video/feature-${name}.mp4`)}" aria-label="${esc(alt)}"></video></div>`;
 const ICON_LINUX = `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2c-2.2 0-3.6 1.9-3.6 4.5 0 1.3.3 2.3-.6 3.6C6.4 12 5 14 5 16.6c0 .7.1 1.3.4 1.9-.9.4-1.9.9-1.9 1.8 0 1.2 2.2 1.2 3.6 1.4 1 .1 1.8.3 2.6.3.9 0 1.5-.4 2.3-.4s1.4.4 2.3.4c.8 0 1.6-.2 2.6-.3 1.4-.2 3.6-.2 3.6-1.4 0-.9-1-1.4-1.9-1.8.3-.6.4-1.2.4-1.9 0-2.6-1.4-4.6-2.8-6.5-.9-1.3-.6-2.3-.6-3.6C15.6 3.9 14.2 2 12 2Zm-1.6 4.2c.4 0 .7.5.7 1.1s-.3 1.1-.7 1.1-.7-.5-.7-1.1.3-1.1.7-1.1Zm3.2 0c.4 0 .7.5.7 1.1s-.3 1.1-.7 1.1-.7-.5-.7-1.1.3-1.1.7-1.1ZM12 9.4c.9 0 2 .5 2 .9s-1.1 1.1-2 1.1-2-.7-2-1.1.9-.9 2-.9Z"/></svg>`;
 const ICON_WIN = `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 5.5 10.5 4.5v7H3zM11.5 4.4 21 3v8.5h-9.5zM3 12.5h7.5v7L3 18.5zM11.5 12.5H21V21l-9.5-1.4z"/></svg>`;
+const ICON_APPLE = `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16.4 12.6c0-2.4 2-3.6 2.1-3.7-1.1-1.7-2.9-1.9-3.5-1.9-1.5-.2-2.9.9-3.7.9-.8 0-1.9-.9-3.2-.8-1.6 0-3.1 1-4 2.4-1.7 3-.4 7.4 1.2 9.8.8 1.2 1.8 2.5 3 2.4 1.2 0 1.7-.8 3.1-.8 1.5 0 1.9.8 3.2.8 1.3 0 2.1-1.2 2.9-2.4.9-1.4 1.3-2.7 1.3-2.8 0 0-2.4-1-2.4-3.9ZM14 5.4c.7-.8 1.1-1.9 1-3-1 0-2.1.7-2.8 1.5-.6.7-1.2 1.8-1 2.9 1 .1 2.1-.6 2.8-1.4Z"/></svg>`;
 const cell = (v) => (v === "yes" ? '<span class="yes">✓ Yes</span>' : v === "no" ? '<span class="no">— No</span>' : v === "part" ? '<span class="part">Partly</span>' : esc(v));
 
 function layout({ path, title, description, body, schema = [], crumbs = null, head = "", index = true }) {
@@ -83,23 +84,25 @@ ${body}
 ${footer()}
 <script>try { if (localStorage.getItem("sb-zveqsvizefgbicwvjvdu-auth-token")) { const a = document.querySelector(".hdr__login"); a.href = ${JSON.stringify(href("/account/"))}; a.textContent = "Account"; } } catch {}</script>
 <script>(() => {
-  // Download buttons: Windows by default; on Linux they become the AppImage (or the Pi .deb on ARM); on Mac they go to the downloads page.
+  // Download buttons: Windows by default; on Linux they become the AppImage (or the Pi .deb on ARM); on Mac the
+  // Apple Silicon or Intel .dmg when the browser tells the chip (Chrome, Edge), otherwise the Mac section of the
+  // downloads page, where the person picks the chip (Safari and Firefox report every Mac as Intel).
   // Only the long "Download for …" buttons carry an OS logo, and it always matches the file they download.
-  const ua = navigator.userAgent, linux = /Linux/.test(ua) && !/Android|CrOS/.test(ua), mac = /Macintosh|Mac OS X/.test(ua) && !/iPhone|iPad/.test(ua);
+  const ua = navigator.userAgent, linux = /Linux/.test(ua) && !/Android|CrOS/.test(ua), mac = /Macintosh|Mac OS X/.test(ua) && !/iPhone|iPad/.test(ua) && navigator.maxTouchPoints < 2;
   if (!linux && !mac) return;
   const pi = /aarch64|arm64|armv7|armhf/.test(ua);
-  document.querySelectorAll("a[data-dl]").forEach((a) => {
+  const set = (href, icon) => document.querySelectorAll("a[data-dl]").forEach((a) => {
     const long = a.dataset.dl === "long", svg = a.querySelector("svg"), label = a.querySelector("span");
-    if (linux) {
-      a.href = /aarch64|arm64/.test(ua) ? ${JSON.stringify(site.downloads.piDeb)} : /armv7|armhf/.test(ua) ? ${JSON.stringify(site.downloads.pi32Deb)} : ${JSON.stringify(site.downloads.appimage)};
-      if (svg) pi ? svg.remove() : (svg.outerHTML = ${JSON.stringify(ICON_LINUX)});
-      label.textContent = long ? (pi ? "Download for Raspberry Pi" : "Download for Linux") : "Download";
-    } else {
-      a.href = ${JSON.stringify(href(site.download))};
-      svg?.remove();
-      label.textContent = long ? "Mac version coming soon" : "Downloads";
-    }
+    a.href = href;
+    if (svg) icon ? (svg.outerHTML = icon) : svg.remove();
+    label.textContent = long ? (pi ? "Download for Raspberry Pi" : linux ? "Download for Linux" : "Download for Mac") : "Download";
   });
+  if (linux) return set(/aarch64|arm64/.test(ua) ? ${JSON.stringify(site.downloads.piDeb)} : /armv7|armhf/.test(ua) ? ${JSON.stringify(site.downloads.pi32Deb)} : ${JSON.stringify(site.downloads.appimage)}, pi ? "" : ${JSON.stringify(ICON_LINUX)});
+  set(${JSON.stringify(href(site.download + "#mac"))}, ${JSON.stringify(ICON_APPLE)});
+  if (navigator.userAgentData?.platform === "macOS") navigator.userAgentData.getHighEntropyValues(["architecture"]).then((h) => {
+    if (h.architecture === "arm") set(${JSON.stringify(site.downloads.macArm)}, ${JSON.stringify(ICON_APPLE)});
+    else if (h.architecture === "x86") set(${JSON.stringify(site.downloads.macIntel)}, ${JSON.stringify(ICON_APPLE)});
+  }).catch(() => {});
 })();</script>
 </body>
 </html>`;
@@ -155,7 +158,7 @@ ${col("Learn", howtos.slice(0, 4).map((h) => [h.short, `/learn/${h.slug}/`]))}
 const downloadCta = (center = false) => `<div class="cta"${center ? ' style="justify-content:center"' : ""}>
 <a class="btn btn--accent btn--lg" data-dl="long" href="${site.downloads.windows}">${ICON_WIN}<span>Download for Windows</span></a>
 <a class="btn btn--ghost btn--lg" href="${href("/#how")}">See how it works</a>
-<span class="note"${center ? ' style="text-align:center"' : ""}>Windows 10 and 11 · <a href="${site.downloads.appimage}" data-dl-alt>Linux</a> · <a href="${site.downloads.piDeb}">Raspberry Pi</a> · Works offline · Mac soon · <a href="${href(site.download)}">All downloads</a></span>
+<span class="note"${center ? ' style="text-align:center"' : ""}>Windows 10 and 11 · <a href="${href(site.download + "#mac")}">Mac</a> · <a href="${site.downloads.appimage}" data-dl-alt>Linux</a> · <a href="${site.downloads.piDeb}">Raspberry Pi</a> · Works offline · <a href="${href(site.download)}">All downloads</a></span>
 </div>`;
 
 const app = {
@@ -163,7 +166,7 @@ const app = {
   "@type": "SoftwareApplication",
   name: "CarvCAM",
   applicationCategory: "DesignApplication",
-  operatingSystem: "Windows 10, Windows 11, Linux, Raspberry Pi OS",
+  operatingSystem: "Windows 10, Windows 11, macOS, Linux, Raspberry Pi OS",
   downloadUrl: site.downloads.windows,
   description: "Desktop CNC software for Sienci Labs LongMill and AltMill: sign design, V-carving, toolpaths, machine setup and carving in one app.",
   url: site.url,
@@ -188,7 +191,7 @@ function home() {
     path: at("/"),
     head: `\n<link rel="preload" as="image" href="${asset("/assets/video/hero-demo-poster.webp")}" fetchpriority="high">`,
     title: "CarvCAM: CNC Software for LongMill & AltMill. Design, Carve, Done.",
-    description: "Design signs, get feeds tuned to your machine, wire and connect with a guided check, and carve, all in one Windows app made for Sienci LongMill and AltMill owners.",
+    description: "Design signs, get feeds tuned to your machine, wire and connect with a guided check, and carve, all in one desktop app for Windows, Mac and Linux, made for Sienci LongMill and AltMill owners.",
     schema: [app, faqLd(faq)],
     body: `
 <section class="hero"><div class="wrap">
@@ -196,7 +199,7 @@ function home() {
 <h1>From blank board to finished sign. <span class="mark">One app.</span></h1>
 <p class="lede">You bought a CNC to make things, not to learn four programs. CarvCAM designs the sign, works out every feed and speed for your machine, walks you through the cables and carves it. All in one window.</p>
 ${downloadCta()}
-<div class="shot shot--video"><video autoplay muted loop playsinline preload="auto" width="1280" height="800" poster="${asset("/assets/video/hero-demo-poster.webp")}" aria-label="CarvCAM in use: typing a sign, planning the cuts, connecting a LongMill and carving it"><source src="${asset("/assets/video/hero-demo.mp4")}" type="video/mp4"></video></div>
+<div class="shot shot--video"><video autoplay muted loop playsinline preload="auto" width="1280" height="800" poster="${asset("/assets/video/hero-demo-poster.webp")}" aria-label="CarvCAM in use: typing names on six tags, planning the cuts, connecting a LongMill and carving them"><source src="${asset("/assets/video/hero-demo.mp4")}" type="video/mp4"></video></div>
 <script>if (matchMedia("(prefers-reduced-motion: reduce)").matches) document.querySelectorAll(".shot--video video").forEach((v) => { v.removeAttribute("autoplay"); v.pause(); v.controls = true; });</script>
 </div></section>
 
@@ -258,12 +261,12 @@ ${clip(img, `CarvCAM ${eb}: screen recording`)}
 </div></section>
 
 <section class="soft"><div class="wrap">
-<div class="sec-head"><span class="eyebrow">Download</span><h2>Available for Windows, Linux and Raspberry Pi</h2></div>
+<div class="sec-head"><span class="eyebrow">Download</span><h2>Available for Windows, Mac, Linux and Raspberry Pi</h2></div>
 <div class="plat plat--4">
 <div class="on"><b>${ICON_WIN} Windows</b>Windows 10 and 11. <a href="${site.downloads.windows}" style="font-weight:600">Download .exe →</a></div>
+<div class="on"><b>${ICON_APPLE} Mac</b>Apple Silicon and Intel. <a href="${site.downloads.macArm}" style="font-weight:600">Apple Silicon →</a> <a href="${site.downloads.macIntel}" style="font-weight:600">Intel →</a></div>
 <div class="on"><b>${ICON_LINUX} Linux</b>Ubuntu, Debian, Mint and others. <a href="${site.downloads.appimage}" style="font-weight:600">AppImage →</a> <a href="${site.downloads.deb}" style="font-weight:600">.deb →</a></div>
 <div class="on"><b>Raspberry Pi</b>Pi 4 and 5, 64-bit and 32-bit. <a href="${site.downloads.piDeb}" style="font-weight:600">64-bit .deb →</a></div>
-<div><b>macOS</b>Coming soon.</div>
 </div></div></section>
 
 <section><div class="narrow faq">
@@ -284,38 +287,44 @@ function download() {
   const btn = (url, icon, label) => `<a class="btn btn--accent" href="${url}">${icon}${label}</a>`;
   layout({
     path: at("/download/"),
-    title: "Download CarvCAM for Windows, Linux and Raspberry Pi | CNC Software for LongMill & AltMill",
-    description: "Download CarvCAM for Windows 10 and 11, Linux (AppImage and .deb) or Raspberry Pi. Design, prepare and carve on Sienci LongMill and AltMill machines. The Mac version is coming soon.",
+    title: "Download CarvCAM for Windows, Mac, Linux and Raspberry Pi | CNC Software for LongMill & AltMill",
+    description: "Download CarvCAM for Windows 10 and 11, Mac (Apple Silicon and Intel), Linux (AppImage and .deb) or Raspberry Pi. Design, prepare and carve on Sienci LongMill and AltMill machines.",
     crumbs: [["Home", "/"], ["Download", "/download/"]],
     schema: [app],
     body: `<section class="article"><div class="narrow">
 <h1>Download CarvCAM</h1>
-<p class="lede">Windows, Linux and Raspberry Pi today. Mac is coming soon. Every link downloads the latest version.</p>
+<p class="lede">Windows, Mac, Linux and Raspberry Pi. Every link downloads the latest version. Step-by-step help: <a href="${href("/docs/install/")}">Install CarvCAM</a>.</p>
 <div class="dlcards">
 <div class="dlcard on" id="windows"><b>${ICON_WIN} Windows</b><p class="note">Windows 10 and 11, 64-bit</p>${btn(site.downloads.windows, ICON_WIN, "Download for Windows")}<p class="note">CarvCAM-Windows-64Bit.exe</p></div>
+<div class="dlcard on" id="mac"><b>${ICON_APPLE} Mac</b><p class="note">Apple Silicon (M1 and newer) or Intel</p>${btn(site.downloads.macArm, ICON_APPLE, "Apple Silicon")} ${btn(site.downloads.macIntel, ICON_APPLE, "Intel")}<p class="note">Not sure? Apple menu › About This Mac: “Chip: Apple M…” is Apple Silicon. <a href="#install-on-a-mac">First open needs one extra click</a>.</p></div>
 <div class="dlcard on" id="linux"><b>${ICON_LINUX} Linux</b><p class="note">64-bit PC: Ubuntu, Debian, Mint, Fedora and others</p>${btn(site.downloads.appimage, ICON_LINUX, "AppImage")} ${btn(site.downloads.deb, ICON_LINUX, ".deb")}<p class="note">.deb for Ubuntu, Debian and Mint · AppImage for any distro</p></div>
 <div class="dlcard on" id="pi"><b>Raspberry Pi</b><p class="note">Pi 4 and 5 · Raspberry Pi OS</p>${btn(site.downloads.piDeb, "", "64-bit .deb")} ${btn(site.downloads.pi32Deb, "", "32-bit .deb")}<p class="note">64-bit: Pi 4 and 5 on Raspberry Pi OS 64-bit · <a href="${site.downloads.piAppImage}">64-bit AppImage</a></p></div>
-<div class="dlcard" id="mac"><b>macOS</b><p class="note">Intel and Apple Silicon</p><p><span class="soon">Coming soon</span></p></div>
 </div>
 <div class="prose">
-<h2>Install on Windows</h2>
+<h2 id="install-on-windows">Install on Windows</h2>
 <ol class="howto">
-<li><h3>Run the installer</h3><p>Open <b>CarvCAM-Windows-64Bit.exe</b> and follow the prompts. If Windows SmartScreen asks, click <b>More info</b>, then <b>Run anyway</b>.</p></li>
-<li><h3>Open CarvCAM</h3><p>From the Start menu or the desktop shortcut. After the first start it works without internet.</p></li>
+<li><h3>Run the installer</h3><p>Open <b>CarvCAM-Windows-64Bit.exe</b>, accept the license and keep the suggested folder. If Windows SmartScreen asks, click <b>More info</b>, then <b>Run anyway</b>.</p></li>
+<li><h3>Open CarvCAM</h3><p>On the last page, tick <b>Create Desktop Shortcut</b> if you want one and leave <b>Run CarvCAM</b> ticked. Later, open it from the Start menu. New versions install themselves.</p></li>
 <li><h3>Pick your machine</h3><p>Choose your LongMill or AltMill, what spins the bit and the bits you own. Then follow <a href="${href("/docs/connect/")}">Connect your machine</a>.</p></li>
 </ol>
-<h2>Install on Linux</h2>
+<h2 id="install-on-a-mac">Install on a Mac</h2>
 <ol class="howto">
-<li><h3>.deb (Ubuntu, Debian, Mint)</h3><p>Double-click the file, or run <code>sudo apt install ./CarvCAM-Linux-amd64.deb</code>. It also lets your user reach the USB controller, no extra setup.</p></li>
+<li><h3>Drag to Applications</h3><p>Open the <b>.dmg</b> for your chip and drag CarvCAM onto the Applications folder.</p></li>
+<li><h3>Allow the first open</h3><p>Open CarvCAM. macOS says it can't check it for malicious software: click <b>Done</b>. Open <b>System Settings › Privacy &amp; Security</b>, scroll to the message about CarvCAM, click <b>Open Anyway</b> and confirm. On macOS 14 and older you can also Control-click the app › <b>Open</b> › <b>Open</b>.</p></li>
+<li><h3>Why the warning</h3><p>This version isn't notarized by Apple yet, so macOS asks once. After that it opens like any app. Until it is, get new versions from this page: the Mac app doesn't update itself. <a href="${href("/learn/install-carvcam-on-a-mac/")}">Step-by-step guide</a>.</p></li>
+</ol>
+<h2 id="install-on-linux">Install on Linux</h2>
+<ol class="howto">
+<li><h3>.deb (Ubuntu, Debian, Mint)</h3><p>Double-click the file, or run <code>sudo apt install ./CarvCAM-Linux-amd64.deb</code>. It also adds a rule that lets your user reach the USB controller, no extra setup.</p></li>
 <li><h3>AppImage (any distro)</h3><p>Make it executable with <code>chmod +x CarvCAM-Linux-x86_64.AppImage</code> and open it. For USB, add yourself to the dialout group once: <code>sudo usermod -aG dialout $USER</code>, then log out and back in.</p></li>
 </ol>
-<h2>Install on a Raspberry Pi</h2>
+<h2 id="install-on-a-raspberry-pi">Install on a Raspberry Pi</h2>
 <ol class="howto">
 <li><h3>Pick the file</h3><p>Pi 4 or 5 on Raspberry Pi OS 64-bit: the <b>64-bit .deb</b>. Older 32-bit systems: the <b>32-bit .deb</b>. Not sure? Run <code>uname -m</code>: <code>aarch64</code> means 64-bit.</p></li>
 <li><h3>Install</h3><p>Run <code>sudo apt install ./CarvCAM-Linux-arm64.deb</code> (or the 32-bit file). USB access is set up for you. 4 GB of memory or more is recommended.</p></li>
 </ol>
-<div class="callout">Close gSender or any other program connected to your machine before connecting CarvCAM. Only one program can use the connection at a time.</div>
-<p class="note">All versions and release notes: <a href="${site.downloads.releases}">GitHub releases</a>.</p>
+<div class="callout">CarvCAM connects to your machine itself, so you don't need gSender. If gSender or another program is connected to the machine, close it first: only one program can use the connection at a time. Prefer to keep gSender? <a href="${href("/docs/send-to-gsender/")}">Send to gSender</a>.</div>
+<p class="note">Updates, uninstall and system requirements: <a href="${href("/docs/install/")}">Install CarvCAM</a>.</p>
 </div></div></section>`,
   });
 }
@@ -337,7 +346,7 @@ function machinePages() {
       title: `${m.title} | CarvCAM`,
       description: m.description,
       crumbs: [["Home", "/"], ["Machines", "/machines/"], [m.name, `/machines/${m.slug}/`]],
-      schema: [app, faqLd([[`What software do I need for the ${m.name}?`, `CarvCAM covers design, toolpaths and machine control for the ${m.name} in one app on Windows.`], [`Does CarvCAM work with the ${m.controller}?`, `Yes. CarvCAM connects to the ${m.controller} over ${m.link}.`]])],
+      schema: [app, faqLd([[`What software do I need for the ${m.name}?`, `CarvCAM covers design, toolpaths and machine control for the ${m.name} in one app on Windows, Mac, Linux and Raspberry Pi.`], [`Does CarvCAM work with the ${m.controller}?`, `Yes. CarvCAM connects to the ${m.controller} over ${m.link}.`]])],
       body: `<section class="article"><div class="wrap">
 <span class="eyebrow">${m.status} · ${m.sizes}</span>
 <h1 style="margin-top:12px;max-width:900px">${esc(m.name)} software: design, carve and control in one app</h1>
@@ -370,7 +379,7 @@ ${finalCta()}`,
   }
 }
 
-const howCard = (h) => `<a class="card" href="${href(`/learn/${h.slug}/`)}"><div class="card__img"><img src="${asset(`/assets/screens/${h.steps[0][2]}-800.webp`)}" alt="" loading="lazy" width="800" height="500"></div><span class="eyebrow">Guide · ${h.steps.length} steps</span><h3>${esc(h.short)}</h3><p>${esc(h.description)}</p><span class="more">Read the guide</span></a>`;
+const howCard = (h) => `<a class="card" href="${href(`/learn/${h.slug}/`)}"><div class="card__img"><img src="${asset(`/assets/screens/${h.steps.find((x) => x[2])[2]}-800.webp`)}" alt="" loading="lazy" width="800" height="500"></div><span class="eyebrow">Guide · ${h.steps.length} steps</span><h3>${esc(h.short)}</h3><p>${esc(h.description)}</p><span class="more">Read the guide</span></a>`;
 const featCard = (f) => `<a class="card" href="${href(`/features/${f.slug}/`)}"><div class="card__img"><img src="${asset(`/assets/screens/${f.shot}-800.webp`)}" alt="" loading="lazy" width="800" height="500"></div><h3>${esc(f.name)}</h3><p>${esc(f.lead)}</p><span class="more">Learn more</span></a>`;
 const finalCta = () => `<section class="final rule"><div class="wrap"><h2>From blank board to finished sign.</h2><p class="lede">One app for your LongMill or AltMill.</p>${downloadCta(true)}</div></section>`;
 
@@ -394,14 +403,14 @@ function featurePages() {
       crumbs: [["Home", "/"], ["Features", "/features/"], [f.name, `/features/${f.slug}/`]],
       schema: [app],
       body: `<section class="article"><div class="wrap">
-<span class="eyebrow">Feature</span>
+<span class="eyebrow">Feature${f.pro ? ` · <a href="${href("/pricing/")}">CarvCAM Pro</a>` : ""}</span>
 <h1 style="margin-top:12px;max-width:900px">${esc(f.title)}</h1>
 <p class="lede" style="max-width:680px">${esc(f.lead)}</p>
 ${downloadCta()}
 ${shot(f.shot, `${f.name} in CarvCAM`)}
 </div></section>
 <section style="padding-top:24px"><div class="wrap frow">
-<div class="frow__copy"><span class="eyebrow">What it does</span><h3>${esc(f.name)}, done for you</h3><ul class="ticks">${f.points.map((p) => `<li>${esc(p)}</li>`).join("")}</ul></div>
+<div class="frow__copy"><span class="eyebrow">What it does</span><h3>${esc(f.heading || `${f.name}, done for you`)}</h3><ul class="ticks">${f.points.map((p) => `<li>${esc(p)}</li>`).join("")}</ul></div>
 <div class="card"><span class="eyebrow">Works on</span><h3>Your Sienci machine</h3><p>${machines.map((m) => `<a href="${href(`/machines/${m.slug}/`)}">${m.name}</a>`).join(" · ")}</p>${guides.length ? `<span class="eyebrow" style="margin-top:12px">Guides</span><p>${guides.map((g) => `<a href="${href(`/learn/${g.slug}/`)}">${esc(g.short)}</a>`).join("<br>")}</p>` : ""}</div>
 </div></section>
 <section class="soft"><div class="wrap"><div class="sec-head"><span class="eyebrow">More features</span><h2>Part of one workflow</h2></div><div class="grid grid--3">${related.map(featCard).join("")}</div></div></section>
@@ -468,7 +477,7 @@ function comparePages() {
       description: c.description,
       crumbs: [["Home", "/"], ["Compare", "/compare/"], [`CarvCAM vs ${c.name}`, vsUrl(c)]],
       schema: [
-        { "@context": "https://schema.org", "@type": "Article", headline: c.title, description: c.description, datePublished: "2026-10-27", dateModified: "2026-10-27", author: { "@type": "Organization", name: "CarvCAM", url: site.url }, publisher: { "@type": "Organization", name: "CarvCAM", url: site.url }, mainEntityOfPage: site.url + vsUrl(c), about: [{ "@type": "SoftwareApplication", name: "CarvCAM", operatingSystem: "Windows" }, { "@type": "SoftwareApplication", name: c.name, publisher: c.maker }], citation: c.sources.map((s) => s.url) },
+        { "@context": "https://schema.org", "@type": "Article", headline: c.title, description: c.description, datePublished: "2026-10-27", dateModified: "2026-10-27", author: { "@type": "Organization", name: "CarvCAM", url: site.url }, publisher: { "@type": "Organization", name: "CarvCAM", url: site.url }, mainEntityOfPage: site.url + vsUrl(c), about: [{ "@type": "SoftwareApplication", name: "CarvCAM", operatingSystem: "Windows, macOS, Linux" }, { "@type": "SoftwareApplication", name: c.name, publisher: c.maker }], citation: c.sources.map((s) => s.url) },
         faqLd(allFaq),
       ],
       body: `<section class="vhero"><div class="wrap">
@@ -590,14 +599,14 @@ ${rec ? `<p class="note" style="margin-top:20px">Sienci Labs itself notes that m
 <section id="options" class="vsec"><div class="wrap">
 <h2>All the options, compared</h2>
 <div class="tablewrap"><table class="cmp"><thead><tr><th>Software</th><th>Does</th><th>Price</th><th>Platforms</th><th>Best for</th></tr></thead><tbody>
-<tr><td class="us">CarvCAM</td><td class="us">Design + CAM + sender, offline</td><td class="us">At launch</td><td class="us">Windows, Linux, Raspberry Pi (Mac soon)</td><td class="us">LongMill and AltMill owners who want one app</td></tr>
+<tr><td class="us">CarvCAM</td><td class="us">Design + CAM + sender, offline</td><td class="us">At launch</td><td class="us">Windows, Mac, Linux, Raspberry Pi</td><td class="us">LongMill and AltMill owners who want one app</td></tr>
 ${comparisons.map((c) => `<tr><td><a href="${href(vsUrl(c))}">${esc(c.name)}</a></td><td>${esc(c.type.split(";")[0].split(" (")[0])}</td><td>${esc(c.pricing[0].price)}${c.pricing[1] ? ` · ${esc(c.pricing[1].price)}` : ""} ${cite(c.pricing[0].source || c.sources[0].url)}</td><td>${esc(c.platformsShort)}</td><td>${esc(c.chooseThem[0])}</td></tr>`).join("")}
 ${others.map((o) => `<tr><td>${esc(o.name)}</td><td>${esc(o.type.split(" (")[0])}</td><td>${esc(o.price)} ${cite(o.source.url, o.source.title)}</td><td>${esc(o.platforms.split(" (")[0])}</td><td>Free or low-cost option</td></tr>`).join("")}
 </tbody></table></div>
 </div></section>
 <section id="choose" class="vsec soft"><div class="wrap narrowish">
 <h2>How to choose</h2>
-<ul class="ticks"><li><span><b>Just starting out?</b> Pick the option with the fewest moving parts and a guided setup. Fewer programs means fewer places for a mismatch.</span></li><li><span><b>Already design elsewhere?</b> Keep your design tool and run files with gSender.</span></li><li><span><b>Signs, plaques, engraving?</b> CarvCAM, VCarve or Carveco.</span></li><li><span><b>Need 3D reliefs, inlays or nesting?</b> VCarve Pro, Aspire or Carveco Maker Plus.</span></li><li><span><b>Mechanical parts and furniture?</b> Fusion.</span></li></ul>
+<ul class="ticks"><li><span><b>Just starting out?</b> Pick the option with the fewest moving parts and a guided setup. Fewer programs means fewer places for a mismatch.</span></li><li><span><b>Already design elsewhere?</b> Keep your design tool and run files with gSender.</span></li><li><span><b>Signs, plaques, engraving?</b> CarvCAM, VCarve or Carveco.</span></li><li><span><b>V-carve inlays?</b> CarvCAM Pro guides them step by step; VCarve has them too.</span></li><li><span><b>Need 3D reliefs or nesting?</b> VCarve Pro, Aspire or Carveco Maker Plus.</span></li><li><span><b>Mechanical parts and furniture?</b> Fusion.</span></li></ul>
 <h2 style="margin-top:48px">Comparisons</h2>
 <div class="grid grid--3">${comparisons.map((c) => `<a class="card" href="${href(vsUrl(c))}"><span class="eyebrow">Comparison</span><h3>CarvCAM vs ${esc(c.name)}</h3><p>${esc(c.kicker)}</p><span class="more">Read it</span></a>`).join("")}</div>
 <h2 style="margin-top:48px">Sources</h2>
@@ -613,7 +622,7 @@ function learnPages() {
   layout({
     path: at("/learn/"),
     title: "Learn CNC with CarvCAM: Step-by-Step Guides for LongMill and AltMill",
-    description: "Step-by-step CNC guides with screenshots: make a wooden sign, V-carve a plaque, set work zero with a touch plate, connect your machine and recover from alarms.",
+    description: "Step-by-step CNC guides with screenshots: make a wooden sign, V-carve a plaque, cut name tags and an inlay coaster, set work zero, connect your machine, recover from alarms and install on a Mac.",
     crumbs: [["Home", "/"], ["Learn", "/learn/"]],
     body: `<section class="article"><div class="wrap"><h1>Learn</h1><p class="lede" style="max-width:640px">Short, step-by-step guides with screenshots. Written for LongMill and AltMill owners.</p></div></section>
 <section style="padding-top:24px"><div class="wrap"><div class="grid grid--3">${howtos.map(howCard).join("")}</div></div></section>${finalCta()}`,
@@ -632,7 +641,7 @@ function learnPages() {
         description: h.description,
         totalTime: h.time,
         tool: h.tools.map((t) => ({ "@type": "HowToTool", name: t })),
-        step: h.steps.map(([n, t, img], i) => ({ "@type": "HowToStep", position: i + 1, name: n, text: t, image: `${site.url}/assets/screens/${img}.webp` })),
+        step: h.steps.map(([n, t, img], i) => ({ "@type": "HowToStep", position: i + 1, name: n, text: t, ...(img ? { image: `${site.url}/assets/screens/${img}.webp` } : {}) })),
       }],
       body: `<section class="article"><div class="narrow">
 <span class="eyebrow">Guide · ${h.steps.length} steps · about ${h.time.replace("PT", "").replace("M", " min")}</span>
@@ -641,7 +650,7 @@ function learnPages() {
 </div></section>
 <section style="padding-top:8px"><div class="narrow prose">
 <div class="callout"><b>You'll need:</b> ${h.tools.map(esc).join(" · ")}</div>
-<ol class="howto">${h.steps.map(([n, t, img]) => `<li><h3>${esc(n)}</h3><p>${esc(t)}</p>${shot(img, `${n} in CarvCAM`)}</li>`).join("")}</ol>
+<ol class="howto">${h.steps.map(([n, t, img]) => `<li><h3>${esc(n)}</h3><p>${esc(t)}</p>${img ? shot(img, `${n} in CarvCAM`) : ""}</li>`).join("")}</ol>
 <div class="related"><h2>Related</h2><p>${rel.map((f) => `<a href="${href(`/features/${f.slug}/`)}">${esc(f.name)}</a>`).join(" · ")} · ${machines.map((m) => `<a href="${href(`/machines/${m.slug}/`)}">${m.name}</a>`).join(" · ")}</p>
 <p>More guides: ${howtos.filter((x) => x !== h).map((x) => `<a href="${href(`/learn/${x.slug}/`)}">${esc(x.short)}</a>`).join(" · ")}</p></div>
 </div></section>
@@ -783,6 +792,7 @@ ${docSearch("dqh")}
     const m = d.machine ? machines.find((x) => x.slug === d.machine) : null;
     const blocks = m ? [...machineBlocks(m, d).slice(0, 4), ...d.blocks, ...machineBlocks(m, d).slice(4)] : d.blocks;
     const dd = { ...d, blocks };
+    at(docUrl(d.slug)); // relative links in the content below need this page's depth
     const content = blocks.map((b) => docBlock(b, dd)).join("\n");
     const toc = blocks.filter((b) => b[0] === "h2" || b[0] === "qa").map((b) => b[1]);
     const steps = blocks.filter((b) => b[0] === "steps").flatMap((b) => b[1]);
@@ -856,7 +866,7 @@ await writeFile(
   join(OUT, "llms.txt"),
   `# CarvCAM
 
-> CarvCAM is a desktop app for Windows, Linux and Raspberry Pi (Mac coming soon), for Sienci Labs LongMill and AltMill CNC routers that does sign design, CAM (toolpaths with feeds and speeds tuned to the machine, router or spindle and bit) and machine control (connects over USB or Ethernet, guided wiring check, homing, touch-plate zero, carving) in one app that works offline. Mac and Raspberry Pi versions are in development.
+> CarvCAM is a desktop app for Windows, Mac (Apple Silicon and Intel), Linux and Raspberry Pi, for Sienci Labs LongMill and AltMill CNC routers, that does sign design, CAM (toolpaths with feeds and speeds from Sienci's tables for the machine, router or spindle and bit, with every Sienci bit set built in) and machine control (connects straight to the controller over USB or Ethernet, guided wiring check, homing, touch-plate zero, carving) in one app that works offline. No separate sender or post-processor is needed; it can also send the checked G-code to gSender. Free, with a Pro plan for guided V-carve inlays, batch from CSV and the cost and price calculator.
 
 Every page is also available as Markdown by adding \`index.md\` to its URL. The full documentation in one file: ${site.url}/llms-full.txt
 

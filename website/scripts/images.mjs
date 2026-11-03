@@ -8,7 +8,7 @@ const src = process.argv[2];
 if (!src) throw new Error("Usage: node scripts/images.mjs <folder with PNG screenshots>");
 const out = new URL("../assets/screens/", import.meta.url).pathname;
 await mkdir(out, { recursive: true });
-for (const f of (await readdir(src)).filter((f) => f.endsWith(".png"))) {
+for (const f of (await readdir(src)).filter((f) => f.endsWith(".png") && !f.startsWith("_"))) {
   const name = basename(f, ".png").replace(/^\d+-/, "");
   for (const w of [1440, 800]) {
     const file = join(out, `${name}${w === 800 ? "-800" : ""}.webp`);

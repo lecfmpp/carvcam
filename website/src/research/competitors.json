@@ -70,7 +70,7 @@
       "faq": [
         {"q": "Is Easel free?", "a": "Easel Basic is free but limited to one carve or G-code export per week, and V-carving is not included. Starter ($8/mo) allows 20 per week; Pro ($24/mo, $216/yr) is unlimited."},
         {"q": "Does Easel work with the LongMill or AltMill?", "a": "Easel lists Sienci machines on its partner page. Machines with the grblHAL SuperLongBoard can carve live only through an opt-in beta (October 2026) over USB; otherwise you export G-code and run it in gSender."},
-        {"q": "Can I use Easel offline?", "a": "No. Easel is a browser app that needs an internet connection. CarvCAM is a Windows desktop app that works offline."},
+        {"q": "Can I use Easel offline?", "a": "No. Easel is a browser app that needs an internet connection. CarvCAM is a desktop app for Windows, Mac and Linux that works offline."},
         {"q": "Does free Easel do V-carving?", "a": "No. V-carving, V-carve inlays and 3D carving are Easel Pro features."},
         {"q": "Can Easel connect over Ethernet to the SLB?", "a": "Not currently. Easel's grblHAL beta page says Ethernet and Wi-Fi do not work yet; USB only. CarvCAM connects over USB or Ethernet."},
         {"q": "Does Easel use Sienci's feeds and speeds?", "a": "Easel uses its own bit/material libraries and community cut settings. CarvCAM's defaults come from Sienci's published speed tables for the specific machine, router/spindle and bit."}
@@ -123,7 +123,7 @@
       ],
       "stronger": [
         "Free and open source, made by the machine maker itself, so it tracks SLB firmware changes closely.",
-        "Cross-platform today (Windows, Mac, Linux, Raspberry Pi) while CarvCAM's Mac/Linux builds are still in development.",
+        "Cross-platform (Windows, Mac, Linux, Raspberry Pi), and open source.",
         "Deep machine utilities: firmware/EEPROM editor, squaring calibration, motor tuning, surfacing generator, macros, joystick support.",
         "Works with any CAM program you already know; pairs with VCarve, Fusion, Carveco, etc.",
         "Wireless control from a second device through a browser.",
@@ -143,7 +143,7 @@
       "faq": [
         {"q": "Is gSender free?", "a": "Yes. gSender is free, open source (GPLv3) software from Sienci Labs."},
         {"q": "Can gSender design or create toolpaths?", "a": "No. gSender runs G-code you make elsewhere (it can generate surfacing code). You still need CAD/CAM software. CarvCAM combines design, toolpaths and machine control in one app."},
-        {"q": "Do I have to stop using gSender if I use CarvCAM?", "a": "No. CarvCAM can run the machine itself, but gSender remains a free option for running G-code from any CAM program, and for firmware utilities."},
+        {"q": "Do I have to stop using gSender if I use CarvCAM?", "a": "No. CarvCAM can run the machine itself or send the verified job straight to gSender (Send to gSender), and gSender remains a free option for running G-code from any CAM program, and for firmware utilities."},
         {"q": "Does gSender work over Ethernet?", "a": "Yes, gSender connects over USB or Ethernet to grbl and grblHAL controllers including the SuperLongBoard."},
         {"q": "What platforms does gSender support?", "a": "Windows, Mac (Intel and Apple Silicon), Linux and Raspberry Pi."},
         {"q": "Which CAM does Sienci pair with gSender?", "a": "Sienci's docs show Carbide Create + gSender as an example toolchain, and its product pages say most customers use Vectric VCarve Pro or Carveco with gSender."}
@@ -290,7 +290,7 @@
       "faq": [
         {"q": "Is VCarve Desktop enough for a LongMill 30x30 or 48x30?", "a": "VCarve Desktop limits jobs to 24 x 24 in. Larger LongMill/AltMill beds require tiling or upgrading to VCarve Pro (about $699)."},
         {"q": "How much does VCarve cost?", "a": "VCarve Desktop lists at about $349 and VCarve Pro at $699 as one-time perpetual licenses; Aspire is about $1,995."},
-        {"q": "Does VCarve run on Mac?", "a": "VCarve and Aspire are Windows-only (Mac users use Parallels). CarvCAM runs on Windows and Linux today, with Mac in development."},
+        {"q": "Does VCarve run on Mac?", "a": "VCarve and Aspire are Windows-only (Mac users use Parallels). CarvCAM runs on Windows, Mac (Intel and Apple Silicon) and Linux."},
         {"q": "Can VCarve control my LongMill?", "a": "No. You export G-code with the grbl (mm) post-processor and run it in gSender. CarvCAM includes machine control."},
         {"q": "Which post-processor should I use in VCarve for a LongMill?", "a": "Sienci recommends Grbl (mm) or Grbl (inch) .gcode, not .tap, and suggests creating a LongMill/AltMill machine configuration."},
         {"q": "Is VCarve better than CarvCAM for 3D work?", "a": "For 3D roughing/finishing, moulding, nesting and production features, VCarve/Aspire offer far more. CarvCAM focuses on signs, engraving, V-carving and cutouts with Sienci-tuned defaults."}

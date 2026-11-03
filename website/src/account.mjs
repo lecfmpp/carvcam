@@ -148,7 +148,7 @@ ${msg}
 <div class="plancard" data-plan-box hidden><div><span class="eyebrow">Your plan</span><h2 data-plan-name>Free</h2><p data-plan-detail></p></div>
 <div class="plancard__actions"><a class="btn btn--primary" href="${href("/pricing/")}" data-upgrade>Upgrade to Pro</a><button type="button" class="btn" data-manage hidden>Manage billing</button></div></div>
 <div class="acct__grid">
-<a class="card" href="${href("/download/")}"><h3>Download CarvCAM</h3><p>Windows, Linux and Raspberry Pi.</p><span class="more">Get the app</span></a>
+<a class="card" href="${href("/download/")}"><h3>Download CarvCAM</h3><p>Windows, Mac, Linux and Raspberry Pi.</p><span class="more">Get the app</span></a>
 <a class="card" href="${href("/onboarding/")}" data-onboarding><h3>Finish your shop profile</h3><p>Five quick questions so CarvCAM fits the way you carve.</p><span class="more">Continue</span></a>
 <a class="card" href="${href("/onboarding/")}" data-edit-answers hidden><h3>Your shop profile</h3><p>Change what you carve, your machine or your software.</p><span class="more">Edit answers</span></a>
 <a class="card" href="${href("/docs/")}"><h3>Docs</h3><p>Step-by-step guides from first sign to finished carve.</p><span class="more">Read the docs</span></a>
