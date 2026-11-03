@@ -19,7 +19,7 @@
 //
 // Needs: playwright (globally installed; chromium.launch() with no options), the app's npm deps
 // installed (cd cam-engine && npm install; cd ../app && npm install). No network: the Sienci
-// photos ship in app/public/{machines,heads,bits}, and "Send to gSender" talks to a stub.
+// photos ship in app/public/{machines,heads,bits}.
 import { createRequire } from "node:module";
 import { spawn } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -57,7 +57,6 @@ const workshop = (o = {}) => ({
     panel: "off",
     wired: o.wired ?? [],
     link: o.link ?? {},
-    gsenderAddress: "",
     ...(o.extra ?? {}),
   },
   version: 2,
@@ -168,17 +167,6 @@ function helpers(p, base) {
       await card.click();
       await p.waitForTimeout(500);
       return card;
-    },
-    /** Answers gSender's API so "Send to gSender" succeeds without gSender running. */
-    fakeGsender: async () => {
-      const cors = { "access-control-allow-origin": "*", "access-control-allow-headers": "*", "access-control-allow-methods": "*", "content-type": "application/json" };
-      await p.context().route(/:8000\/api\//, (route) => {
-        const u = route.request().url();
-        if (route.request().method() === "OPTIONS") return route.fulfill({ status: 204, headers: cors });
-        if (u.includes("/api/controllers")) return route.fulfill({ headers: cors, body: JSON.stringify([{ port: "COM3", ready: true, workflow: { state: "idle" }, controller: { type: "grblHAL", state: { status: { activeState: "Idle" } } } }]) });
-        if (u.includes("/api/signin")) return route.fulfill({ headers: cors, body: JSON.stringify({ token: "t" }) });
-        return route.fulfill({ headers: cors, body: "{}" });
-      });
     },
     /** Saves the open design to My projects. */
     save: async () => {
@@ -293,8 +281,7 @@ export const SHOTS = [
   },
   {
     name: "settings",
-    what: "Settings (scrolled to the end): what spins the bit, touch panel mode, gSender address, CarvCAM account",
-    ws: { extra: { gsenderAddress: "192.168.1.50:8000" } },
+    what: "Settings (scrolled to the end): what spins the bit, touch panel mode, CarvCAM account",
     run: async (h) => {
       await h.go("workshop/settings", 2000);
       await h.p.evaluate(() => {
@@ -414,25 +401,11 @@ export const SHOTS = [
   // ---------------- prepare
   {
     name: "prepare",
-    what: "Prepare: speed presets from the Sienci table, toolpath preview, Send to gSender, no post-processor",
+    what: "Prepare: speed presets from the Sienci table, toolpath preview, Download G-code, no post-processor",
     run: async (h) => {
       await h.make("Raised door sign", 2500);
       await h.nav("prepare", 1000);
       await h.verified();
-    },
-  },
-  {
-    name: "send-gsender",
-    what: "Prepare: Send to gSender done (Loaded as …), gSender at 192.168.1.50:8000 (a stubbed gSender answers)",
-    ws: { extra: { gsenderAddress: "192.168.1.50:8000" } },
-    run: async (h) => {
-      await h.fakeGsender();
-      await h.make("Name tags", 2500);
-      await h.nav("prepare", 1000);
-      await h.verified();
-      await h.btn("Send to gSender").click();
-      await h.p.getByText(/Loaded as/).waitFor({ timeout: 15000 });
-      await h.p.waitForTimeout(800);
     },
   },
   {

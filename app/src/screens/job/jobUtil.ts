@@ -144,3 +144,4 @@ function elementName(name: string) {
 const fmtNum = (n: number) => String(Math.round(n * 10) / 10);
 
 export const PRESETS: Preset[] = ["fast", "balanced", "detailed"];
+if (import.meta.env.DEV && typeof window !== "undefined") (window as unknown as { __flow: typeof useFlow }).__flow = useFlow;

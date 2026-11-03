@@ -91,7 +91,7 @@
       const CUT = seq("e-cut", B.cutFrames);
       const SHOTS = {
         design: ["a0-start", "a1-select", "a2-t1", "a2-t2", "a2-t3", "a3-font", "a3-h1", "a3-h2", "a4-copies", "a5-n2", "a5-n3", "a5-n4", "a5-n5", "a5-n6", "a6-done"],
-        prepare: ["b0-prepare", "b1-play1", "b1-play2", "b1-play3", "b1-play4", "b1-play5", "b1-play6", "b1-play7", "b1-playend", "b2-3d", "b3-sending", "b3-sent"],
+        prepare: ["b0-prepare", "b1-play1", "b1-play2", "b1-play3", "b1-play4", "b1-play5", "b1-play6", "b1-play7", "b1-playend", "b2-3d"],
         connect: ["c0-wiz", "c1-step0", "c1-step0-t0", "c1-step1", "c1-step1-t0", "c1-step2", "c1-step2-t0", "c1-step3", "c1-step3-t0", "c2-ports", "c4-verify", "c5-yes1", "c6-spinning", "c7-ok"],
         carve: ["d6-check", "d6-check-in", ...RUN, "e-change", "e-change1", "e-change2", ...CUT, "e-done"],
       }[scene];
@@ -259,7 +259,7 @@
         pulse(box([92, 287, 551, 389], 6), t - 0.3, 1.1);
         loopBack(1.2);
       } else if (scene === "prepare") {
-        // play the toolpath, 3D, then Send to gSender (no post-processor to pick)
+        // play the toolpath, 3D, then the panel: checked for this machine, Download G-code, no post-processor to pick
         begin(600, 420);
         t = 0.4;
         camTo(0.3, 1.0, 460, 380, 1.25);
@@ -273,14 +273,14 @@
         show("b2-3d", t, 0.3);
         camTo(t + 0.1, 1.1, 520, 500, 1.35);
         t += 1.1;
-        camTo(t, 1.0, 1180, 700, 1.45);
-        moveTo(B.gsender, 0.9);
-        click();
-        show("b3-sending", t);
-        t += 0.25;
-        show("b3-sent", t, 0.2);
-        pulse(box([1043, 645, 360, 102], 4), t + 0.3, 1.2); // "Sent to gSender" + "Loaded as …"
-        pulse(box(B.noPost, 4), t + 1.0, 1.1);
+        const [dlx, dly] = ctr(B.download);
+        camTo(t, 1.0, dlx, dly - 10, 1.45);
+        moveTo(B.download, 0.9, 40);
+        t += 0.15;
+        pulse(box(B.checked, 4), t, 1.0); // "Everything below is checked for your LongMill MK3 30×30."
+        pulse(box(B.download, 4), t + 0.6, 1.0); // nothing to send: download only if you want another sender
+        pulse(box(B.noPost, 4), t + 1.2, 1.2); // "No post-processor to pick: …"
+        t += 0.9;
         move(860, 600, 0.7);
         loopBack(1.6);
       } else if (scene === "connect") {

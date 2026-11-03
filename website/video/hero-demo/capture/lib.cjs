@@ -13,7 +13,7 @@ const arg = (k, d) => {
 // Workshop: LongMill MK3 30×30 + AutoSpin T1, a starter bit kit, onboarding done. Keys and ids follow the
 // app's stored schema (app/src/state/workshop.ts, version 2).
 const BITS = ["flat-1-8-upcut", "flat-1-4-upcut", "flat-1-16-downcut", "flat-1-8-downcut", "vbit-60-15mm", "vbit-30-1-8", "flat-1-8-compression", "surfacing-22mm"];
-const WORKSHOP = { state: { onboarded: true, machines: [{ id: "longmill-mk3-30x30", head: "autospin-t1" }], active: 0, bits: BITS, trackDone: ["surface", "depth-test"], mode: "simple", panel: "off", wired: [], link: {}, gsenderAddress: "" }, version: 2 };
+const WORKSHOP = { state: { onboarded: true, machines: [{ id: "longmill-mk3-30x30", head: "autospin-t1" }], active: 0, bits: BITS, trackDone: ["surface", "depth-test"], mode: "simple", panel: "off", wired: [], link: {} }, version: 2 };
 
 // Design: the "Name tags ×6" board (app/src/state/design.ts, version 4) before it's personalised: six linked
 // tags that all read NAME in Bebas Neue at 8 mm. The video types the name, picks the font, sizes it and fills
@@ -72,15 +72,6 @@ async function open(outDir) {
       document.head.appendChild(st);
     });
   }, [JSON.stringify(WORKSHOP), JSON.stringify(DESIGN)]);
-  // "Send to gSender" talks to a stub that answers like gSender with a controller on COM3
-  const cors = { "access-control-allow-origin": "*", "access-control-allow-headers": "*", "access-control-allow-methods": "*", "content-type": "application/json" };
-  await ctx.route(/:8000\/api\//, (route) => {
-    const u = route.request().url();
-    if (route.request().method() === "OPTIONS") return route.fulfill({ status: 204, headers: cors });
-    if (u.includes("/api/controllers")) return route.fulfill({ headers: cors, body: JSON.stringify([{ port: "COM3", ready: true, workflow: { state: "idle" }, controller: { type: "grblHAL", state: { status: { activeState: "Idle" } } } }]) });
-    if (u.includes("/api/signin")) return route.fulfill({ headers: cors, body: JSON.stringify({ token: "t" }) });
-    return route.fulfill({ headers: cors, body: "{}" });
-  });
   const page = await ctx.newPage();
   page.on("pageerror", (e) => console.log("pageerror", e.message));
   fs.mkdirSync(outDir, { recursive: true });

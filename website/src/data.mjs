@@ -122,7 +122,7 @@ export const features = [
       "G-code written for your Sienci controller (LongBoard, SuperLongBoard, SLB-LITE, SLB-EXT, grbl or grblHAL), chosen from your machine profile",
       "Millimeters, work zero and safe height match your setup, so no “bad number format” or unit mix-ups",
       "Every line verified: travel limits, depth, bit changes, feed and spindle range, unsupported commands",
-      "Open the file in gSender, or send it there with one click, and press Start",
+      "Nothing to export: CarvCAM runs the checked file on the machine itself, or download the .nc for any other sender",
     ],
   },
   {
@@ -409,7 +409,7 @@ export const howtos = [
 /* ---------------- FAQ (home) ---------------- */
 export const faq = [
   ["Which machines does CarvCAM support?", "Sienci Labs LongMill MK2 (LongBoard or SuperLongBoard), LongMill MK3 (SLB-LITE) and AltMill 2×4, 4×4 and 4×8 (SLB-EXT), with the Makita, AutoSpin T1 or ER20 spindle kits."],
-  ["Do I still need gSender or another sender?", "No. CarvCAM connects to the controller over USB or Ethernet and runs the job itself. If you prefer to keep gSender, Send to gSender loads the checked file into it in one click, or you can download the G-code."],
+  ["Do I still need gSender or another sender?", "No. CarvCAM connects to the controller over USB or Ethernet and runs the job itself. You don't need gSender. If you'd rather use gSender or another sender anyway, download the checked G-code (.nc) in Prepare and open it there."],
   ["Which computers can run it?", "Windows 10 and 11 (64-bit), Mac with Apple Silicon or Intel, Linux (AppImage, or .deb for Ubuntu, Debian and Mint) and Raspberry Pi (64-bit and 32-bit)."],
   ["Does it need internet?", "Only to download it. After that it runs entirely on your computer, workshop Wi-Fi or not. If you have Pro, sign in once; Pro keeps working offline for 30 days after each check."],
   ["Can I import my own designs?", "Yes: SVG and DXF files, and images you can trace into outlines."],

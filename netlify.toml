@@ -98,3 +98,18 @@
   from = "/download/raspberry-pi-32bit-deb"
   to = "https://github.com/lecfmpp/carvcam/releases/latest/download/CarvCAM-Linux-armv7l.deb"
   status = 302
+
+# Removed pages: Send to gSender was taken out of the app (CarvCAM runs the machine itself; Prepare
+# still has Download G-code for any other sender). Old links land on Prepare.
+[[redirects]]
+  from = "/docs/send-to-gsender/"
+  to = "/docs/prepare/"
+  status = 301
+[[redirects]]
+  from = "/docs/send-to-gsender"
+  to = "/docs/prepare/"
+  status = 301
+[[redirects]]
+  from = "/docs/send-to-gsender/index.md"
+  to = "/docs/prepare/index.md"
+  status = 301
