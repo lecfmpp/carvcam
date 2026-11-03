@@ -1,4 +1,4 @@
-/** Leitor mínimo de G-code (subconjunto GRBL), compartilhado pelo verificador e pelo simulador. */
+/** Minimal G-code reader (GRBL subset), shared by the verifier and the simulator. */
 
 export interface Word {
   letter: string;
@@ -9,7 +9,7 @@ export interface Line {
   number: number;
   raw: string;
   words: Word[];
-  /** Linha com "$" (comando de sistema/configuração do GRBL). */
+  /** Line starting with "$" (GRBL system/settings command). */
   system: boolean;
 }
 
@@ -36,13 +36,13 @@ export interface Segment {
   to: { x: number; y: number; z: number };
   feed: number;
   spindleOn: boolean;
-  /** Para arcos: pontos intermediários já interpolados. */
+  /** For arcs: intermediate points, already interpolated. */
   points?: { x: number; y: number; z: number }[];
 }
 
 /**
- * Interpreta os movimentos em coordenadas absolutas (mm). Assume que o verificador já
- * rejeitou G20/G91; aqui só seguimos o estado modal.
+ * Interprets the moves in absolute coordinates (mm). Assumes the verifier has already
+ * rejected G20/G91; here we only track the modal state.
  */
 export function toSegments(lines: Line[], start = { x: 0, y: 0, z: 0 }): Segment[] {
   const segs: Segment[] = [];

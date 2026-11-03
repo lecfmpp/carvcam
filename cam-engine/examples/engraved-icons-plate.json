@@ -1,0 +1,69 @@
+{
+  "plate": {
+    "type": "plate",
+    "width": 150,
+    "height": 90,
+    "thickness": 12,
+    "material": "softwood",
+    "texts": [
+      {
+        "content": "LUNA",
+        "font": "bebas-neue",
+        "size": 30,
+        "mode": "engrave",
+        "depth": 2
+      },
+      {
+        "content": "since 2024",
+        "font": "archivo-black",
+        "size": 9,
+        "mode": "engrave",
+        "depth": 1.5
+      }
+    ],
+    "edge": {
+      "type": "chamfered",
+      "radius": 8
+    },
+    "icons": [
+      {
+        "id": "heart",
+        "x": 22,
+        "y": 70,
+        "size": 16,
+        "mode": "engrave",
+        "depth": 2
+      },
+      {
+        "id": "leaf",
+        "x": 128,
+        "y": 70,
+        "size": 16,
+        "mode": "engrave",
+        "depth": 2
+      }
+    ],
+    "slots": [
+      {
+        "x": 75,
+        "y": 80,
+        "length": 14,
+        "width": 6
+      }
+    ]
+  },
+  "tool": {
+    "id": 1,
+    "name": "1/16\" straight bit",
+    "diameter": 1.5875,
+    "flutes": 2,
+    "cutLength": 6
+  },
+  "cutoutTool": {
+    "id": 2,
+    "name": "Long 1/8\" straight bit",
+    "diameter": 3.175,
+    "flutes": 2,
+    "cutLength": 22
+  }
+}

@@ -1,0 +1,13 @@
+/* Theater mode for tutorial videos */
+.theater { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 24px; background: rgba(4, 5, 7, 0.88); backdrop-filter: blur(6px); animation: theater-in 160ms ease-out; }
+.theater__stage { width: min(1280px, 100%, calc((100vh - 170px) * 16 / 9)); display: grid; gap: 12px; }
+.theater__head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; color: #fff; }
+.theater__eyebrow { font: 500 12px/1 var(--mono, ui-monospace, monospace); letter-spacing: 0.06em; text-transform: uppercase; color: rgba(255, 255, 255, 0.6); }
+.theater__title { margin: 6px 0 0; font: 600 20px/1.25 var(--font, system-ui); color: #fff; }
+.theater__close { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.08); color: #fff; cursor: pointer; }
+.theater__close:hover { background: rgba(255, 255, 255, 0.16); }
+.theater__frame { position: relative; aspect-ratio: 16 / 9; border-radius: 14px; overflow: hidden; background: #000; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6); }
+.theater__frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.theater__hint { margin: 0; text-align: center; font-size: 12px; color: rgba(255, 255, 255, 0.45); }
+@keyframes theater-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .theater { animation: none; } }

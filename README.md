@@ -1,20 +1,21 @@
 # CarvCAM
 
-Nova interface e CAM para o gSender, feita para as máquinas Sienci Labs (LongMill e AltMill).
-Veio do repositório Leandro-Apps/scanbusinesscard (pasta `carvcam/`), com o histórico preservado.
+Design, prepare and carve signs on Sienci Labs machines (LongMill and AltMill) in one app.
+Proprietary software — see `LICENSE`. This repository is private.
 
-| Pasta | O que é |
+| Folder | What it is |
 |---|---|
-| `gsender-ui/` | O app (React + Vite): design de placas, preparo, posicionamento, corte e simulação |
-| `cam-engine/` | Motor de CAM em TypeScript: geometria, operações, G-code e catálogo Sienci |
-| `docs/gsender-reverse-engineering/` | Estudos e decisões (engenharia reversa do gSender, comparativos) |
+| `app/` | The app (React + Vite): sign design, preparation, positioning, carving and simulation |
+| `cam-engine/` | CAM engine in TypeScript: geometry, operations, G-code and the Sienci catalog |
+| `desktop/` | Desktop app (Electron) and installers for Windows, Linux and Raspberry Pi |
+| `docs/` | Internal guides (code signing) |
 
-## Testar
+## Try it
 
-Precisa do [Node.js](https://nodejs.org) 18 ou mais novo. Na raiz do repositório:
+You need [Node.js](https://nodejs.org) 18 or newer. From the repository root:
 
-- **Mac:** clique duas vezes em `testar-carvcam.command`
-- **Windows:** clique duas vezes em `testar-carvcam.cmd`
-- **Linux / terminal:** `./testar-carvcam.sh`
+- **Mac:** double-click `try-carvcam.command`
+- **Windows:** double-click `try-carvcam.cmd`
+- **Linux / terminal:** `./try-carvcam.sh`
 
-Abre em http://localhost:4173. Detalhes em `gsender-ui/README.md`.
+It opens at http://localhost:4173. Details in `app/README.md`.

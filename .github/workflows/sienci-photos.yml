@@ -1,0 +1,38 @@
+# Downloads the official Sienci Labs product photos (machines, routers/spindles, bits) used by the app's
+# cards and commits them as WebP under app/public/. Runs when this file changes or from Actions › Run workflow.
+# The photos belong to Sienci Labs: use them according to the affiliate program / brand materials terms.
+name: Sienci product photos
+
+on:
+  push:
+    paths: [".github/workflows/sienci-photos.yml"]
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Download every photo again"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install
+        run: cd app && npm ci --no-audit --no-fund
+      - name: Download and convert the photos
+        run: cd app && node scripts/fetch-sienci-images.mjs ${{ inputs.force && '--force' || '' }}
+      - name: Commit new photos
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/public/machines app/public/heads app/public/bits
+          if git diff --cached --quiet; then echo "No new photos."; exit 0; fi
+          git commit -m "App: Sienci Labs product photos for machine, router/spindle and bit cards"
+          git push

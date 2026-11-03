@@ -2,23 +2,23 @@ import * as ot from "opentype.js";
 import type { FontMap } from "./layout.js";
 import type { FontId } from "./schema.js";
 
-/** Fontes incluídas (todas SIL Open Font License; licenças em fonts/). */
-export const FONT_FILES: Record<FontId, { arquivo: string; nome: string; estilo: string }> = {
-  "archivo-black": { arquivo: "archivoblack/ArchivoBlack-Regular.ttf", nome: "Archivo Black", estilo: "Sem serifa, bem grossa: a mais fácil de usinar" },
-  pacifico: { arquivo: "pacifico/Pacifico-Regular.ttf", nome: "Pacifico", estilo: "Cursiva, letras ligadas: boa para letreiro contínuo" },
-  "bebas-neue": { arquivo: "bebasneue/BebasNeue-Regular.ttf", nome: "Bebas Neue", estilo: "Condensada, só maiúsculas" },
+/** Bundled fonts (all SIL Open Font License; licenses in fonts/). */
+export const FONT_FILES: Record<FontId, { file: string; name: string; style: string }> = {
+  "archivo-black": { file: "archivoblack/ArchivoBlack-Regular.ttf", name: "Archivo Black", style: "Sans serif, very bold: the easiest to carve" },
+  pacifico: { file: "pacifico/Pacifico-Regular.ttf", name: "Pacifico", style: "Script with joined letters: good for one-piece cut-out lettering" },
+  "bebas-neue": { file: "bebasneue/BebasNeue-Regular.ttf", name: "Bebas Neue", style: "Condensed, capitals only" },
 };
 
-/** Carrega as fontes a partir de bytes (funciona no navegador com fetch e no Node com fs). */
-export async function loadFonts(read: (arquivo: string) => Promise<ArrayBuffer>, ids: FontId[] = Object.keys(FONT_FILES) as FontId[]): Promise<FontMap> {
+/** Loads the fonts from raw bytes (works in the browser with fetch and in Node with fs). */
+export async function loadFonts(read: (file: string) => Promise<ArrayBuffer>, ids: FontId[] = Object.keys(FONT_FILES) as FontId[]): Promise<FontMap> {
   const out: FontMap = {};
-  for (const id of ids) out[id] = parseFont(await read(FONT_FILES[id].arquivo));
+  for (const id of ids) out[id] = parseFont(await read(FONT_FILES[id].file));
   return out;
 }
 
 /**
- * O opentype.js publica UMD (Node) e ESM (bundlers): num caso `parse` vem no `default`,
- * no outro vem como export nomeado.
+ * opentype.js ships both UMD (Node) and ESM (bundlers): in one case `parse` lives on `default`,
+ * in the other it is a named export.
  */
 function parseFont(buf: ArrayBuffer) {
   const mod = ot as unknown as { parse?: typeof ot.parse; default?: { parse: typeof ot.parse } };
