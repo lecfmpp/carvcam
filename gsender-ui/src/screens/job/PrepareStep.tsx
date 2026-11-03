@@ -143,6 +143,7 @@ export function PrepareStep({ ctx }: { ctx: JobCtx }) {
               <Download size={16} strokeWidth={1.75} />
               Download G-code (.nc)
             </button>
+            <div className="sidepanel__hint">No post-processor to pick: the G-code is written for your {machine.controller} and checked line by line.</div>
           </>
         }
       >
@@ -229,7 +230,7 @@ export function PrepareStep({ ctx }: { ctx: JobCtx }) {
             </div>
             {result ? (
               verified ? (
-                <span className="job-verified">
+                <span className="job-verified" title="Every line checked against your machine's travel, bits, feeds and controller. No post-processor needed.">
                   <Check size={13} strokeWidth={2.2} />
                   G-code verified
                 </span>
