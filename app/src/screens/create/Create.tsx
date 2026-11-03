@@ -17,7 +17,9 @@ import {
   Circle,
   Copy,
   FileUp,
+  Grid3x3,
   Hexagon,
+  Layers,
   Minus,
   MousePointer2,
   PenTool,
@@ -46,7 +48,9 @@ import { AssistantBar } from "./AssistantBar";
 import { CurveEditor, PenLayer, type Geom } from "./pen";
 import { isImageFile, tracingFromFile, TracingLayer } from "./tracing";
 import { toast } from "../../state/ui";
-import { addCurve, addElement, alignElements, deleteElement, patchElement, type CurveNode, duplicateElement, elementBoxes, elementOf, fontOf, margin, moveElement, parseId, type Align, type Box, type ElementId, type Tool } from "./elements";
+import { addCurve, addElement, alignElements, copyBoxes, deleteElement, patchElement, type CurveNode, duplicateElement, elementBoxes, elementOf, fontOf, margin, moveElement, parseId, type Align, type Box, type ElementId, type Tool } from "./elements";
+import { CopiesPanel } from "./copiesPanel";
+import { InlayWizard } from "./inlayWizard";
 import { buildIssues, engineErrorIssue, type UiIssue } from "./issues";
 import { IssueCard, IssueTray, useIssueCtx, useIssueRunner } from "./IssueCard";
 import { useCanvasPrefs, useUi } from "../../state/ui";
@@ -122,6 +126,10 @@ export default function Create() {
   const errors = issues.filter((i) => i.level === "error").length;
   const warnings = issues.filter((i) => i.level === "warning").length;
   const boxes = useMemo(() => elementBoxes(spec, result), [spec, result]);
+  const copies = useMemo(() => copyBoxes(spec, result), [spec, result]);
+  // Make copies panel and inlay wizard: they work on the selection (or the element clicked).
+  const [copiesFor, setCopiesFor] = useState<ElementId[] | null>(null);
+  const [inlayFor, setInlayFor] = useState<ElementId[] | null>(null);
   const patchDesign = useDesign((s) => s.patch);
   const legendOpen = useCanvasPrefs((s) => s.legendOpen);
   // Holding tabs: the engine's (for the simulation) and the ones to draw (Manual follows the design at once).
@@ -192,6 +200,16 @@ export default function Create() {
     const order = [...ids].sort((a, b) => parseId(b).index - parseId(a).index);
     patchSpec((s) => order.reduce((acc, x) => deleteElement(acc, x), s));
     choose(null);
+  };
+  const forSelection = (id: ElementId) => (selected.includes(id) ? selected : [id]).filter((x) => x !== "holes");
+  const openCopies = (id: ElementId) => {
+    if (!selected.includes(id)) choose(id);
+    setInlayFor(null);
+    setCopiesFor(forSelection(id));
+  };
+  const openInlay = (id: ElementId) => {
+    setCopiesFor(null);
+    setInlayFor(forSelection(id));
   };
   const duplicate = (id: ElementId) => {
     const [next, nid] = duplicateElement(spec, id, boxes.get(id));
@@ -339,6 +357,7 @@ export default function Create() {
                 scale={s}
                 zoom={api.zoom}
                 boxes={boxes}
+                copies={copies}
                 issues={issues}
                 tool={tool}
                 sel={sel}
@@ -372,6 +391,8 @@ export default function Create() {
                 }}
                 onDuplicate={duplicate}
                 onDelete={remove}
+                onCopies={openCopies}
+                onInlay={spec.type !== "lettering" ? openInlay : undefined}
               />
               {result && sameBlock && tabMarksNow.length ? (
                 <TabsLayer
@@ -403,7 +424,11 @@ export default function Create() {
         setFocusKey={setFocusKey}
         onDuplicate={duplicate}
         onDelete={remove}
+        onCopies={openCopies}
+        onInlay={openInlay}
       />
+      {copiesFor ? <CopiesPanel key={copiesFor.join(",")} ids={copiesFor} boxes={boxes} onClose={() => setCopiesFor(null)} /> : null}
+      {inlayFor ? <InlayWizard ids={inlayFor} boxes={boxes} result={result} onClose={() => setInlayFor(null)} /> : null}
     </div>
   );
 }
@@ -521,6 +546,10 @@ function VectorPreview({ result, material, faded, lineWidth }: { result: Generat
         {[...L.cutouts, ...L.holes].map((v, i) => (
           <path key={`v${i}`} d={pathOf(v.region as Region)} fill={THROUGH_COLOR} />
         ))}
+        {/* Loose parts: the cut around them (about the bit's width). */}
+        {(L.parts ?? []).map((v, i) => (
+          <path key={`p${i}`} d={pathOf(v.region as Region)} fill="none" stroke={THROUGH_COLOR} strokeWidth={3.2} strokeLinejoin="round" />
+        ))}
       </g>
     </svg>
   );
@@ -547,6 +576,8 @@ interface OverlayProps {
   scale: number;
   zoom: number;
   boxes: Map<ElementId, Box>;
+  /** Boxes of the linked grid copies (without the original). */
+  copies: Map<ElementId, Box[]>;
   issues: UiIssue[];
   tool: Tool;
   sel: ElementId | null;
@@ -566,6 +597,8 @@ interface OverlayProps {
   onText(id: ElementId, text: string): void;
   onDuplicate(id: ElementId): void;
   onDelete(id: ElementId): void;
+  onCopies(id: ElementId): void;
+  onInlay?(id: ElementId): void;
 }
 
 function Overlay(p: OverlayProps) {
@@ -677,7 +710,26 @@ function Overlay(p: OverlayProps) {
         <span>{fmt(p.spec.height)} mm</span>
       </div>
 
-      {[...p.boxes].map(([id, b]) => {
+      {/* Linked grid copies: they follow the original while dragging; clicking one selects the original. */}
+      {[...p.copies].flatMap(([id, list]) => {
+        const d = drag && group.includes(id) ? drag : null;
+        return list.map((b, k) => (
+          <div
+            key={`${id}#${k}`}
+            className={`create-el--copy ${p.selected.includes(id) ? "is-sel" : ""}`}
+            style={px({ ...b, cx: b.cx + (d?.dx ?? 0), cy: b.cy + (d?.dy ?? 0) })}
+            title="Linked copy: edit the original to change all copies"
+            onPointerDown={(e) => {
+              if (p.tool !== "select" || e.button !== 0) return;
+              e.stopPropagation();
+              p.onPick(id, e.shiftKey);
+            }}
+          />
+        ));
+      })}
+
+      {/* Biggest underneath: a text inside a rectangle stays clickable. */}
+      {[...p.boxes].sort((a, c) => c[1].w * c[1].h - a[1].w * a[1].h).map(([id, b]) => {
         const d = drag && group.includes(id) ? drag : null;
         const r = px({ ...b, cx: b.cx + (d?.dx ?? 0), cy: b.cy + (d?.dy ?? 0) });
         const isSel = p.selected.includes(id);
@@ -730,7 +782,18 @@ function Overlay(p: OverlayProps) {
               <Copy size={14} strokeWidth={1.75} />
             </button>
           ) : null}
+          {p.sel !== "holes" ? (
+            <button aria-label="Make copies" title="Make copies (grid)" onClick={() => p.onCopies(p.sel!)}>
+              <Grid3x3 size={14} strokeWidth={1.75} />
+            </button>
+          ) : null}
+          {p.onInlay && p.sel !== "holes" ? (
+            <button aria-label="Guided inlay" title="Guided inlay (Pro)" onClick={() => p.onInlay!(p.sel!)}>
+              <Layers size={14} strokeWidth={1.75} />
+            </button>
+          ) : null}
           <button aria-label="Delete (Del)" title="Delete (Del)" onClick={() => p.onDelete(p.sel!)}>
+
             <Trash2 size={14} strokeWidth={1.75} />
           </button>
         </div>

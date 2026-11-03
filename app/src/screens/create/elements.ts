@@ -33,7 +33,7 @@ export const ICONS: { id: Icon["id"]; name: string }[] = [
   { id: "leaf", name: "Leaf" },
 ];
 
-export const MODE_NAME: Record<string, string> = { relief: "raised", engrave: "engraved", cutout: "cut out" };
+export const MODE_NAME: Record<string, string> = { relief: "raised", engrave: "engraved", cutout: "cut through", part: "cut out part" };
 export const SHAPE_NAME: Record<Shape["type"], string> = { rectangle: "Rectangle", circle: "Circle", line: "Line", polygon: "Polygon", star: "Star", curve: "Curve" };
 export const OP_NAME: Record<string, string> = { subtract: "subtracts", mask: "mask" };
 
@@ -97,7 +97,11 @@ export function listElements(spec: PlateSpecInput): ElementRow[] {
   return rows;
 }
 
-const opOr = (e: { operation?: string }, mode: string) => (e.operation && e.operation !== "normal" ? OP_NAME[e.operation] : mode);
+const opOr = (e: { operation?: string; copies?: { rows?: number; cols?: number } }, mode: string) => {
+  const base = e.operation && e.operation !== "normal" ? OP_NAME[e.operation] : mode;
+  const n = copyCount(e.copies);
+  return n > 1 ? `${base} · ×${n}` : base;
+};
 
 function shapeSize(f: Shape) {
   if (f.type === "rectangle") return `${r(f.width)} × ${r(f.height)} mm`;
@@ -154,9 +158,11 @@ export function elementBoxes(spec: PlateSpecInput, result: GenerateResult | null
       if (!id) return;
       fromEngine.set(id, [...(fromEngine.get(id) ?? []), ...reg]);
     };
-    L.engraved.forEach((g) => add(g.ref, g.region));
-    L.cutouts.forEach((v) => add(v.ref, v.region));
-    L.relief?.items?.forEach((it) => add(it.ref, it.region));
+    // Only the element itself: its grid copies are drawn separately (copyBoxes).
+    L.engraved.forEach((g) => !g.copy && add(g.ref, g.region));
+    L.cutouts.forEach((v) => !v.copy && add(v.ref, v.region));
+    (L.parts ?? []).forEach((v) => !v.copy && add(v.ref, v.region));
+    L.relief?.items?.forEach((it) => !it.copy && add(it.ref, it.region));
     L.holes.forEach((f) => add(f.ref, f.region));
   }
   for (const [id, reg] of fromEngine) {
@@ -509,3 +515,124 @@ export function arcFromBend(t: Text, bend: number): number | undefined {
   const L = textWidth(t);
   return Math.round((L / ((bend / 100) * Math.PI)) * 10) / 10;
 }
+
+// ------------------------------------------------------------------ copies grid
+
+/**
+ * Copies stay linked to the original: the grid is a field of the element (`copies`) and the engine
+ * draws the copies when it builds the layout, so changing the original (text, size, position)
+ * changes all of them. "Separate" turns the copies into independent elements (if they fit the
+ * spec's per-type limits).
+ */
+export type Copies = NonNullable<Text["copies"]>;
+
+export const copiesOf = (spec: PlateSpecInput, id: ElementId): Copies | undefined => (id === "holes" ? undefined : (elementOf(spec, id) as { copies?: Copies } | null)?.copies);
+export const copyCount = (c: { rows?: number; cols?: number } | undefined) => (c ? (c.rows ?? 1) * (c.cols ?? 1) : 1);
+
+/** Boxes of each element's copies (without the original), in part mm. */
+export function copyBoxes(spec: PlateSpecInput, result: GenerateResult | null): Map<ElementId, Box[]> {
+  const out = new Map<ElementId, Box[]>();
+  if (!result) return out;
+  const m = margin(spec);
+  const L = result.layout;
+  const all = [...L.engraved, ...L.cutouts, ...(L.parts ?? []), ...(L.relief?.items ?? [])];
+  for (const e of all) {
+    if (!e.copy) continue;
+    const id = idOf(e.ref);
+    const b = bounds(e.region as Region);
+    if (!id || !b) continue;
+    out.set(id, [...(out.get(id) ?? []), { cx: (b.x0 + b.x1) / 2 - m, cy: (b.y0 + b.y1) / 2 - m, w: b.x1 - b.x0, h: b.y1 - b.y0 }]);
+  }
+  return out;
+}
+
+/** Box around the elements. */
+export function groupBox(ids: ElementId[], boxes: Map<ElementId, Box>) {
+  const bs = ids.map((id) => boxes.get(id)).filter((b): b is Box => !!b);
+  if (!bs.length) return null;
+  return {
+    x0: Math.min(...bs.map((b) => b.cx - b.w / 2)),
+    y0: Math.min(...bs.map((b) => b.cy - b.h / 2)),
+    x1: Math.max(...bs.map((b) => b.cx + b.w / 2)),
+    y1: Math.max(...bs.map((b) => b.cy + b.h / 2)),
+  };
+}
+
+/** Writes the same grid (or none, with `c` null) on each element. */
+export function setCopies(spec: PlateSpecInput, ids: ElementId[], c: Copies | null): PlateSpecInput {
+  let s = spec;
+  for (const id of ids) {
+    if (id === "holes") continue;
+    const own = copiesOf(s, id);
+    // The per-copy names belong to each text: they don't move from one element to another.
+    const next = c && copyCount(c) > 1 ? { ...c, texts: id.startsWith("t:") ? (c.texts ?? own?.texts) : undefined } : undefined;
+    s = patchElement(s, id, { copies: next });
+  }
+  return s;
+}
+
+/** Most elements of each kind a spec can hold (the engine schema's limits). */
+export const ELEMENT_LIMIT: Record<"t" | "f" | "i" | "s", number> = { t: 6, f: 40, i: 12, s: 8 };
+const KIND_PLURAL = { t: "texts", f: "shapes", i: "icons", s: "drawings" } as const;
+
+/**
+ * Separates the copies into independent elements. Fails (with a reason) when that would go past the
+ * limit of elements of that kind, or when a turned copy has no way to turn (text, icon, drawing).
+ */
+export function detachCopies(spec: PlateSpecInput, ids: ElementId[], boxes: Map<ElementId, Box>): PlateSpecInput | { error: string } {
+  let s = structuredClone(spec);
+  const rx = (v: number) => Math.round(v * 100) / 100;
+  for (const id of ids) {
+    const { kind } = parseId(id);
+    if (kind === "holes") continue;
+    const el = elementOf(s, id) as (AnyEl & { copies?: Copies; x?: number; y?: number }) | null;
+    const c = el?.copies;
+    if (!el || !c || copyCount(c) <= 1) continue;
+    const key = LIST[kind];
+    const arr = (s[key] as AnyEl[] | undefined) ?? [];
+    if (arr.length + copyCount(c) - 1 > ELEMENT_LIMIT[kind]) return { error: `Too many to separate: a design can have up to ${ELEMENT_LIMIT[kind]} ${KIND_PLURAL[kind]}. Keep them linked instead.` };
+    const box = boxes.get(id);
+    const pivot = c.pivot ?? (box ? { x: box.cx, y: box.cy } : { x: el.x ?? 0, y: el.y ?? 0 });
+    const type = (el as { type?: string }).type;
+    const canTurn = kind === "f" && type !== undefined;
+    if (c.alternate && !canTurn) return { error: "Turned copies of text, icons and drawings can't be separated. Keep them linked instead." };
+    const base = { ...el, copies: undefined } as AnyEl & Record<string, unknown>;
+    // Text without a position: pin it where it is, so the copies share the same reference.
+    if (kind === "t" && (base.x === undefined || base.y === undefined) && box) Object.assign(base, { x: rx(box.cx), y: rx(box.cy) });
+    const made: AnyEl[] = [];
+    for (let r = 0; r < (c.rows ?? 1); r++) {
+      for (let col = 0; col < (c.cols ?? 1); col++) {
+        const k = r * (c.cols ?? 1) + col;
+        if (k === 0) continue;
+        const n = structuredClone(base) as Record<string, unknown> & { x: number; y: number; x2?: number; y2?: number; rotation?: number; nodes?: CurveNode[]; content?: string };
+        if (kind === "t" && c.texts?.[k - 1]?.trim()) n.content = c.texts[k - 1].trim();
+        if (c.alternate && (r + col) % 2 === 1) {
+          const turn = (x: number, y: number) => ({ x: 2 * pivot.x - x, y: 2 * pivot.y - y });
+          // Turning around the pivot moves the anchor to its opposite point; the shape turns around its anchor.
+          const a = turn(n.x, n.y);
+          n.x = a.x;
+          n.y = a.y;
+          if (type === "line") {
+            const b = turn(n.x2!, n.y2!);
+            n.x2 = b.x;
+            n.y2 = b.y;
+          } else if (type === "polygon" || type === "star") n.rotation = (((n.rotation ?? 0) + 360) % 360) - 180;
+          else if (type === "curve") n.nodes = n.nodes!.map((p) => ({ x: -p.x, y: -p.y, ...(p.ox !== undefined ? { ox: -p.ox, oy: -(p.oy ?? 0), ix: -(p.ix ?? 0), iy: -(p.iy ?? 0) } : {}) }));
+        }
+        const dx = col * (c.dx ?? 0);
+        const dy = -r * (c.dy ?? 0);
+        n.x = rx(n.x + dx);
+        n.y = rx(n.y + dy);
+        if (type === "line") {
+          n.x2 = rx(n.x2! + dx);
+          n.y2 = rx(n.y2! + dy);
+        }
+        made.push(n as unknown as AnyEl);
+      }
+    }
+    const idx = parseId(id).index;
+    s = { ...s, [key]: [...arr.map((x, i) => (i === idx ? base : x)), ...made] };
+  }
+  return s;
+}
+

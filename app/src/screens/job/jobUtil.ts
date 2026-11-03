@@ -82,11 +82,26 @@ export function groupOps(result: GenerateResult, tabs: number, lettering: boolea
   while (i < ops.length) {
     const o = ops[i];
     const same: number[] = [i];
-    // Merge adjacent operations of the same type and bit.
-    while (i + 1 < ops.length && ops[i + 1].type === o.type && ops[i + 1].tool === o.tool && o.type !== "profile") same.push(++i);
+    // Merge adjacent operations of the same type and bit. Loose parts (grid copies) merge into one
+    // step; the board's own outline stays on its own, and so do the inlay's V-carve and clearing.
+    const isPart = (k: number) => ops[k].name.startsWith("Part:");
+    const isInlay = (k: number) => /: inlay (pocket|plug)$/.test(ops[k].name);
+    while (
+      i + 1 < ops.length &&
+      ops[i + 1].type === o.type &&
+      ops[i + 1].tool === o.tool &&
+      isInlay(i + 1) === isInlay(i) &&
+      !isInlay(i) &&
+      (o.type !== "profile" || (isPart(i) && isPart(i + 1)))
+    )
+      same.push(++i);
     const names = same.map((k) => elementName(ops[k].name));
+    const plug = /inlay plug$/.test(o.name);
     let label = "";
-    if (o.type === "engrave") label = names.length === 1 ? `Engrave ${names[0]}` : names.length === 2 ? `Engrave ${names[0]} and ${names[1]}` : `Engrave ${names.length} details`;
+    if (isInlay(same[0])) label = /^Clear flat bottom/.test(o.name) ? `Clear the flat bottom of the ${plug ? "plug" : "pocket"}` : `V-carve the inlay ${plug ? "plug" : "pocket"} · ${fmtNum(o.depth)} mm`;
+    else if (isPart(same[0])) label = `Cut out ${same.length} part${same.length > 1 ? "s" : ""} with tabs`;
+    else if (o.type === "engrave") label =
+ names.length === 1 ? `Engrave ${names[0]}` : names.length === 2 ? `Engrave ${names[0]} and ${names[1]}` : `Engrave ${names.length} details`;
     else if (o.type === "relief") label = `Lower the background · ${fmtNum(o.depth)} mm`;
     else if (o.type === "cutout") label = "Cut through the letters";
     else if (o.type === "hole") {
