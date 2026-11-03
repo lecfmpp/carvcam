@@ -481,7 +481,7 @@ export const docs = {
       ["h2", "How the fit works"],
       ["p", "Both parts are cut with the same V-bit, so their walls have the same slope and wedge together. The plug isn't cut to the full pocket depth: it starts shallower by the **glue gap**, so its walls touch the pocket walls before its tip reaches the bottom. That gap at the bottom holds the extra glue. The plug board is cut deeper by the **board gap**, so the two boards stay a little apart after gluing and you can saw the plug board off in that gap."],
       ["table", ["Number", "What it is", "Default"], [["Pocket depth", "How deep the V-bit cuts the pocket walls", "3 mm"], ["Glue gap", "Space left at the bottom of the pocket", "0.5 mm"], ["Plug start depth", "Pocket depth − glue gap: where the V-bit starts at the edge of the plug", "2.5 mm"], ["Board gap", "Space between the two boards once glued", "2 mm"], ["Plug cut depth", "Plug start depth + board gap", "4.5 mm"]]],
-      ["shot", "inlay-guide", "The cross-section updates as you change the numbers."],
+      ["shot", "inlay-guide", "Step 3, Cut guide: the pocket, the plug, glue-up and flattening, in order."],
       ["h2", "Make an inlay"],
       [
         "steps",
