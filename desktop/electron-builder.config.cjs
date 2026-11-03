@@ -47,8 +47,16 @@ module.exports = {
   },
   // The .deb installs a udev rule so the USB controller works without joining the dialout group.
   deb: { afterInstall: "build/linux-after-install.sh", afterRemove: "build/linux-after-remove.sh" },
+  // Mac: .dmg to install and .zip for automatic updates, Intel (x64) and Apple Silicon (arm64).
+  // Without an Apple certificate (CSC_LINK) the app gets an ad-hoc signature ("-"): Apple Silicon only
+  // runs signed code, and an unsigned Electron app shows up as "damaged". Gatekeeper still asks the
+  // person to confirm on first open (see desktop/README.md); notarization needs the real certificate.
   mac: {
-    target: [{ target: "dmg", arch: ["x64", "arm64"] }],
+    target: [
+      { target: "dmg", arch: ["x64", "arm64"] },
+      { target: "zip", arch: ["x64", "arm64"] },
+    ],
+    ...(process.env.CSC_LINK ? {} : { identity: "-" }),
     artifactName: "${productName}-${version}-Mac-${arch}.${ext}",
     icon: "build/icon.png",
     category: "public.app-category.productivity",

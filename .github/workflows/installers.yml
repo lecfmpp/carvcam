@@ -155,11 +155,11 @@ jobs:
             desktop/release/latest-linux*.yml
           retention-days: 14
 
-  # Mac is still "coming soon" on the website: this job only keeps the test .dmg and doesn't block the others.
+  # Mac: .dmg (Intel and Apple Silicon). Signed and notarized when the Apple secrets exist; otherwise
+  # ad-hoc signed, still published, and the download page explains the first-open confirmation.
   build-mac:
     needs: build-windows
     runs-on: macos-latest
-    continue-on-error: true
     env:
       HAS_MAC_CERT: ${{ secrets.MAC_CERT_P12_BASE64 != '' && 'true' || 'false' }}
     steps:
@@ -186,15 +186,17 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: ${{ env.HAS_MAC_CERT }}
         run: |
           cd desktop
-          # Without an Apple certificate the .dmg is unsigned and only kept as an artifact (it doesn't go to the Release).
           # Secrets that don't exist arrive as empty strings; electron-builder would read an empty CSC_LINK
-          # as a certificate path, so they are removed from the environment.
+          # as a certificate path, so they are removed from the environment (the build is then ad-hoc signed).
           if [[ "$HAS_MAC_CERT" != "true" ]]; then unset CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; fi
           PUBLISH=never
-          if [[ -n "$RELEASE_TAG" && "$HAS_MAC_CERT" == "true" ]]; then PUBLISH=always; fi
+          if [[ -n "$RELEASE_TAG" ]]; then PUBLISH=always; fi
           npm run dist:mac -- --publish "$PUBLISH"
+      - name: Check the app signature
+        run: |
+          for app in desktop/release/mac*/CarvCAM.app; do codesign --verify --deep --strict --verbose=2 "$app"; done
       - name: Fixed-name copies for the website
-        if: env.RELEASE_TAG != '' && env.HAS_MAC_CERT == 'true'
+        if: env.RELEASE_TAG != ''
         env:
           GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
         run: |
@@ -207,5 +209,8 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: CarvCAM-Mac
-          path: desktop/release/*.dmg
+          path: |
+            desktop/release/*.dmg
+            desktop/release/*-Mac-*.zip
+            desktop/release/latest-mac.yml
           retention-days: 14
