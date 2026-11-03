@@ -10,7 +10,36 @@ export const FONT_IDS = ["archivo-black", "pacifico", "bebas-neue"] as const;
 export const ICON_IDS = ["heart", "star", "house", "leaf"] as const;
 export const MATERIAL_IDS = ["mdf", "plywood", "softwood", "hardwood", "acrylic"] as const;
 
-export const ModeSchema = z.enum(["relief", "engrave", "cutout"]);
+/**
+ * relief: the element stays up and the background is lowered; engrave: the area is lowered;
+ * cutout: cuts through along the inside of the outline (stencil); part: cuts the element out
+ * along the outside, with holding tabs, as a loose part (name tags, coasters on one board).
+ */
+export const ModeSchema = z.enum(["relief", "engrave", "cutout", "part"]);
+
+/** Reference to a drawn element (index within that type's list). */
+export const RefSchema = z.object({ type: z.enum(["text", "icon", "shape", "svg"]), index: z.number().int().min(0) });
+
+/**
+ * Grid of linked copies of an element. The engine makes the copies when it builds the layout, so
+ * changing the original changes every copy. The copy in row r and column c is offset (c·dx, −r·dy)
+ * from the original (rows go down). With `alternate`, copies where r + c is odd are turned 180°
+ * around `pivot` (the center of the selected group; omitted = the element's own center).
+ */
+export const CopiesSchema = z
+  .object({
+    rows: z.number().int().min(1).max(40).default(1),
+    cols: z.number().int().min(1).max(40).default(1),
+    /** Pitch between centers, mm. */
+    dx: z.number().min(0).max(3000).default(0),
+    dy: z.number().min(0).max(3000).default(0),
+    alternate: z.boolean().default(false),
+    pivot: z.object({ x: z.number(), y: z.number() }).optional(),
+    /** Text elements only: the text of each copy from the second one on (empty = same as the original). */
+    texts: z.array(z.string().max(60)).max(400).optional(),
+  })
+  .refine((c) => c.rows * c.cols <= 400, { message: "At most 400 copies." });
+export type Copies = z.infer<typeof CopiesSchema>;
 
 /**
  * Modifiers that apply to any drawn element (text, icon, shape, imported drawing).
@@ -32,10 +61,7 @@ export const ModifiersShape = {
    * Subtract/mask only: the affected elements. Omitted = all normal elements.
    * Empty list = none.
    */
-  targets: z
-    .array(z.object({ type: z.enum(["text", "icon", "shape", "svg"]), index: z.number().int().min(0) }))
-    .max(80)
-    .optional(),
+  targets: z.array(RefSchema).max(80).optional(),
   /** Engrave only: instead of clearing the area, engraves the outline plus parallel lines inside it. */
   hatch: z
     .object({
@@ -43,6 +69,9 @@ export const ModifiersShape = {
       angle: z.number().min(-180).max(180).default(45),
     })
     .optional(),
+  /** Mirrors the element left to right around its own anchor (x). Used by the inlay plug. */
+  mirror: z.boolean().optional(),
+  copies: CopiesSchema.optional(),
 };
 
 export const TextSchema = z.object({
@@ -200,6 +229,28 @@ export const EdgeSchema = z.object({
   radius: z.number().min(0).default(0),
 });
 
+/**
+ * V-carve inlay. An inlay is two jobs:
+ * - pocket (female): on the base board, the `targets` elements are V-carved down to `depth`;
+ * - plug (male): on the insert board, the (already mirrored) elements stay up and everything else
+ *   is V-carved starting at `depth − glueGap` (the start depth), down to `boardGap` below that.
+ * Flipped and glued, the plug goes into the pocket, the walls touch and `glueGap` is left for glue.
+ */
+export const InlaySchema = z.object({
+  part: z.enum(["pocket", "plug"]),
+  /** Pocket depth (D), mm. */
+  depth: z.number().min(0.5).max(20).default(3),
+  /** Glue gap between the top of the plug and the bottom of the pocket, mm. */
+  glueGap: z.number().min(0).max(3).default(0.5),
+  /** Gap left between the two boards once fitted (how far the plug is cut below the start depth), mm. */
+  boardGap: z.number().min(0.3).max(10).default(2),
+  /** Clear the flat areas with the flat bit (the cutout bit) instead of the V-bit. */
+  clear: z.boolean().default(true),
+  /** Pocket only: the elements that make up the inlay. Omitted = every engraved element. */
+  targets: z.array(RefSchema).max(80).optional(),
+});
+export type Inlay = z.infer<typeof InlaySchema>;
+
 export const PlateSpecSchema = z.object({
   type: z.enum(["plate", "lettering"]).default("plate"),
   width: z.number().positive().max(3000),
@@ -219,6 +270,8 @@ export const PlateSpecSchema = z.object({
   outerCutout: z.boolean().default(true),
   /** Extra material around the part, when there is an outer cutout. */
   margin: z.number().min(0).default(10),
+  /** V-carve inlay: this board is the pocket or the plug of an inlay. */
+  inlay: InlaySchema.optional(),
 });
 
 export type PlateSpec = z.infer<typeof PlateSpecSchema>;
