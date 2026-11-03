@@ -1,0 +1,584 @@
+{
+  "checked": "2026-10-27",
+  "notes": [
+    "All facts checked on 2026-10-27 unless a source date is given. Prices are USD list prices as shown by the cited source on that date.",
+    "Vectric's own purchase pages load prices client-side and returned no figures; Vectric USD prices are from authorized resellers / Sienci's own store and are marked accordingly.",
+    "Nothing here describes CarvCAM pricing. CarvCAM claims in FAQ answers are limited to the product description supplied by the CarvCAM team."
+  ],
+  "competitors": [
+    {
+      "slug": "easel",
+      "name": "Easel (Basic / Starter / Pro)",
+      "maker": "Inventables (Chicago, USA)",
+      "type": "Combo: browser-based CAD + CAM + machine control (sender)",
+      "launched": "unverified (commonly cited ~2014; not confirmed on a primary source)",
+      "pricing": [
+        {"plan": "Easel Basic (free)", "price": "$0", "notes": "Full design toolset, but only ONE carve or G-code export per week. No V-carving, no 3D carving, one machine profile.", "source": "https://easel.com/pages/easel-pro-feature-detail"},
+        {"plan": "Easel Starter", "price": "$8/month or $72/year", "notes": "20 carves or G-code exports per week; adds raster carving, ramping plunges, center work zero. Still no V-carving.", "source": "https://support.easel.com/hc/en-us/articles/52649769958163-Easel-Plans-Pricing"},
+        {"plan": "Easel Pro", "price": "$24/month, $216/year, or $599 per 3-year subscription", "notes": "Unlimited carves/exports, V-carving, V-carve inlays, 3D carving, 300+ fonts, 10M+ design library, custom bit/material toolbox, large-material tiling, multiple machine profiles, resume carve. Auto-renews.", "source": "https://support.easel.com/hc/en-us/articles/52649769958163-Easel-Plans-Pricing"}
+      ],
+      "platforms": "Browser (any OS with a modern browser; Web Serial 'Quick Connect' requires Chrome/Chromium) plus the Easel Driver for USB machine connection",
+      "offline": "No. Cloud/browser app; Sienci notes Easel requires an internet connection to work.",
+      "account_required": "Yes (free Easel account)",
+      "runs_machine": "Yes for GRBL and FluidNC machines over USB. For grblHAL (Sienci SuperLongBoard/SLB-EXT) there is an opt-in beta announced October 2026: USB only, no Ethernet/Wi-Fi. Before the beta, SLB users had to export G-code and run it in gSender.",
+      "sienci_support": "Easel has a Sienci Labs partner page listing AltMill MK2 4x4 (SLB-EXT), LongMill MK3 (SLB-LITE), LongMill original and LongMill MK2.5. Sienci's post-processor table says 'No selection required' for Easel. grblHAL live carving is beta-only and USB-only.",
+      "features": [
+        "2D design tools, text, basic shapes, SVG/DXF/G-code import and export",
+        "Image trace (image-to-vector)",
+        "Built-in bit and material libraries with recommended cut settings; Community Cut Settings",
+        "Automated toolpath generation, two-stage carving with feedrate override",
+        "Detailed 3D preview / simulation",
+        "Raster carving and ramping plunges (Starter and Pro)",
+        "V-carving, V-carve inlays, 3D carving, textured pockets, nesting, large-material tiling (Pro only)",
+        "Machine setup wizard with wiring test, homing, spindle test, Z-probe (also on grblHAL beta)",
+        "Digital readout (DRO), resume carve (Pro), machine parking (Pro)"
+      ],
+      "limits": [
+        {"text": "Free Basic plan is limited to one carve or G-code export per week; Starter is limited to 20 per week.", "source": "https://easel.com/pages/easel-pro-feature-detail"},
+        {"text": "V-carving, V-carve inlays and 3D carving require Easel Pro ($24/mo or $216/yr).", "source": "https://easel.com/pages/easel-pro-feature-detail"},
+        {"text": "grblHAL support (needed for Sienci SLB/SLB-EXT) is an opt-in beta; Ethernet and Wi-Fi connections do not work, only USB.", "source": "https://easel.com/features/grblhal-beta"},
+        {"text": "For grblHAL controllers outside the beta, Easel exports G-code to run in the machine's own software.", "source": "https://easel.com/partners/sienci-labs"},
+        {"text": "Requires an internet connection; Sienci suggests designing on one computer and running the machine from another if offline.", "source": "https://resources.sienci.com/view/lm-system-requirements/"}
+      ],
+      "pain_points": [
+        {"text": "New LongMill MK2.5 owner could connect in gSender but Easel Pro could not see the SLB; forum reply: Easel doesn't support grblHAL firmware (pre-beta).", "source": "https://forum.sienci.com/t/easel-connecting-to-slb/12619"},
+        {"text": "'I just purchased a Sienci Labs Longmill with their SLB controller and come to find out that Easel is incompatable with grblHal.'", "source": "https://forum.easel.com/t/grblhal-support-in-easel/155142"},
+        {"text": "Users who only do 2D work dropped Pro after price increases and asked for a cheaper 'pro lite' tier; subscription poor value for occasional users.", "source": "https://forum.easel.com/t/free-easel/148231"},
+        {"text": "Sienci's own 2026 software review: V-bits, ramping, STL import and clip art need Pro; no internet means you can't create new files.", "source": "https://www.youtube.com/watch?v=GgeP3nUztpw"},
+        {"text": "Onefinity forum thread on the Easel price hike: users weighing whether to pay or 'jump ship' to Carbide Create, Carveco or VCarve.", "source": "https://forum.onefinitycnc.com/t/easel-price-increase/9544"}
+      ],
+      "stronger": [
+        "Fastest first-cut experience; nothing to install, runs in any browser.",
+        "Huge tutorial base, project gallery, and 10M+ design library on Pro.",
+        "Works across many GRBL machine brands, not tied to one vendor.",
+        "Now has a guided setup (wiring test, homing, probe) similar in spirit to CarvCAM's, and is actively adding grblHAL support.",
+        "Cloud storage means projects follow you between computers.",
+        "Mature product with years of user feedback; Pro adds 3D carving and inlays."
+      ],
+      "keywords": [
+        "easel alternative",
+        "easel alternative offline",
+        "easel pro alternative free",
+        "easel longmill",
+        "easel superlongboard grblhal",
+        "easel vs vcarve",
+        "is easel free",
+        "easel pro price",
+        "easel without internet",
+        "easel v carve free"
+      ],
+      "faq": [
+        {"q": "Is Easel free?", "a": "Easel Basic is free but limited to one carve or G-code export per week, and V-carving is not included. Starter ($8/mo) allows 20 per week; Pro ($24/mo, $216/yr) is unlimited."},
+        {"q": "Does Easel work with the LongMill or AltMill?", "a": "Easel lists Sienci machines on its partner page. Machines with the grblHAL SuperLongBoard can carve live only through an opt-in beta (October 2026) over USB; otherwise you export G-code and run it in gSender."},
+        {"q": "Can I use Easel offline?", "a": "No. Easel is a browser app that needs an internet connection. CarvCAM is a Windows desktop app that works offline."},
+        {"q": "Does free Easel do V-carving?", "a": "No. V-carving, V-carve inlays and 3D carving are Easel Pro features."},
+        {"q": "Can Easel connect over Ethernet to the SLB?", "a": "Not currently. Easel's grblHAL beta page says Ethernet and Wi-Fi do not work yet; USB only. CarvCAM connects over USB or Ethernet."},
+        {"q": "Does Easel use Sienci's feeds and speeds?", "a": "Easel uses its own bit/material libraries and community cut settings. CarvCAM's defaults come from Sienci's published speed tables for the specific machine, router/spindle and bit."}
+      ],
+      "sources": [
+        {"title": "Easel Plans/Pricing (Easel Support Center, updated Aug 14 2026)", "url": "https://support.easel.com/hc/en-us/articles/52649769958163-Easel-Plans-Pricing"},
+        {"title": "Easel Plans & Features comparison", "url": "https://easel.com/pages/easel-pro-feature-detail"},
+        {"title": "Easel GrblHAL (Beta), October 2026", "url": "https://easel.com/features/grblhal-beta"},
+        {"title": "Easel Sienci Labs partner page", "url": "https://easel.com/partners/sienci-labs"},
+        {"title": "Sienci forum: Easel connecting to SLB", "url": "https://forum.sienci.com/t/easel-connecting-to-slb/12619"},
+        {"title": "Sienci Labs 2026 CNC Design Software Review (YouTube)", "url": "https://www.youtube.com/watch?v=GgeP3nUztpw"}
+      ]
+    },
+    {
+      "slug": "gsender",
+      "name": "gSender",
+      "maker": "Sienci Labs (Kitchener-Waterloo, Ontario, Canada)",
+      "type": "Sender / machine control only (no CAD, no CAM). Includes surfacing g-code generator.",
+      "launched": "Public release May 2021, after ~5 months of alpha/closed beta with 300+ testers; built on CNCjs.",
+      "pricing": [
+        {"plan": "gSender", "price": "Free", "notes": "Open source, GNU GPLv3. gSender Edge is a free test build.", "source": "https://sienci.com/gsender/"}
+      ],
+      "platforms": "Windows, Intel Mac, Apple Silicon Mac, Raspberry Pi, Intel Linux; older builds for legacy OSes (Chromebook instructions in docs)",
+      "offline": "Yes (desktop app; internet only needed to download/update)",
+      "account_required": "No",
+      "runs_machine": "Yes, this is its job. Supports grbl and grblHAL, USB or Ethernet, wireless control from a second device via browser.",
+      "sienci_support": "First-party: Sienci's own sender, works out-of-the-box on LongMill and AltMill with pre-built machine profiles; Sienci recommends it as the go-to interface.",
+      "features": [
+        "Connect over USB or Ethernet; grbl and grblHAL",
+        "Jogging, DRO, zeroing, touch-plate probing with continuity detection",
+        "3D toolpath visualization and file insight (feed range, tools used, estimated time, dimensions)",
+        "Feed/spindle overrides, start-from-line, outline, pause/stop",
+        "Tool change handling on M6 (pause, ignore, or run code blocks)",
+        "Surfacing tool, squaring/calibration wizard, motor movement tuning",
+        "Firmware tool for EEPROM settings and flashing",
+        "Macros, keyboard shortcuts, joystick/gamepad support, lightweight mode",
+        "Pre-built profiles for LongMill, AltMill, Shapeoko, X-Carve, OpenBuilds, and many more"
+      ],
+      "limits": [
+        {"text": "No design or toolpath creation: Sienci's toolchain docs pair gSender with a separate CAM program (e.g., Carbide Create, Vectric, Fusion).", "source": "https://resources.sienci.com/view/cnc-choosing-software/"},
+        {"text": "Provided 'as is'; Sienci docs advise holding off updates before important carves and exporting preferences first.", "source": "https://resources.sienci.com/view/gs-installation/"},
+        {"text": "Users must pick the correct firmware (grbl vs grblHAL) at connect; mis-selection caused erratic behaviour, prompting Sienci to change defaults in 1.4.4.", "source": "https://forum.sienci.com/t/confirm-grbl-vs-grblhal-on-connect/11295"}
+      ],
+      "pain_points": [
+        {"text": "User reports jobs stopping midway on large Fusion mesh files; turned out to be USB/RF noise, fixed by rerouting the cable.", "source": "https://forum.sienci.com/t/gsender-stops-in-middle-of-job-or-verify/12528"},
+        {"text": "LongMill MK2.5 owner on Ethernet: gSender 1.6.4 stopped with 'Alarm 10: EStop asserted' and did not record the last line run.", "source": "https://forum.sienci.com/t/gsender-stops-carving/27298"},
+        {"text": "SLB owner: harder and harder to connect at startup; homing button missing until reconnecting several times.", "source": "https://forum.sienci.com/t/gsender-issues-connecting-to-slb/26575"},
+        {"text": "GitHub issue: job stops mid-carve; start-from-line ran at ~1 in/min due to an inch/mm bug, fixed in 1.5.x.", "source": "https://github.com/Sienci-Labs/gsender/issues/625"},
+        {"text": "Beginner confusion about the multi-program toolchain: 'have no clue how to get the file to the Longmill.'", "source": "https://forum.sienci.com/t/learning-curve-on-longmill/1558"}
+      ],
+      "stronger": [
+        "Free and open source, made by the machine maker itself, so it tracks SLB firmware changes closely.",
+        "Cross-platform today (Windows, Mac, Linux, Raspberry Pi) while CarvCAM's Mac/Linux builds are still in development.",
+        "Deep machine utilities: firmware/EEPROM editor, squaring calibration, motor tuning, surfacing generator, macros, joystick support.",
+        "Works with any CAM program you already know; pairs with VCarve, Fusion, Carveco, etc.",
+        "Wireless control from a second device through a browser.",
+        "Large existing user base and Sienci support documentation."
+      ],
+      "keywords": [
+        "gsender download",
+        "gsender vs ugs",
+        "gsender alternative",
+        "gsender tool change",
+        "gsender stops mid job",
+        "gsender ethernet connection slb",
+        "best gcode sender for longmill",
+        "gsender with vcarve",
+        "gsender cam software"
+      ],
+      "faq": [
+        {"q": "Is gSender free?", "a": "Yes. gSender is free, open source (GPLv3) software from Sienci Labs."},
+        {"q": "Can gSender design or create toolpaths?", "a": "No. gSender runs G-code you make elsewhere (it can generate surfacing code). You still need CAD/CAM software. CarvCAM combines design, toolpaths and machine control in one app."},
+        {"q": "Do I have to stop using gSender if I use CarvCAM?", "a": "No. CarvCAM can run the machine itself, but gSender remains a free option for running G-code from any CAM program, and for firmware utilities."},
+        {"q": "Does gSender work over Ethernet?", "a": "Yes, gSender connects over USB or Ethernet to grbl and grblHAL controllers including the SuperLongBoard."},
+        {"q": "What platforms does gSender support?", "a": "Windows, Mac (Intel and Apple Silicon), Linux and Raspberry Pi."},
+        {"q": "Which CAM does Sienci pair with gSender?", "a": "Sienci's docs show Carbide Create + gSender as an example toolchain, and its product pages say most customers use Vectric VCarve Pro or Carveco with gSender."}
+      ],
+      "sources": [
+        {"title": "Introducing gSender (Sienci Labs)", "url": "https://sienci.com/gsender/"},
+        {"title": "gSender Installation docs", "url": "https://resources.sienci.com/view/gs-installation/"},
+        {"title": "gSender Problems/Bugs docs", "url": "https://resources.sienci.com/view/gs-feedback/"},
+        {"title": "gSender GitHub issue #625", "url": "https://github.com/Sienci-Labs/gsender/issues/625"}
+      ]
+    },
+    {
+      "slug": "carbide-create",
+      "name": "Carbide Create (Core / Pro)",
+      "maker": "Carbide 3D (Torrance, California, USA)",
+      "type": "CAD + CAM (no machine control; Carbide Motion is the separate sender, Carbide 3D machines only)",
+      "launched": "unverified",
+      "pricing": [
+        {"plan": "Carbide Create Core", "price": "Free", "notes": "Included with Shapeoko/Nomad. Designed for Carbide 3D machines; saving standard G-code for any CNC machine is a Pro-only feature.", "source": "https://carbide3d.com/carbidecreate/core-vs-pro/"},
+        {"plan": "Carbide Create Pro (subscription)", "price": "$120/year", "notes": "Deactivates at end of term.", "source": "https://carbide3d.com/carbidecreate/buy"},
+        {"plan": "Carbide Create Pro (perpetual)", "price": "$360 one-time", "notes": "One year of updates included; additional updates $120/year.", "source": "https://carbide3d.com/carbidecreate/buy"},
+        {"plan": "Pro trial", "price": "Free 14-day trial", "notes": "Fully functional, generates G-code.", "source": "https://carbide3d.com/carbidecreate/core-vs-pro/"}
+      ],
+      "platforms": "Windows and Mac",
+      "offline": "Yes, runs locally; no internet required",
+      "account_required": "No account needed for Core use per vendor page (Pro needs license activation; unverified whether activation needs internet)",
+      "runs_machine": "No. Carbide Motion (sender) only works with Carbide 3D machines, so LongMill/AltMill owners need Pro to export G-code and then run it in gSender or another sender.",
+      "sienci_support": "Sienci's post-processor table lists 'grbl' for Carbide Create. Sienci's docs note that V7+ removed free G-code export, requiring a C2D extraction workaround (now limited to Carbide machine owners) or an older V6 build.",
+      "features": [
+        "2D design: shapes, Bezier splines, text on arc, booleans, offsets, alignment",
+        "Automatic image-to-vector tracing; SVG/DXF import; Design Elements library",
+        "Pockets, contours, V-carving, V-carve inlay mode, engraving",
+        "Tool library with speeds and feeds; 3D simulation",
+        "Pro: 3D modelling (components, textures, heightmaps, STL import), 3D rough/finish, rest machining, ramping, toolpath tiling, advanced engraving, standard G-code output"
+      ],
+      "limits": [
+        {"text": "Carbide Create Core is designed for Carbide 3D machines; using it with another CNC machine requires a Pro license.", "source": "https://carbide3d.com/carbidecreate/core-vs-pro/"},
+        {"text": "G-code export is offered only in Create Pro.", "source": "https://guides.carbide3d.com/create-pro/g-code-output/"},
+        {"text": "Since V7, G-code is stored encrypted inside the .c2d file; the web extraction tool is limited to owners of Carbide 3D machines (since June 30 2023).", "source": "https://forum.onefinitycnc.com/t/carbide-create-g-code-june-30-2023-no-longer-works/21380"},
+        {"text": "Toolpath tiling (to cut larger than the work area) is Pro-only.", "source": "https://carbide3d.com/carbidecreate/core-vs-pro/"}
+      ],
+      "pain_points": [
+        {"text": "'If you want to use a non carbide machine you have to pay for pro in order to export G-code now.'", "source": "https://community.carbide3d.com/t/carbide-create-764-doesnt-export-gcodes-without-being-pro/88818"},
+        {"text": "User upset that 'Save as Gcode' was greyed out as Pro-only after updating to V7.", "source": "https://community.carbide3d.com/t/can-no-longer-save-gcode/49218"},
+        {"text": "Onefinity owners lost the free C2D-to-G-code web extraction in mid-2023; workaround is downgrading to V6.", "source": "https://forum.onefinitycnc.com/t/carbide-create-g-code-june-30-2023-no-longer-works/21380"},
+        {"text": "Sienci 2026 review: without Pro you can't save real G-code and are 'basically stuck in their ecosystem'.", "source": "https://www.youtube.com/watch?v=GgeP3nUztpw"},
+        {"text": "Older LongMill user opinion: 'poor user interface and limited free functionality.'", "source": "https://forum.sienci.com/t/cheap-vectric-sw-on-ebay-is-it-for-real/479"}
+      ],
+      "stronger": [
+        "Mature, polished 2D/2.5D design tools with booleans, splines, inlay mode and a large design-element library.",
+        "Mac support today.",
+        "Pro adds 3D modelling, heightmaps, STL import and 3D roughing/finishing at a low price ($120/yr).",
+        "Perpetual license option ($360) for subscription-averse users.",
+        "Large tutorial library (My Carbide 3D) and active community forum.",
+        "Many beginner guides still recommend it, so it has strong mindshare."
+      ],
+      "keywords": [
+        "carbide create longmill",
+        "carbide create gcode export free",
+        "carbide create core vs pro",
+        "carbide create non carbide machine",
+        "carbide create pro price",
+        "carbide create alternative",
+        "carbide create v6 download gcode",
+        "carbide create grbl post processor"
+      ],
+      "faq": [
+        {"q": "Is Carbide Create free for LongMill owners?", "a": "Carbide Create Core is free but is designed for Carbide 3D machines; exporting standard G-code for a LongMill or AltMill requires Carbide Create Pro ($120/year or $360 perpetual)."},
+        {"q": "Can Carbide Create send jobs to a LongMill directly?", "a": "No. Carbide Motion only works with Carbide 3D machines, so you export G-code (Pro) and run it in gSender. CarvCAM designs, makes toolpaths and runs the LongMill/AltMill itself."},
+        {"q": "Does Carbide Create work offline?", "a": "Yes, it runs locally on Windows and Mac without internet."},
+        {"q": "Does Carbide Create include feeds and speeds?", "a": "Yes, it has a tool library with speeds and feeds focused on Carbide 3D tooling. CarvCAM's defaults come from Sienci's tables for your Sienci machine, router/spindle and bit."},
+        {"q": "Which post-processor should I use for Carbide Create on a LongMill?", "a": "Sienci recommends the grbl post-processor (Pro required for G-code output)."},
+        {"q": "Can I still get free G-code from older Carbide Create?", "a": "Users report Carbide Create V6 still exports G-code, but it lacks newer features and is no longer the supported version."}
+      ],
+      "sources": [
+        {"title": "Carbide Create overview", "url": "https://carbide3d.com/carbidecreate/"},
+        {"title": "Carbide Create Core vs Pro", "url": "https://carbide3d.com/carbidecreate/core-vs-pro/"},
+        {"title": "Buy Carbide Create Pro", "url": "https://carbide3d.com/carbidecreate/buy"},
+        {"title": "Carbide 3D Guides: G-code Output", "url": "https://guides.carbide3d.com/create-pro/g-code-output/"},
+        {"title": "Carbide Create V7 blog (G-code in C2D)", "url": "https://carbide3d.com/blog/carbide-create-v7/"}
+      ]
+    },
+    {
+      "slug": "vcarve",
+      "name": "Vectric VCarve Desktop / VCarve Pro (and Aspire)",
+      "maker": "Vectric Ltd (Alcester, England, UK)",
+      "type": "CAD + CAM (no machine control; ships with the very basic VTransfer sender on Windows)",
+      "launched": "unverified (current version V12.5, released May 2026 per reseller listing)",
+      "pricing": [
+        {"plan": "VCarve Desktop", "price": "$349 one-time (perpetual)", "notes": "Reseller list price (SainSmart, Woodcraft, OpenBuilds). Vectric's own page renders price client-side and was not captured. Major versions released within 12 months of purchase are free; minor updates free.", "source": "https://www.sainsmart.com/products/vectric-vcarve-desktop"},
+        {"plan": "VCarve Pro", "price": "$699 one-time (perpetual)", "notes": "Sienci Labs (official reseller) lists $699 USD. Upgrade from Desktop by paying the difference.", "source": "https://sienci.com/product/vectric-vcarve-pro/"},
+        {"plan": "Aspire", "price": "$1,995 one-time (perpetual)", "notes": "Reseller list price; adds 3D relief modelling.", "source": "https://us.openbuilds.com/vectric/"},
+        {"plan": "Free trial", "price": "Free", "notes": "Trial cannot save toolpaths from your own designs (only sample projects), per users.", "source": "https://forum.sienci.com/t/cheap-vectric-sw-on-ebay-is-it-for-real/479"}
+      ],
+      "platforms": "Windows only for VCarve/Aspire (Mac via Parallels, limited support). Vectric's separate 'Spark' product is new for macOS.",
+      "offline": "Yes, desktop software; Sienci lists Vectric among options to design and generate G-code without internet",
+      "account_required": "V&Co account / license code for activation and downloads (unverified whether ongoing internet check is needed; users report up to 3 installs)",
+      "runs_machine": "No. Export G-code and run in gSender (Sienci's recommendation).",
+      "sienci_support": "Strong: Sienci is an official Vectric reseller; Sienci's post-processor table lists 'grbl (mm)' and says newer Vectric versions may include a default 'LongMill' option; Sienci support documents a custom machine configuration for LongMill/AltMill. Sienci product pages say most customers use VCarve Pro or Carveco with gSender.",
+      "features": [
+        "Full 2D drawing/editing, advanced text tools with single-line fonts, spell checker",
+        "Image tracing (vectorization); imports DXF, EPS, AI, SVG, SKP, PDF",
+        "Profiling with interactive tabs/bridges, lead-ins, ramps; pocketing; drilling; thread milling; auto-inlays",
+        "2.5D: V-carving, chamfer, fluting, prism, moulding, texture, PhotoVCarving, sketch carving",
+        "3D rough and finish of one imported 3rd-party model plus Vectric clipart",
+        "Toolpath preview/simulation with realistic material rendering (V12.5)",
+        "Toolpath tiling (both editions)",
+        "Pro only: unlimited job size, true-shape nesting, merged toolpaths, toolpath templates, gadgets, job setup sheets, keep-out zones, VCarve inlays, array copy toolpath",
+        "Aspire: 3D component modelling, sculpting, 90+ hours of tutorials"
+      ],
+      "limits": [
+        {"text": "VCarve Desktop work area is limited to 24 x 24 in; Pro is unlimited.", "source": "https://www.vectric.com/products/vcarve-desktop"},
+        {"text": "Desktop and Cut2D Desktop support jobs up to 24x24 in without tiling; larger jobs must be tiled into sections.", "source": "https://www.vectric.com/products/vcarve/"},
+        {"text": "Vectric's comparison lists 'VCarve Inlays' as Pro-only (Desktop has auto-inlays).", "source": "https://www.vectric.com/compare/"},
+        {"text": "VCarve Desktop can only import a single 3rd-party 3D model per job.", "source": "https://www.vectric.com/products/vcarve-desktop"},
+        {"text": "Windows only; Sienci notes Macs need Parallels and Vectric support may be limited.", "source": "https://sienci.com/product/vectric-vcarve-pro/"}
+      ],
+      "pain_points": [
+        {"text": "New LongMill 48x30 owner surprised Desktop is limited to 24x24 and asks for alternatives without the limit.", "source": "https://forum.sienci.com/t/vcarve-desktop-limits/11048"},
+        {"text": "Desktop user: only drawback of the 24x24 limit so far is 'I can't surface my spoilboard.'", "source": "https://forum.sienci.com/t/vcarve-desktop-limits/11048"},
+        {"text": "48-inch LongMill owner 'found out the hard [way] the 24 x 24 limitation'.", "source": "https://forum.sienci.com/t/do-i-need-vcarve-or-vcarve-pro/9081"},
+        {"text": "Sienci 2026 review: substantial upfront cost and Windows-only are the main knocks.", "source": "https://www.youtube.com/watch?v=GgeP3nUztpw"},
+        {"text": "Trial can only generate G-code for Vectric's sample projects, so you can't fully test your own work before buying.", "source": "https://forum.sienci.com/t/cheap-vectric-sw-on-ebay-is-it-for-real/479"}
+      ],
+      "stronger": [
+        "Industry-standard hobby/pro sign-making CAM with best-in-class V-carving and inlays.",
+        "Perpetual license; upgrade path Desktop to Pro to Aspire by paying the difference.",
+        "Enormous tutorial ecosystem (Vectric videos, Mark Lindsay CNC, Learn Your CNC) and many purchasable project files ship with Vectric instructions.",
+        "Far broader toolpath set: moulding, fluting, prism, texture, 3D roughing/finishing, nesting (Pro).",
+        "Sienci resells it and documents LongMill/AltMill machine configuration.",
+        "Regarded as intuitive by many users, including Sienci staff."
+      ],
+      "keywords": [
+        "vcarve alternative",
+        "vcarve desktop vs pro",
+        "vcarve desktop 24x24 limit",
+        "vcarve longmill post processor",
+        "vcarve longmill machine configuration",
+        "cheaper alternative to vcarve",
+        "vcarve for mac",
+        "vcarve desktop price",
+        "aspire vs vcarve pro"
+      ],
+      "faq": [
+        {"q": "Is VCarve Desktop enough for a LongMill 30x30 or 48x30?", "a": "VCarve Desktop limits jobs to 24 x 24 in. Larger LongMill/AltMill beds require tiling or upgrading to VCarve Pro (about $699)."},
+        {"q": "How much does VCarve cost?", "a": "VCarve Desktop lists at about $349 and VCarve Pro at $699 as one-time perpetual licenses; Aspire is about $1,995."},
+        {"q": "Does VCarve run on Mac?", "a": "VCarve and Aspire are Windows-only (Mac users use Parallels). CarvCAM runs on Windows and Linux today, with Mac in development."},
+        {"q": "Can VCarve control my LongMill?", "a": "No. You export G-code with the grbl (mm) post-processor and run it in gSender. CarvCAM includes machine control."},
+        {"q": "Which post-processor should I use in VCarve for a LongMill?", "a": "Sienci recommends Grbl (mm) or Grbl (inch) .gcode, not .tap, and suggests creating a LongMill/AltMill machine configuration."},
+        {"q": "Is VCarve better than CarvCAM for 3D work?", "a": "For 3D roughing/finishing, moulding, nesting and production features, VCarve/Aspire offer far more. CarvCAM focuses on signs, engraving, V-carving and cutouts with Sienci-tuned defaults."}
+      ],
+      "sources": [
+        {"title": "Vectric VCarve product page", "url": "https://www.vectric.com/products/vcarve-desktop"},
+        {"title": "Vectric compare page", "url": "https://www.vectric.com/compare/"},
+        {"title": "Vectric Aspire", "url": "https://www.vectric.com/products/aspire"},
+        {"title": "Sienci Labs: VCarve Pro V12 (official reseller)", "url": "https://sienci.com/product/vectric-vcarve-pro/"},
+        {"title": "Sienci Labs: Our relationship with Vectric", "url": "https://sienci.com/vectric/"},
+        {"title": "Sienci Zendesk: Post Processor (Vectric machine config)", "url": "https://sienci.zendesk.com/hc/en-us/articles/43788713234196-Post-Processor"}
+      ]
+    },
+    {
+      "slug": "fusion-360",
+      "name": "Autodesk Fusion (Fusion 360) for Personal Use",
+      "maker": "Autodesk (San Francisco, USA)",
+      "type": "Full parametric 3D CAD + CAM + CAE (no machine control)",
+      "launched": "unverified (commonly cited 2013)",
+      "pricing": [
+        {"plan": "Fusion for personal use", "price": "Free (1-year renewable)", "notes": "Personal, non-commercial, home-based projects only; individuals generating < $1,000 USD/year; not for primary employment or commercial training.", "source": "https://www.autodesk.com/products/fusion-360/personal"},
+        {"plan": "Autodesk Fusion (commercial)", "price": "$57/month billed annually (as shown on 2026-10-27)", "notes": "30-day free trial; higher tiers (Fusion for Manufacturing/Design) cost more.", "source": "https://www.autodesk.com/products/fusion-360/overview"}
+      ],
+      "platforms": "Windows and Mac (cloud-connected desktop app)",
+      "offline": "Limited: cloud-based data management; an offline mode exists (per Sienci review) but requires periodic sign-in (duration unverified)",
+      "account_required": "Yes, Autodesk account",
+      "runs_machine": "No. Post-process to G-code with the grbl post and run in gSender.",
+      "sienci_support": "Sienci's post-processor table lists 'grbl' with required tweaks: Safe Retracts = Clearance Height (not G28), Output M6 = No, Output Tool Number = No. No official LongMill machine profile from Autodesk; users build their own.",
+      "features": [
+        "Parametric and freeform 3D CAD, assemblies, sketches",
+        "2.5-axis and 3-axis milling CAM including adaptive clearing, turning, additive",
+        "Toolpath simulation in the Manufacture workspace",
+        "Large tool libraries; feeds/speeds are user-entered (no Sienci-specific defaults)",
+        "Huge learning resources and community"
+      ],
+      "limits": [
+        {"text": "Personal use removes rapid moves: all linking moves use high feed capped at the cut feedrate.", "source": "https://www.autodesk.com/support/technical/article/caas/sfdcarticles/sfdcarticles/Fusion-360-Free-License-Changes.html"},
+        {"text": "No automatic tool changes: operations using more than one tool must be posted as separate files.", "source": "https://www.autodesk.com/support/technical/article/caas/sfdcarticles/sfdcarticles/Fusion-360-Free-License-Changes.html"},
+        {"text": "Maximum of 10 active (editable) documents; others become read-only until swapped.", "source": "https://www.autodesk.com/products/fusion-360/blog/the-10-document-limit-for-personal-use-explained-in-7-steps/"},
+        {"text": "No probing, 3+2 or multi-axis milling; limited export formats; single-sheet drawings.", "source": "https://www.autodesk.com/support/technical/article/caas/sfdcarticles/sfdcarticles/Fusion-360-Free-License-Changes.html"},
+        {"text": "Non-commercial only and under $1,000 USD annual revenue.", "source": "https://www.autodesk.com/products/fusion-360/personal"}
+      ],
+      "pain_points": [
+        {"text": "LongMill owner: 'Fusion 360 is free and crazy complicated'; months of YouTube to become competent; fears losing the hobby license.", "source": "https://forum.sienci.com/t/an-idiot-buys-a-cnc-machine/8071"},
+        {"text": "Same user: frequent job failures on curvy Fusion/grbl files; fixes included disabling tool number and editing the post's decimals.", "source": "https://forum.sienci.com/t/an-idiot-buys-a-cnc-machine/8071"},
+        {"text": "First test with a downloaded LongMill profile 'sent the router plunging into my wasteboard'; Z-zero mismatches between Fusion and gSender.", "source": "https://forum.sienci.com/t/using-f360-with-longmill-30-x-30/5873"},
+        {"text": "'Far too complicated to use for simple 2D and 2.5D carving.'", "source": "https://forum.sienci.com/t/cheap-vectric-sw-on-ebay-is-it-for-real/479"},
+        {"text": "Personal-use users hit 'tool changer' post errors because multi-tool posting is blocked.", "source": "https://forums.autodesk.com/t5/fusion-support-forum/fusion-360-cam-seems-to-think-i-have-a-tool-changer-and-is/td-p/11679969"},
+        {"text": "Fusion would not run on an office PC with integrated graphics.", "source": "https://forum.sienci.com/t/learning-curve-on-longmill/1558"}
+      ],
+      "stronger": [
+        "True parametric 3D CAD: furniture, jigs, mechanical parts, assemblies; nothing CarvCAM-class can match it here.",
+        "Industrial-grade CAM (adaptive clearing, 3D finishing, aluminium-capable strategies).",
+        "Free for qualifying hobbyists.",
+        "Windows and Mac.",
+        "Massive tutorial base and community.",
+        "Skills transfer to professional work."
+      ],
+      "keywords": [
+        "fusion 360 longmill post processor",
+        "fusion 360 grbl post processor settings",
+        "fusion 360 personal use limitations cam",
+        "fusion 360 personal use rapid moves",
+        "fusion 360 alternative for cnc router",
+        "fusion 360 too complicated for signs",
+        "fusion 360 vs vcarve",
+        "fusion 360 longmill machine setup",
+        "fusion 360 v carve text"
+      ],
+      "faq": [
+        {"q": "Is Fusion 360 free for LongMill owners?", "a": "Fusion for personal use is free for non-commercial, home-based projects by individuals earning under $1,000 USD/year, with CAM limitations."},
+        {"q": "What are Fusion's personal-use CAM limits?", "a": "No rapid moves (linking moves capped at cut feedrate), no multi-tool posting (one file per tool), 10 active documents, no probing or multi-axis."},
+        {"q": "Which post-processor should I use for Fusion and a LongMill?", "a": "Sienci recommends the grbl post with Safe Retracts set to Clearance Height (not G28), Output M6 = No, and Output Tool Number = No."},
+        {"q": "Can Fusion run my LongMill directly?", "a": "No. Export G-code and run it in gSender. CarvCAM includes machine control with guided zeroing and bit changes."},
+        {"q": "Is Fusion overkill for signs and V-carving?", "a": "Many LongMill users find Fusion powerful but complex for simple 2D/2.5D sign work. CarvCAM is focused on signs, text, engraving, V-carving and cutouts."},
+        {"q": "Can I sell what I make with free Fusion?", "a": "Personal use is limited to non-commercial projects; users generating over $1,000/yr must buy a subscription."}
+      ],
+      "sources": [
+        {"title": "Autodesk Fusion for personal use (compare)", "url": "https://www.autodesk.com/products/fusion-360/personal"},
+        {"title": "Changes to Fusion 360 for personal use (Autodesk support)", "url": "https://www.autodesk.com/support/technical/article/caas/sfdcarticles/sfdcarticles/Fusion-360-Free-License-Changes.html"},
+        {"title": "The 10 Document Limit Explained (Fusion Blog)", "url": "https://www.autodesk.com/products/fusion-360/blog/the-10-document-limit-for-personal-use-explained-in-7-steps/"},
+        {"title": "Autodesk Fusion overview & pricing", "url": "https://www.autodesk.com/products/fusion-360/overview"},
+        {"title": "Sienci: Post-Processors (Fusion settings)", "url": "https://resources.sienci.com/view/cnc-post-processors/"}
+      ]
+    },
+    {
+      "slug": "carveco-maker",
+      "name": "Carveco Maker / Maker Plus",
+      "maker": "Carveco Ltd (Warwickshire, England, UK); formed 2018 by former Delcam/Autodesk ArtCAM team",
+      "type": "CAD + CAM, strong 3D relief (no machine control)",
+      "launched": "Company formed mid-2018 after Autodesk discontinued ArtCAM (support ended Nov 1 2018); Carveco Maker product launch year unverified (~2019)",
+      "pricing": [
+        {"plan": "Carveco Maker monthly", "price": "$17.50/month", "notes": "Subscription only; 30-day free trial; auto-renews. (Raised from $15 on Sept 1 2025; Sienci's store page still shows $15.)", "source": "https://carveco.com/purchase/purchase-carveco/"},
+        {"plan": "Carveco Maker annual", "price": "$180/year", "notes": "", "source": "https://carveco.com/purchase/purchase-carveco/"},
+        {"plan": "Carveco Maker Plus", "price": "$50/month or $540/year", "notes": "Adds 3D relief design, nesting, toolpath templates, tiling. Perpetual option listed at $1,200 on Carveco US store (unverified as current).", "source": "https://carveco.com/2025/06/18/upcoming-changes-to-carveco-pricing/"},
+        {"plan": "Carveco (flagship)", "price": "$250/month or $2,700/year", "notes": "", "source": "https://carveco.com/2025/06/18/upcoming-changes-to-carveco-pricing/"}
+      ],
+      "platforms": "Windows (64-bit)",
+      "offline": "Partially: needs internet to activate; then runs offline up to 21 days before it must re-check the license",
+      "account_required": "Yes, email + license key activation against Carveco's license server",
+      "runs_machine": "No. Export G-code and run in gSender.",
+      "sienci_support": "Sienci is a Carveco reseller/affiliate; Sienci lists post-processor 'UGS grbl' (Sienci's Carveco store page says GRBL (in) or GRBL (mm)). Sienci product pages say most customers use VCarve Pro or Carveco.",
+      "features": [
+        "2D design and editing, Vector Doctor to fix imported vectors",
+        "2D/2.5D toolpaths, V-carving, inlays",
+        "3D model import (multiple models into one job), 3D machining",
+        "Maker Plus: Shape Editor, sculpting and texture tools for 3D reliefs, nesting, toolpath templates, batch calculation, tiling",
+        "AI Image-to-Relief and Text-to-Relief (subscription, credit-based)",
+        "No job size limit"
+      ],
+      "limits": [
+        {"text": "Maker is only available on subscription; stopping payment ends access.", "source": "https://carveco.com/purchase/purchase-carveco/"},
+        {"text": "Must reconnect to the license server at least every 21 days.", "source": "https://carveco.com/getting-started/license-keys/getting-started-with-carveco-maker/"},
+        {"text": "Tiling requires Maker Plus (per Sienci's 2026 review).", "source": "https://www.youtube.com/watch?v=GgeP3nUztpw"}
+      ],
+      "pain_points": [
+        {"text": "Onefinity owner with a free year: hotkeys broken ('New Menu'), unclear docs, UI text hard to read; won't renew.", "source": "https://forum.onefinitycnc.com/t/i-really-dont-like-carveco-change-my-mind/27889"},
+        {"text": "'Too many times I go to open the software and it errors saying it cannot connect.'", "source": "https://forum.onefinitycnc.com/t/i-really-dont-like-carveco-change-my-mind/27889"},
+        {"text": "Activation failed with 'ExceededMachineAllowance' when moving to a new PC.", "source": "https://support.carveco.com/hc/en-gb/community/posts/17302383069596-Carveco-Maker-Activation-problem-again"},
+        {"text": "Beginner: 'still can't even make a simple sign without 52 problems arising' (vector errors, fillet/trim failing).", "source": "https://forum.onefinitycnc.com/t/carveco-maker-corupted/33528"},
+        {"text": "LongMill owner cancelling Carveco: issues with resizing, inlays, toolpaths that 'jump all over the project'.", "source": "https://forum.sienci.com/t/vectric-vcarve-vs-carveco-maker/10614"},
+        {"text": "Sienci 2026 review: 'I still don't find Carveco to be intuitive'; less tutorial content than Vectric.", "source": "https://www.youtube.com/watch?v=GgeP3nUztpw"}
+      ],
+      "stronger": [
+        "Excellent 3D relief tools from 30 years of ArtCAM heritage; multiple 3D models per job.",
+        "Low monthly entry price, pause anytime.",
+        "No 24x24 job-size limit (unlike VCarve Desktop).",
+        "Vector Doctor auto-fixes messy imported vectors.",
+        "AI relief generation (credit-based).",
+        "Sienci resells it and many LongMill users run it."
+      ],
+      "keywords": [
+        "carveco maker review",
+        "carveco maker vs vcarve desktop",
+        "carveco maker longmill post processor",
+        "carveco alternative",
+        "carveco maker price",
+        "carveco maker offline",
+        "carveco maker plus vs maker"
+      ],
+      "faq": [
+        {"q": "How much is Carveco Maker?", "a": "$17.50/month or $180/year (subscription only). Maker Plus is $50/month or $540/year."},
+        {"q": "Does Carveco Maker work offline?", "a": "After activation it can run offline for up to 21 days before it must reconnect to verify the subscription. CarvCAM works fully offline."},
+        {"q": "Which post-processor for Carveco and a LongMill?", "a": "Sienci's table lists UGS grbl; Sienci's store page says GRBL (in) or GRBL (mm)."},
+        {"q": "Can Carveco control my LongMill?", "a": "No, export G-code and run it in gSender. CarvCAM includes machine control."},
+        {"q": "Is Carveco better for 3D reliefs?", "a": "Yes, Carveco (especially Maker Plus) is strong for 3D relief work, which is outside CarvCAM's focus on 2D/2.5D signs, engraving, V-carve and cutouts."},
+        {"q": "Is Carveco Windows only?", "a": "Carveco lists Windows 64-bit system requirements."}
+      ],
+      "sources": [
+        {"title": "Purchase Carveco", "url": "https://carveco.com/purchase/purchase-carveco/"},
+        {"title": "Upcoming changes to Carveco pricing (June 2025)", "url": "https://carveco.com/2025/06/18/upcoming-changes-to-carveco-pricing/"},
+        {"title": "Getting Started With Carveco Maker (licensing/21 days)", "url": "https://carveco.com/getting-started/license-keys/getting-started-with-carveco-maker/"},
+        {"title": "About Carveco", "url": "https://carveco.com/about-carveco/"},
+        {"title": "Sienci: Carveco Maker Subscription", "url": "https://sienci.com/product/carveco-maker-subscription/"}
+      ]
+    },
+    {
+      "slug": "ugs",
+      "name": "Universal G-code Sender (UGS)",
+      "maker": "Will Winder and open-source contributors",
+      "type": "Sender (with a basic built-in designer for SVG/DXF/image import)",
+      "launched": "GitHub repo created June 2012",
+      "pricing": [{"plan": "UGS Platform / Classic", "price": "Free", "notes": "Open source, GPLv3", "source": "https://github.com/winder/universal-g-code-sender"}],
+      "platforms": "Windows, Mac, Linux, Raspberry Pi (self-contained Java app)",
+      "offline": "Yes",
+      "account_required": "No",
+      "runs_machine": "Yes: GRBL, FluidNC, TinyG, g2core, Smoothieware (grblHAL works in GRBL mode; explicit grblHAL support unverified)",
+      "sienci_support": "Listed by Sienci as a good alternative sender (difficulty 2/4); Sienci built gSender after feedback on older senders' flaws.",
+      "features": ["3D G-code visualizer", "Real-time overrides", "G-code editor", "Designer with SVG/DXF/PNG/JPG import and laser support", "Gamepad and web pendant", "Configurable G-code optimization"],
+      "limits": [{"text": "Primarily a sender; design tools are basic and there are no Sienci-specific feeds/speeds.", "source": "https://winder.github.io/ugs_website/"}],
+      "pain_points": [{"text": "LongMill users on the Sienci forum generally prefer gSender as 'way more user friendly' than UGS.", "source": "https://forum.sienci.com/t/new-to-cncn-what-software-should-i-use/3504"}],
+      "stronger": ["Free, open source, cross-platform, supports many controller types.", "Long track record since 2012."],
+      "keywords": ["ugs vs gsender", "universal gcode sender longmill", "ugs grblhal"],
+      "faq": [{"q": "Is UGS free?", "a": "Yes, UGS is free and open source (GPLv3)."}],
+      "sources": [{"title": "UGS website", "url": "https://winder.github.io/ugs_website/"}, {"title": "UGS GitHub", "url": "https://github.com/winder/universal-g-code-sender"}]
+    },
+    {
+      "slug": "kiri-moto",
+      "name": "Kiri:Moto",
+      "maker": "Stewart Allen / Grid.Space",
+      "type": "Browser-based CAM (3D printing slicer, CNC, laser); no design, no machine control",
+      "launched": "unverified",
+      "pricing": [{"plan": "Kiri:Moto", "price": "Free", "notes": "Open source (MIT per UGS wiki); donations welcome", "source": "https://grid.space/kiri/"}],
+      "platforms": "Browser; Onshape plugin",
+      "offline": "unverified",
+      "account_required": "No (unverified)",
+      "runs_machine": "No",
+      "sienci_support": "Recommended by Sienci as a beginner-friendly 3D CAM (difficulty 2/4); Sienci's CAMLab is based on Kiri:Moto.",
+      "features": ["CNC operations: rough, outline, contour, pocket, trace, drill, lathe", "STL-based 3D toolpaths", "G-code preview"],
+      "limits": [{"text": "CAM only from 3D models; you need separate design software and a sender.", "source": "https://resources.sienci.com/view/cnc-choosing-software/"}],
+      "pain_points": [],
+      "stronger": ["Free 3D relief/tray CAM from STL in a browser.", "Integrates with Onshape."],
+      "keywords": ["kiri moto cnc", "kiri moto longmill", "free 3d cam stl"],
+      "faq": [{"q": "Is Kiri:Moto free?", "a": "Yes, it is free and runs in the browser."}],
+      "sources": [{"title": "Kiri:Moto", "url": "https://grid.space/kiri/"}]
+    },
+    {
+      "slug": "estlcam",
+      "name": "Estlcam",
+      "maker": "Christian Knull (Germany)",
+      "type": "CAM + CNC control (direct control requires Estlcam-compatible controller hardware)",
+      "launched": "unverified (current V13.017, Oct 23 2026)",
+      "pricing": [
+        {"plan": "Estlcam free version", "price": "Free", "notes": "Fully functional; increasingly longer delays when opening/saving files.", "source": "https://www.estlcam.de/"},
+        {"plan": "Estlcam license V13", "price": "49 EUR (incl. 19% VAT, reseller)", "notes": "Perpetual; one year of updates, then optional Update Code. Up to 3 computers.", "source": "https://www.rocketronics.de/shop/en/estlcam-license.html"}
+      ],
+      "platforms": "Windows (64-bit)",
+      "offline": "Yes",
+      "account_required": "No",
+      "runs_machine": "Only with an Estlcam controller board; otherwise export G-code (Sienci: 'No selection required').",
+      "sienci_support": "Listed in Sienci's post-processor table ('No selection required').",
+      "features": ["2D/2.5D from DXF/SVG", "V-carves, text engraving, chamfering, thread milling, trochoidal milling", "3D from STL", "Picture and QR-code machining"],
+      "limits": [{"text": "Direct machine control requires an Estlcam controller board, not the Sienci SLB.", "source": "https://www.rocketronics.de/shop/en/estlcam-license.html"}],
+      "pain_points": [],
+      "stronger": ["Very cheap perpetual license, fully functional free version.", "Broad 2D/3D CAM feature set."],
+      "keywords": ["estlcam longmill", "estlcam grbl", "cheap cnc cam software"],
+      "faq": [{"q": "How much is Estlcam?", "a": "About 49 EUR for a perpetual license with one year of updates; the free version is fully functional but adds file open/save delays."}],
+      "sources": [{"title": "Estlcam home", "url": "https://www.estlcam.de/"}]
+    }
+  ],
+  "general_keywords": [
+    "best software for longmill",
+    "best cnc software for longmill mk3",
+    "altmill software",
+    "longmill software for beginners",
+    "free cnc software for beginners",
+    "all in one cnc software design cam control",
+    "cnc sign making software",
+    "v carve software free",
+    "offline cnc software",
+    "cnc software no subscription",
+    "superlongboard software",
+    "grblhal cam software",
+    "longmill feeds and speeds",
+    "longmill post processor",
+    "easel vs carbide create vs vcarve",
+    "do I need a gcode sender",
+    "cnc software windows offline sign carving",
+    "image to vector cnc"
+  ],
+  "sienci_recommendations": [
+    {"text": "Sienci's 'Choosing Software' page recommends beginner Design+CAM options Vectr, Easel, Carbide Create, Inkscape, F-Engrave, Halftoner, Kiri:Moto and CAMLab; advanced options Carveco Maker, VCarve Desktop, Onshape, Fusion 360. It favours design-and-CAM-in-one tools.", "source": "https://resources.sienci.com/view/cnc-choosing-software/"},
+    {"text": "For machine control Sienci recommends gSender as the go-to interface; UGS, CNCjs, OpenBuilds Control, Easel, VTransfer and bCNC listed as alternatives.", "source": "https://resources.sienci.com/view/lm-choosing-software/"},
+    {"text": "Sienci offers a Toolchain Wizard and a master software table of 80+ programs.", "source": "https://resources.sienci.com/view/cnc-software-table/"},
+    {"text": "LongMill MK3 product page FAQ: 'most of our customers use Vectric VCarve Pro or Carveco for the CAM and gSender for the g-code sender.'", "source": "https://sienci.com/product/longmill-mk3-30x30/"},
+    {"text": "Sienci is an official reseller of Vectric (VCarve Desktop, VCarve Pro, Aspire) and a reseller/affiliate of Carveco; also lists LightBurn and MillMage. Sienci states the LongMill is fully compatible with free software.", "source": "https://sienci.com/product-category/cad-cam-software/"},
+    {"text": "Post-processor chart for LongMill/AltMill: Vectric grbl (mm); Carveco UGS grbl; Fusion grbl (with Clearance Height, no M6, no tool number); Easel none; Carbide Create grbl; Estlcam none; FreeCAD grbl (mm). Export in mm.", "source": "https://resources.sienci.com/view/cnc-post-processors/"},
+    {"text": "Sienci support article with Vectric machine configuration values (acceleration 1500 mm/s^2 AltMill, 750 mm/s^2 LongMill) and warning not to use .tap.", "source": "https://sienci.zendesk.com/hc/en-us/articles/43788713234196-Post-Processor"},
+    {"text": "Sienci feeds & speeds tables (LongMill, Makita RT0701 dial settings, Sienci bits).", "source": "https://resources.sienci.com/view/lm-feeds-and-speeds/"},
+    {"text": "Sienci feeds & speeds Fundamentals page (reduced/regular speed tables in mm/min).", "source": "https://resources.sienci.com/view/cnc-feeds-speeds/"},
+    {"text": "Sienci feeds & speeds imperial PDF.", "source": "https://resources.sienci.com/wp-content/uploads/2022/03/Feeds-and-Speeds-Imperial.pdf"},
+    {"text": "Sienci 2026 CNC Design Software Review video (Easel, Carbide Create, Carveco, Vectric, Fusion, Onshape, SolidWorks).", "source": "https://www.youtube.com/watch?v=GgeP3nUztpw"}
+  ],
+  "authority_links": [
+    {"title": "Sienci Resources home", "url": "https://resources.sienci.com/", "why": "Primary documentation for LongMill, AltMill, SLB, gSender"},
+    {"title": "Sienci: Choosing Software", "url": "https://resources.sienci.com/view/cnc-choosing-software/", "why": "Maker's own software recommendations"},
+    {"title": "Sienci: Post-Processors chart", "url": "https://resources.sienci.com/view/cnc-post-processors/", "why": "Authoritative post settings per CAM"},
+    {"title": "Sienci: Feeds & Speeds", "url": "https://resources.sienci.com/view/lm-feeds-and-speeds/", "why": "Source of CarvCAM's default tables"},
+    {"title": "Sienci: SuperLongBoard troubleshooting", "url": "https://resources.sienci.com/view/slb-troubleshooting/", "why": "grblHAL/SLB setup reference"},
+    {"title": "gSender", "url": "https://sienci.com/gsender/", "why": "Official free sender"},
+    {"title": "Easel plans", "url": "https://easel.com/pages/easel-pro-feature-detail", "why": "Primary pricing/limits source"},
+    {"title": "Easel grblHAL beta", "url": "https://easel.com/features/grblhal-beta", "why": "Primary source on Easel + SLB support"},
+    {"title": "Carbide Create Core vs Pro", "url": "https://carbide3d.com/carbidecreate/core-vs-pro/", "why": "Primary source on non-Carbide machine restriction"},
+    {"title": "Vectric Compare", "url": "https://www.vectric.com/compare/", "why": "Primary Desktop vs Pro limits"},
+    {"title": "Autodesk: Fusion personal use changes", "url": "https://www.autodesk.com/support/technical/article/caas/sfdcarticles/sfdcarticles/Fusion-360-Free-License-Changes.html", "why": "Primary source on rapids/tool-change/10-doc limits"},
+    {"title": "Carveco purchase", "url": "https://carveco.com/purchase/purchase-carveco/", "why": "Primary pricing"},
+    {"title": "grblHAL GitHub", "url": "https://github.com/grblHAL", "why": "Firmware running on the SLB (URL not fetched; unverified path)"}
+  ],
+  "backlink_opportunities": [
+    {"name": "Sienci Community Forum - Other Software / Showcase categories", "url": "https://forum.sienci.com/", "type": "forum", "how": "Participate genuinely; check forum rules for software announcements before posting; answer LongMill software questions."},
+    {"name": "Sienci Labs (partner / software table inclusion)", "url": "https://resources.sienci.com/view/cnc-software-table/", "type": "vendor directory", "how": "Contact Sienci to request listing in the 80+ program master table and Toolchain Wizard; Sienci also has reseller/affiliate relationships (Vectric, Carveco)."},
+    {"name": "mhatalski/awesome-cnc", "url": "https://github.com/mhatalski/awesome-cnc", "type": "awesome list (GitHub)", "how": "Open a pull request adding CarvCAM under Software."},
+    {"name": "UGS Wiki Software comparison", "url": "https://github.com/winder/Universal-G-Code-Sender/wiki/Software-comparison", "type": "wiki comparison table", "how": "Wiki invites corrections; propose adding CarvCAM to CAD/CAM and sender tables."},
+    {"name": "geobruce/FabLab CAM tools list", "url": "https://github.com/geobruce/FabLab/blob/master/CAM-tools-CNC.md", "type": "GitHub list", "how": "PR to add under 'Application based' (list focuses on free/open tools; check fit)."},
+    {"name": "r/hobbycnc", "url": "https://www.reddit.com/r/hobbycnc/", "type": "community", "how": "Read sidebar self-promotion rules; share build logs/useful content rather than ads. (Rules not verified.)"},
+    {"name": "r/CNC", "url": "https://www.reddit.com/r/CNC/", "type": "community", "how": "Mostly industrial; only post if rules allow tool posts. (Rules not verified.)"},
+    {"name": "Sienci Labs YouTube (software review videos)", "url": "https://www.youtube.com/watch?v=GgeP3nUztpw", "type": "YouTube", "how": "Pitch for inclusion in next 'which software is right for you' video."},
+    {"name": "IDC Woodcraft (YouTube; deep LongMill/Vectric/gSender tutorials, recommended on Sienci forum)", "url": "https://forum.sienci.com/t/vcarve-pro-to-g-sender/12550", "type": "YouTube creator", "how": "Offer a review copy; channel URL not verified."},
+    {"name": "Mark Lindsay CNC / Learn Your CNC (Garrett Fromme, Kyle Ely) / James Dean Designs", "url": "https://academy.learnyourcnc.com/library", "type": "YouTube creators / course", "how": "Mentioned by LongMill users as go-to software teachers; outreach for reviews (channel URLs unverified)."},
+    {"name": "CNC Dad - Best Free CNC Software for Beginners (2026)", "url": "https://www.cnc-dad.com/blog/best-free-cnc-software/", "type": "comparison blog", "how": "Outreach: article claims Carbide Create free 'works with any machine' (contradicted by Carbide 3D); offer correction plus CarvCAM listing."},
+    {"name": "GeekBitz - Best CNC Software for Beginners 2026", "url": "https://geekbitz.com/best-cnc-software-for-beginners/", "type": "comparison blog", "how": "Outreach with corrected Easel pricing and CarvCAM as Sienci-focused option."},
+    {"name": "Rankite - Best Hobby CNC Software 2026", "url": "https://rankite.com/blog/best-hobby-cnc-software", "type": "comparison blog", "how": "Pitch inclusion; they compare vendor pricing pages."},
+    {"name": "Guideflow - 7 best CNC software for 2026", "url": "https://www.guideflow.com/blog/cnc-software", "type": "comparison blog", "how": "Pitch inclusion."},
+    {"name": "CNCRouterInfo - Fusion vs VCarve vs Carbide Create", "url": "https://cncrouterinfo.com/guides/fusion360-vs-vcarve-vs-carbide-create/", "type": "comparison guide", "how": "Pitch inclusion / guest guide."},
+    {"name": "DigitalChiselCo - VCarve vs Aspire vs Carveco vs Fusion", "url": "https://digitalchiselco.com/blog/aspire-vcarve-carveco-fusion-360-comparison", "type": "comparison blog", "how": "Pitch inclusion for 2D sign workflow."},
+    {"name": "Makera blog - Best CNC Software 2026", "url": "https://www.makera.com/blogs/cnc-beginner-guide/best-cnc-software", "type": "vendor blog", "how": "Low likelihood (competitor machine vendor); optional."},
+    {"name": "Onefinity CNC Forum software categories", "url": "https://forum.onefinitycnc.com/", "type": "forum", "how": "Relevant only once non-Sienci machines are supported; read before posting."},
+    {"name": "AlternativeTo (Easel / VCarve alternatives pages)", "url": "https://alternativeto.net/", "type": "software directory", "how": "Submit CarvCAM as alternative to Easel, VCarve, Carbide Create (not verified for current submission policy)."},
+    {"name": "Product Hunt", "url": "https://www.producthunt.com/", "type": "launch directory", "how": "Launch listing at release (unverified fit for niche)."}
+  ]
+}
