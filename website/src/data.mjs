@@ -109,6 +109,20 @@ export const machines = [
 /* ---------------- Features ---------------- */
 export const features = [
   {
+    slug: "no-post-processor",
+    name: "No post-processor",
+    title: "No Post-Processor Needed: G-code Made for Your Sienci Controller",
+    description: "No post-processor to pick, no units or zero to match. CarvCAM writes G-code for your LongMill or AltMill controller and verifies every line before you carve.",
+    shot: "prepare",
+    lead: "“What is a post processor?” is one of the most asked questions on the Sienci forum. In CarvCAM you never need to know: there is nothing to pick, and the file is checked before it reaches the machine.",
+    points: [
+      "G-code written for your Sienci controller (LongBoard, SuperLongBoard, SLB-LITE, SLB-EXT, grbl or grblHAL), chosen from your machine profile",
+      "Millimeters, work zero and safe height match your setup, so no “bad number format” or unit mix-ups",
+      "Every line verified: travel limits, depth, bit changes, feed and spindle range, unsupported commands",
+      "Open the file in gSender, or send it there with one click, and press Start",
+    ],
+  },
+  {
     slug: "v-carve",
     name: "V-carving",
     title: "V-Carve Software for Hobby CNC Signs",
@@ -272,5 +286,6 @@ export const faq = [
   ["Which computers can run it?", "Windows 10 and 11, and Linux (AppImage or .deb for Ubuntu, Debian and Mint). Raspberry Pi (64-bit and 32-bit). The Mac version is coming soon."],
   ["Does it need internet?", "Only to download it. After that it runs entirely on your computer, workshop Wi-Fi or not."],
   ["Can I import my own designs?", "Yes: SVG and DXF files, and images you can trace into outlines."],
+  ["Do I need to pick a post-processor?", "No. There is no post-processor to choose: CarvCAM writes G-code for the controller in your machine profile (LongBoard, SuperLongBoard, SLB-LITE or SLB-EXT) and verifies every line, travel and bit change before you can carve."],
   ["Do I need to know G-code or feeds and speeds?", "No. Pick Fast, Balanced or Detailed and CarvCAM sets the numbers for your machine, router and bit, then checks the job before you carve."],
 ];
