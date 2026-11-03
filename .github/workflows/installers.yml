@@ -188,7 +188,11 @@ jobs:
           cd desktop
           # Secrets that don't exist arrive as empty strings; electron-builder would read an empty CSC_LINK
           # as a certificate path, so they are removed from the environment (the build is then ad-hoc signed).
-          if [[ "$HAS_MAC_CERT" != "true" ]]; then unset CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; fi
+          # Pull requests never use the Apple secrets (electron-builder skips signing on PR builds anyway).
+          # Without them, desktop/build/adhoc-sign.cjs ad-hoc signs the app so it runs on Apple Silicon.
+          if [[ "$HAS_MAC_CERT" != "true" || "${{ github.event_name }}" == "pull_request" ]]; then
+            unset CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID
+          fi
           PUBLISH=never
           if [[ -n "$RELEASE_TAG" ]]; then PUBLISH=always; fi
           npm run dist:mac -- --publish "$PUBLISH"
