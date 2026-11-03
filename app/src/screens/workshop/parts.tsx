@@ -32,7 +32,7 @@ export function compatBadge(bit: Bit, head: HeadId) {
 
 export function bitSpecs(b: Bit) {
   const inch = b.inch.endsWith("mm") ? "" : ` · ${b.inch}`;
-  return `Ø ${+b.d.toFixed(2)} mm${inch} · shank ${b.shank}″ · cut ${+b.cut.toFixed(1)} mm`;
+  return `Ø ${+b.d.toFixed(2)} mm${inch} · shank ${b.shank}″${b.cut ? ` · cut ${+b.cut.toFixed(1)} mm` : ""}`;
 }
 
 /** Bit card with silhouette, specs and compatibility badge. */

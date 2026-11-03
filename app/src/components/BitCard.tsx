@@ -1,9 +1,10 @@
 import { ArrowUpRight, Check, Plus, X } from "lucide-react";
 import { useState } from "react";
-import type { BitProfile } from "../lib/catalog";
+import type { BitFeeds, BitProfile } from "../lib/catalog";
 import { sienciLink, type Placement } from "../lib/referral";
 import { BitSilhouette } from "./BitSilhouette";
 import "./machine-card.css";
+import "./bit-card.css";
 
 export interface BitCardData {
   id: string;
@@ -12,7 +13,7 @@ export interface BitCardData {
   kind: string;
   profile: BitProfile;
   d: number;
-  shank: "1/8" | "1/4";
+  shank: "1/8" | "1/4" | "3/8";
   cut?: number;
   flutes: number;
   use: string;
@@ -22,12 +23,17 @@ export interface BitCardData {
 
 /**
  * White bit card: photo (WebP) or silhouette, type, name, what it's for, labeled spec sheet,
+ * the Sienci sets it comes in, the feeds badge (official vs estimated) for the machine and head,
  * compatibility with the head and the store link (with UTM and affiliate code).
  */
 export function BitCard(props: {
   bit: BitCardData;
   placement: Placement;
   compat?: { level: "fits" | "accessory" | "no"; label: string };
+  /** Sienci sets the bit comes in. */
+  kits?: { name: string; url: string }[];
+  /** Feeds and speeds on the active machine and head. */
+  feeds?: BitFeeds;
   owned?: boolean;
   /** Just removed from My bits: the card stays in place, dimmed, with "Add back". */
   removed?: boolean;
@@ -56,6 +62,19 @@ export function BitCard(props: {
         <span className="mcard__label">{bit.kind}</span>
         <h3 className="bcard__title">{bit.name}</h3>
         <p className="mcard__tagline">{bit.use}</p>
+        {props.kits?.length ? (
+          <p className="bcard__kits">
+            <span>In</span>{" "}
+            {props.kits.map((k, i) => (
+              <span key={k.url}>
+                {i ? ", " : ""}
+                <a href={sienciLink(k.url, props.placement, `kit-${bit.id}`)} target="_blank" rel="noreferrer">
+                  {k.name}
+                </a>
+              </span>
+            ))}
+          </p>
+        ) : null}
         <dl className="bcard__specs">
           {specs.map(([k, v]) => (
             <div key={k}>
@@ -64,6 +83,7 @@ export function BitCard(props: {
             </div>
           ))}
         </dl>
+        {props.feeds ? <FeedsLine f={props.feeds} /> : null}
         {props.compat ? <span className={`bcard__compat bcard__compat--${props.compat.level}`}>{props.compat.label}</span> : null}
       </div>
       <div className="mcard__foot bcard__foot">
@@ -88,6 +108,22 @@ export function BitCard(props: {
         </a>
       </div>
     </article>
+  );
+}
+
+/** "Official Sienci feeds" / "Estimated" badge and the main numbers (feed, RPM with the Makita dial, depth per pass). */
+function FeedsLine({ f }: { f: BitFeeds }) {
+  const x = f.feeds;
+  return (
+    <div className="bcard__feeds" title={f.detail}>
+      <span className={`bcard__feedsbadge bcard__feedsbadge--${f.badge}`}>{f.label}</span>
+      {x ? (
+        <span className="bcard__feedsnums">
+          {x.feed.toLocaleString("en-US")} mm/min · {x.rpm.toLocaleString("en-US")} RPM{x.dial ? ` (dial ${x.dial})` : ""} · {x.slotStepdown ?? x.pocketStepdown} mm/pass
+        </span>
+      ) : null}
+      <span className="bcard__feedswhy">{f.detail}</span>
+    </div>
   );
 }
 

@@ -7,11 +7,35 @@ import { BitCard } from "../../components/BitCard";
 import { GsenderAddressField } from "../../components/SendToGsender";
 import { MachineCard } from "../../components/MachineCard";
 import { affiliateConfigured, sienciLink } from "../../lib/referral";
-import { bitImage, STORE_BITS, STORE_CATEGORY_URL } from "../../lib/storeBits";
+import { bitImage, STORE_CATEGORY_URL } from "../../lib/storeBits";
 import { TopBar } from "../../components/TopBar";
 import { engineOptions, runEngine } from "../../engine/useEngine";
 import type { SimGrid } from "../../engine/protocol";
-import { BITS, bitById, compat, HEADS, machineById, MACHINES, materialById, PROJECTS, projectFits, TRACK, type Bit, type HeadId, type Intent, type Machine, type Project } from "../../lib/catalog";
+import {
+  BIT_KITS,
+  bitById,
+  bitFeeds,
+  bitKind,
+  BITS,
+  compat,
+  FEEDS_GROUPS,
+  HEADS,
+  kitBitIds,
+  kitsForFamily,
+  machineById,
+  MACHINES,
+  materialById,
+  PROJECTS,
+  projectFits,
+  TRACK,
+  type Bit,
+  type BitKit,
+  type FeedsGroup,
+  type HeadId,
+  type Intent,
+  type Machine,
+  type Project,
+} from "../../lib/catalog";
 import { defaultTabs, useDesign, type Design } from "../../state/design";
 import { useActiveMachine, useWorkshop } from "../../state/workshop";
 import { SimCanvas } from "../../stage/SimCanvas";
@@ -268,8 +292,8 @@ function ProjectCard({ project: p, onMake }: { project: Project; onMake(): void 
 // ---------------------------------------------------------------- My bits
 
 function Library() {
-  const { head, headId } = useActiveMachine();
-  const { bits, toggleBit } = useWorkshop();
+  const { machine, head, headId } = useActiveMachine();
+  const { bits, toggleBit, setBits } = useWorkshop();
   const [tab, setTabRaw] = useState<"mine" | "all">("mine");
   // Bits removed while looking at My bits stay on screen (dimmed, with "Add back") until the tab changes,
   // so a card never vanishes from under the pointer.
@@ -279,15 +303,49 @@ function Library() {
     setKept([]);
   };
   const [intent, setIntent] = useState<Intent | null>(null);
-  const filtered = BITS.filter((b) => !intent || b.uses.includes(intent));
-  const list = tab === "mine" ? filtered.filter((b) => bits.includes(b.id) || kept.includes(b.id)) : filtered;
+  const [kit, setKit] = useState<BitKit["id"] | "">("");
+  const [group, setGroup] = useState<FeedsGroup>("softwood");
+  const familyKits = kitsForFamily(machine.family);
+  const otherKits = BIT_KITS.filter((k) => !familyKits.includes(k));
+  const kitIds = kit ? kitBitIds(kit) : null;
+  const filtered = BITS.filter((b) => (!intent || b.uses.includes(intent)) && (!kitIds || kitIds.includes(b.id)));
+  const main = tab === "mine" ? filtered.filter((b) => bits.includes(b.id) || kept.includes(b.id)) : filtered.filter((b) => b.carvcam);
+  const store = tab === "all" ? filtered.filter((b) => !b.carvcam) : [];
+  const kitOwned = !!kitIds && kitIds.every((id) => bits.includes(id));
+  const feedsOf = (b: Bit) => bitFeeds(b.id, machine.id, headId, group, machine.preset);
+  const badges = BITS.map((b) => feedsOf(b).badge);
+  const official = badges.filter((x) => x === "official").length;
+  const estimated = badges.filter((x) => x === "estimated").length;
+
+  const card = (b: Bit, placement: "bit_library" | "store_bits") => {
+    const c = compat(b, headId);
+    return (
+      <BitCard
+        key={b.id}
+        bit={{ id: b.id, name: b.name, kind: bitKind(b), profile: b.profile, d: b.d, shank: b.shank, cut: b.cut || undefined, flutes: b.flutes, use: b.use, url: b.storeUrl, image: bitImage(b.id) }}
+        placement={placement}
+        compat={{ level: c.level, label: c.level === "fits" ? `Fits your ${head.name}` : c.label }}
+        kits={b.kits}
+        feeds={feedsOf(b)}
+        owned={bits.includes(b.id)}
+        removed={tab === "mine" && !bits.includes(b.id)}
+        onToggle={() => {
+          if (tab === "mine" && bits.includes(b.id) && !kept.includes(b.id)) setKept([...kept, b.id]);
+          toggleBit(b.id);
+        }}
+      />
+    );
+  };
 
   return (
     <div className="ws-page ws-page--wide" style={{ gap: 24 }}>
       <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 20, flexWrap: "wrap" }}>
         <div className="ws-head">
           <h1 className="ws-title ws-title--sm">Bits</h1>
-          <p className="ws-lead ws-lead--sm">Mark the bits you own so CarvCAM only suggests those. Fit is checked against your {head.name}.</p>
+          <p className="ws-lead ws-lead--sm">
+            Mark the bits you own so CarvCAM only suggests those. Fit and feeds are for your {machine.family} {machine.size} with the {head.name}: {official} bits
+            use Sienci's official numbers, {estimated} are estimated from Sienci's table.
+          </p>
         </div>
         <div role="tablist" className="ws-tabs">
           {(
@@ -302,74 +360,85 @@ function Library() {
           ))}
         </div>
       </div>
-      <IntentChips value={intent} onChange={setIntent} />
+      <div className="ws-libfilters">
+        <IntentChips value={intent} onChange={setIntent} />
+        <label className="ws-libselect">
+          <span>Sienci set</span>
+          <select value={kit} onChange={(e) => setKit(e.target.value as BitKit["id"] | "")}>
+            <option value="">All sets</option>
+            <optgroup label={`Sold for the ${machine.family.startsWith("AltMill") ? "AltMill" : "LongMill"}`}>
+              {familyKits.map((k) => (
+                <option key={k.id} value={k.id}>
+                  {k.name}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label="Other sets">
+              {otherKits.map((k) => (
+                <option key={k.id} value={k.id}>
+                  {k.name}
+                </option>
+              ))}
+            </optgroup>
+          </select>
+        </label>
+        <label className="ws-libselect">
+          <span>Feeds for</span>
+          <select value={group} onChange={(e) => setGroup(e.target.value as FeedsGroup)}>
+            {FEEDS_GROUPS.map(([g, l]) => (
+              <option key={g} value={g}>
+                {l}
+              </option>
+            ))}
+          </select>
+        </label>
+        {kitIds ? (
+          <button
+            className={`ws-chip ${kitOwned ? "" : "ws-chip--cta"}`}
+            aria-pressed={kitOwned}
+            onClick={() => setBits(kitOwned ? bits.filter((id) => !kitIds.includes(id)) : [...new Set([...bits, ...kitIds])])}
+          >
+            {kitOwned ? "✓ I have this set" : "I have this set"}
+          </button>
+        ) : null}
+      </div>
 
-      <section className="bsection" aria-label="Bits CarvCAM works with">
+      <section className="bsection" aria-label={tab === "mine" ? "My bits" : "Bits CarvCAM works with"}>
         <div className="bsection__head">
           <h2 className="bsection__title">{tab === "mine" ? "In my workshop" : "Works with CarvCAM"}</h2>
-          <span className="bsection__note">Speeds and feeds come from the Sienci table for each of these.</span>
+          <span className="bsection__note">“Official Sienci feeds” are Sienci's own numbers for this machine; “Estimated” ones are derived from them. Hover a badge for why.</span>
         </div>
-        {list.length === 0 ? (
+        {main.length === 0 ? (
           <div style={{ padding: 24, borderRadius: 14, border: "1px dashed rgba(255,255,255,.16)", font: "400 14px var(--font)", color: "var(--text-3)" }}>
-            No bits here yet. Switch to All Sienci bits and mark the ones you have.
+            {tab === "mine" ? "No bits here yet. Switch to All Sienci bits and mark the ones you have." : "No bits match these filters."}
           </div>
         ) : null}
-        <div className="bgrid">
-          {list.map((b) => {
-            const c = compat(b, headId);
-            return (
-              <BitCard
-                key={b.id}
-                bit={{ id: b.id, name: b.name, kind: bitKind(b), profile: b.profile, d: b.d, shank: b.shank, cut: b.cut, flutes: b.flutes, use: b.use, url: b.storeUrl, image: bitImage(b.id) }}
-                placement="bit_library"
-                compat={{ level: c.level, label: c.level === "fits" ? `Fits your ${head.name}` : c.label }}
-                owned={bits.includes(b.id)}
-                removed={tab === "mine" && !bits.includes(b.id)}
-                onToggle={() => {
-                  if (tab === "mine" && bits.includes(b.id) && !kept.includes(b.id)) setKept([...kept, b.id]);
-                  toggleBit(b.id);
-                }}
-              />
-            );
-          })}
-        </div>
+        <div className="bgrid">{main.map((b) => card(b, "bit_library"))}</div>
       </section>
 
-      {tab === "all" ? (
+      {store.length ? (
         <section className="bsection" aria-label="More from the Sienci store">
           <div className="bsection__head">
             <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
               <h2 className="bsection__title">More from the Sienci store</h2>
-              <span className="bsection__note">3D carving, bowls, coated bits. CarvCAM doesn't plan toolpaths for these yet.</span>
+              <span className="bsection__note">3D carving, roughing, bowls, big surfacing bits. CarvCAM doesn't plan toolpaths for these yet, but here are their feeds.</span>
             </div>
             <a className="bsection__all" href={sienciLink(STORE_CATEGORY_URL, "store_bits", "all-bits")} target="_blank" rel="noreferrer">
               Browse all bits <ArrowUpRight size={14} />
             </a>
           </div>
-          <div className="bgrid">
-            {STORE_BITS.map((b) => (
-              <BitCard key={b.id} bit={b} placement="store_bits" />
-            ))}
-          </div>
+          <div className="bgrid">{store.map((b) => card(b, "store_bits"))}</div>
         </section>
       ) : null}
 
       <p className="bdisclosure">
+        Feeds come from Sienci's Feeds &amp; Speeds table (resources.sienci.com, updated May 2026). Always test on scrap first.{" "}
         {affiliateConfigured
           ? "Links to sienci.com carry a CarvCAM referral code. Sienci Labs may pay CarvCAM a commission on purchases, at no extra cost to you."
           : "Links to sienci.com tell Sienci Labs you came from CarvCAM."}
       </p>
     </div>
   );
-}
-
-/** Bit type on one line, for the card. */
-function bitKind(b: Bit) {
-  if (b.profile === "v") return `V-bit · ${b.angle ?? 60}°`;
-  if (b.profile === "ball") return "Ball nose · upcut";
-  if (b.profile === "compression") return "Compression";
-  if (b.profile === "surfacing") return "Surfacing";
-  return `Flat · ${b.flute}`;
 }
 
 // ---------------------------------------------------------------- Settings

@@ -526,7 +526,9 @@ function mapWarning(a: Warning, k: number, ctx: IssueCtx): UiIssue {
     case "COMPRESSION_STEPDOWN":
       return { ...base, title: "Deeper first pass for the compression bit", detail: "The first pass goes past the up-cut part of the bit so both faces stay clean.", alts: [] };
     case "NO_SIENCI_TABLE":
-      return { ...base, level: "info", title: "No official speeds for this combination", detail: "We use conservative calculated values instead.", alts: [] };
+      return a.data?.origin === "estimated"
+        ? { ...base, level: "info", title: "Estimated speeds for this bit", detail: a.data?.reason === "head" ? "Your router or spindle can't reach the table's RPM, so CarvCAM slows the feed to keep the same chip load. Test on scrap first." : "Sienci's table doesn't list this exact bit, so CarvCAM scales the closest row of it. Test on scrap first.", alts: [] }
+        : { ...base, level: "info", title: "No official speeds for this combination", detail: "We use conservative calculated values instead.", alts: [] };
     case "NOTHING_TO_CUT": {
       const only = /subtract or mask/.test(a.message);
       const [withText] = addElement(spec, "text", spec.width / 2, spec.height / 2);

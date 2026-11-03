@@ -44,6 +44,18 @@
     { "id": "store-groove-1-2", "url": "https://sienci.com/product/1-2_1-1-4_round_groove_bit/", "image": "bits/store-groove-1-2.webp", "photo": "https://sienci.com/wp-content/uploads/2020/09/1_2_-Round-Groove-Bit_profile-3.png" },
     { "id": "store-groove-3-4", "url": "https://sienci.com/product/3-4_1-1-4_round-groove-bit/", "image": "bits/store-groove-3-4.webp", "photo": "https://sienci.com/wp-content/uploads/2021/03/76.png" },
     { "id": "store-bowl-1", "url": "https://sienci.com/product/1_3-4_r3-8_flat_bottom_bowl_bit/", "image": "bits/store-bowl-1.webp", "photo": "https://sienci.com/wp-content/uploads/2025/08/1_x3_4_xR3_8_-Flat-Bottom-Bowl-Bit-1_4_-Shank-2F.png" },
-    { "id": "store-surfacing-1-5", "url": "https://sienci.com/product/1-1-2_surfacing_bit/", "image": "bits/store-surfacing-1-5.webp", "photo": "https://sienci.com/wp-content/uploads/2025/08/1-12-Surfacing-Bit-14-Shank-4F-1.png" }
+    { "id": "store-surfacing-1-5", "url": "https://sienci.com/product/1-1-2_surfacing_bit/", "image": "bits/store-surfacing-1-5.webp", "photo": "https://sienci.com/wp-content/uploads/2025/08/1-12-Surfacing-Bit-14-Shank-4F-1.png" },
+
+    { "id": "roughing-3-8-1-1-4-dlc", "url": "https://sienci.com/product/3-8_1-1-4_roughing-upcut-endmill/", "image": "bits/roughing-3-8-1-1-4-dlc.webp" },
+    { "id": "roughing-3-8-2-dlc", "url": "https://sienci.com/product/3-8_2_roughing-upcut-end-mill/", "image": "bits/roughing-3-8-2-dlc.webp" },
+    { "id": "high-helix-1-4-2-dlc", "url": "https://sienci.com/product/1-4_2_high_helix_upcut_end_mill/", "image": "bits/high-helix-1-4-2-dlc.webp" },
+    { "id": "flat-1-8-downcut-dlc", "url": "https://sienci.com/product/1-8_3-3_downcut_end_mill/", "image": "bits/flat-1-8-downcut-dlc.webp" },
+    { "id": "flat-1-8-upcut-dlc", "url": "https://sienci.com/product/1-8_1-2_upcut_end_mill/", "image": "bits/flat-1-8-upcut-dlc.webp" },
+    { "id": "vbit-30-dlc", "url": "https://sienci.com/product/1-4_30_degree_downcut_vbit/", "image": "bits/vbit-30-dlc.webp" },
+    { "id": "vbit-90-dlc", "url": "https://sienci.com/product/1-4_90_degree_vbit/", "image": "bits/vbit-90-dlc.webp" },
+    { "id": "vbit-90-3-8-dlc", "url": "https://sienci.com/product/3-8_90_degree_vbit/", "image": "bits/vbit-90-3-8-dlc.webp" },
+    { "id": "ball-1-4-1-3-4-dlc", "url": "https://sienci.com/product/1-4_1-3-4_downcut_ballnose/", "image": "bits/ball-1-4-1-3-4-dlc.webp" },
+    { "id": "tapered-1-8-r0-25", "url": "https://sienci.com/product/1-8_r0-25_tapered_ballnose_endmill_2pcs/", "image": "bits/tapered-1-8-r0-25.webp" },
+    { "id": "surfacing-1-5-inserted", "url": "https://sienci.com/product/1-1-2_inserted_heavy_duty_spoilboard_surfacing/", "image": "bits/surfacing-1-5-inserted.webp" }
   ]
 }

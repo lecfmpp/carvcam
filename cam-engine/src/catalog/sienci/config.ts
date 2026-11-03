@@ -4,7 +4,8 @@ import type { MachineInput, MaterialId, ToolInput } from "../../schema.js";
 import { HEADS, nearestDial, type HeadId } from "./heads.js";
 import { compatibility, BIT_BY_ID, toTool, type SienciBit } from "./bits.js";
 import { machineLimits, MACHINES, type MachineId } from "./machines.js";
-import { sienciParams, type Speed } from "./table.js";
+import { sienciFeeds } from "./feeds.js";
+import { MATERIAL_GROUP, type Speed } from "./table.js";
 
 /** Max plunge rate for a straight plunge (resources.sienci.com, "Feeds & Speeds - LongMill"). */
 export const MAX_STRAIGHT_PLUNGE = 300;
@@ -61,6 +62,7 @@ export function resolveSienci(cfg: SienciConfig, material: MaterialId): Resolved
   if (cutout) bits.push({ f: cutout, toolNumber: 2, role: "cutout" });
 
   const params: Partial<CutParams>[] = [];
+  let estimated = false;
   for (const { f, toolNumber, role } of bits) {
     if (!f.supportedInV1) {
       warnings.push({
@@ -82,15 +84,29 @@ export function resolveSienci(cfg: SienciConfig, material: MaterialId): Resolved
       });
     }
 
-    const t = f.tableRow ? sienciParams(f.tableRow, material, speed) : undefined;
-    if (!t) {
+    const r = sienciFeeds(f.id, cfg.machine, headId, MATERIAL_GROUP[material], speed);
+    if (r.status !== "ok") {
+      if (r.status === "not-recommended") {
+        warnings.push({
+          code: "NO_SIENCI_TABLE",
+          severity: "warning",
+          message: `Sienci does not publish parameters for the ${f.name} in this material; using calculated conservative values.`,
+          suggestion: r.reason,
+        });
+      }
+      params.push({});
+      continue;
+    }
+    const t = { ...r.feeds, slotStepdown: r.feeds.slotStepdown ?? r.feeds.pocketStepdown };
+    estimated ||= r.feeds.origin === "estimated";
+    if (r.feeds.reasons.includes("bit") || r.feeds.reasons.includes("head")) {
       warnings.push({
         code: "NO_SIENCI_TABLE",
         severity: "warning",
-        message: `Sienci does not publish parameters for the ${f.name} in this material; using calculated conservative values.`,
+        message: `Sienci's table doesn't list the ${f.name} ${r.feeds.reasons.includes("bit") ? "in this material" : "at the RPM your router or spindle reaches"}; parameters estimated from it.`,
+        suggestion: r.feeds.rules.join(" "),
+        data: { bit: f.id, role, origin: "estimated", reason: r.feeds.reasons.includes("bit") ? "bit" : "head" },
       });
-      params.push({});
-      continue;
     }
     let stepdown = t.slotStepdown;
     if (f.compressionUpcut && stepdown <= f.compressionUpcut) {
@@ -137,7 +153,7 @@ export function resolveSienci(cfg: SienciConfig, material: MaterialId): Resolved
     cutoutCut: cutout ? params[1] : undefined,
     warnings,
     manualAdjustments,
-    source: `Sienci Labs table, ${speed} speed`,
+    source: `Sienci Labs table, ${speed} speed${estimated ? ` (estimated for ${machine.name} + ${head.name})` : ""}`,
   };
 }
 
