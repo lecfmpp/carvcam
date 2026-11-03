@@ -2,39 +2,39 @@ import { EndType, FillRule, inflatePathsD, JoinType, unionD, type PathD, type Pa
 import { bounds, difference, simplify, translate, union, type Pt, type Region } from "./geometry/clip.js";
 
 /**
- * Importador de SVG: converte o desenho em uma região 2D em mm (Y para cima, centrada na origem).
+ * SVG importer: converts the drawing into a 2D region in mm (Y up, centered on the origin).
  *
- * Roda no worker (sem DOMParser), então tem um leitor de XML mínimo próprio. Suporta path
- * (todos os comandos), rect, circle, ellipse, line, polyline, polygon, grupos com transform,
- * fill-rule, traços (stroke vira faixa da largura do traço) e regras simples de classe em <style>.
- * Formas com preenchimento branco são subtraídas do que veio antes (como o olho vê o desenho).
+ * Runs in the worker (no DOMParser), so it has its own minimal XML reader. Supports path
+ * (all commands), rect, circle, ellipse, line, polyline, polygon, groups with transform,
+ * fill-rule, strokes (a stroke becomes a band as wide as the stroke) and simple class rules in <style>.
+ * Shapes with a white fill are subtracted from what came before (the way the eye sees the drawing).
  */
 
-export interface SvgDesenho {
-  /** Região em mm, centrada em (0, 0). */
-  regiao: Region;
-  /** Tamanho natural em mm (pelas unidades do arquivo; px = 1/96 in). */
-  largura: number;
-  altura: number;
+export interface SvgDrawing {
+  /** Region in mm, centered on (0, 0). */
+  region: Region;
+  /** Natural size in mm (from the file's units; px = 1/96 in). */
+  width: number;
+  height: number;
 }
 
-export class SvgInvalido extends Error {}
+export class InvalidSvg extends Error {}
 
-const cache = new Map<string, SvgDesenho>();
+const cache = new Map<string, SvgDrawing>();
 
-export function parseSvg(texto: string): SvgDesenho {
-  const hit = cache.get(texto);
+export function parseSvg(text: string): SvgDrawing {
+  const hit = cache.get(text);
   if (hit) return hit;
-  const d = parse(texto);
+  const d = parse(text);
   if (cache.size > 16) cache.delete(cache.keys().next().value!);
-  cache.set(texto, d);
+  cache.set(text, d);
   return d;
 }
 
-/** Desenho redimensionado para a largura dada (mantém a proporção) e centrado em (x, y). */
-export function placeSvg(d: SvgDesenho, x: number, y: number, largura: number): Region {
-  const s = largura / d.largura;
-  return d.regiao.map((p) => p.map((q) => ({ x: q.x * s + x, y: q.y * s + y })));
+/** Drawing scaled to the given width (keeps the aspect ratio) and centered on (x, y). */
+export function placeSvg(d: SvgDrawing, x: number, y: number, width: number): Region {
+  const s = width / d.width;
+  return d.region.map((p) => p.map((q) => ({ x: q.x * s + x, y: q.y * s + y })));
 }
 
 // ---------------------------------------------------------------- XML
@@ -58,7 +58,7 @@ function parseXml(src: string): Node {
     else if (m[6] !== undefined) top.text += m[6];
     else if (m[2] === "/") {
       const name = local(m[3]);
-      // Fecha até a tag correspondente (tolera XML um pouco torto).
+      // Close up to the matching tag (tolerates slightly broken XML).
       for (let i = stack.length - 1; i > 0; i--) {
         if (stack[i].tag === name) {
           stack.length = i;
@@ -91,7 +91,7 @@ const decode = (s: string) =>
     return { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'" }[k] ?? "";
   });
 
-// ---------------------------------------------------------------- estilo e transformações
+// ---------------------------------------------------------------- style and transforms
 
 type M = [number, number, number, number, number, number]; // a b c d e f
 const ID: M = [1, 0, 0, 1, 0, 0];
@@ -199,14 +199,14 @@ function inherit(parent: Style, own: Record<string, string>): Style {
 const isNone = (c: string) => c === "none" || c === "transparent" || c === "";
 const isWhite = (c: string) => ["white", "#fff", "#ffffff", "rgb(255,255,255)", "rgb(255, 255, 255)"].includes(c);
 
-// ---------------------------------------------------------------- geometria
+// ---------------------------------------------------------------- geometry
 
 interface Sub {
   pts: Pt[];
   closed: boolean;
 }
 
-/** Converte em mm (já com a transformação completa) e achata curvas com passo ~0,25 mm. */
+/** Converts to mm (with the full transform applied) and flattens curves in ~0.25 mm steps. */
 class Pen {
   subs: Sub[] = [];
   private cur: Sub | null = null;
@@ -223,7 +223,7 @@ class Pen {
   close() {
     if (this.cur) this.cur.closed = true;
   }
-  /** Bézier cúbica (pontos no espaço do usuário; transformação afim preserva a curva). */
+  /** Cubic Bézier (points in user space; an affine transform preserves the curve). */
   cubic(x0: number, y0: number, x1: number, y1: number, x2: number, y2: number, x3: number, y3: number) {
     const p = [apply(this.m, x0, y0), apply(this.m, x1, y1), apply(this.m, x2, y2), apply(this.m, x3, y3)];
     const len = dist(p[0], p[1]) + dist(p[1], p[2]) + dist(p[2], p[3]);
@@ -235,11 +235,11 @@ class Pen {
       this.cur!.pts.push({ x: a * p[0].x + b * p[1].x + c * p[2].x + d * p[3].x, y: a * p[0].y + b * p[1].y + c * p[2].y + d * p[3].y });
     }
   }
-  /** Pontos já calculados no espaço do usuário (arcos, elipses). */
+  /** Points already computed in user space (arcs, ellipses). */
   userPoints(pts: [number, number][]) {
     for (const [x, y] of pts) this.cur!.pts.push(apply(this.m, x, y));
   }
-  /** Número de segmentos para um arco de raio r (em unidades do usuário) e ângulo da. */
+  /** Number of segments for an arc of radius r (in user units) and angle da. */
   segs(r: number, da: number) {
     const rmm = r * det(this.m);
     return Math.max(4, Math.min(360, Math.ceil((Math.abs(da) * Math.max(rmm, 0.1)) / 0.25)));
@@ -253,16 +253,16 @@ function tracePath(pen: Pen, d: string) {
   let i = 0;
   let cmd = "";
   let x = 0, y = 0, sx = 0, sy = 0;
-  let cx = 0, cy = 0; // último ponto de controle (para S/T)
+  let cx = 0, cy = 0; // last control point (for S/T)
   let prev = "";
   const isCmd = (t: string | undefined) => t !== undefined && /^[a-zA-Z]$/.test(t);
   const n = () => {
     const t = toks[i++];
-    if (t === undefined || isCmd(t)) throw new SvgInvalido("Caminho (path) malformado.");
+    if (t === undefined || isCmd(t)) throw new InvalidSvg("Malformed path.");
     return Number(t);
   };
-  // Flags do arco podem vir grudadas ("a10 10 0 01 5 5"); o regex já separa "01" em "01",
-  // então tratamos aqui: se o token tiver mais de um dígito 0/1, divide.
+  // Arc flags can come glued together ("a10 10 0 01 5 5"); the regex keeps "01" as "01",
+  // so we handle it here: if the token has more than one 0/1 digit, split it.
   const flag = () => {
     const t = toks[i];
     if (t !== undefined && /^[01]{2,}/.test(t)) {
@@ -273,7 +273,7 @@ function tracePath(pen: Pen, d: string) {
   };
   while (i < toks.length) {
     if (isCmd(toks[i])) cmd = toks[i++];
-    else if (!cmd) throw new SvgInvalido("Caminho (path) malformado.");
+    else if (!cmd) throw new InvalidSvg("Malformed path.");
     const rel = cmd === cmd.toLowerCase();
     const C = cmd.toUpperCase();
     const ox = rel ? x : 0, oy = rel ? y : 0;
@@ -282,7 +282,7 @@ function tracePath(pen: Pen, d: string) {
         x = ox + n(); y = oy + n();
         pen.move(x, y);
         sx = x; sy = y;
-        cmd = rel ? "l" : "L"; // pares seguintes são linhas
+        cmd = rel ? "l" : "L"; // following pairs are lines
         break;
       case "L":
         x = ox + n(); y = oy + n();
@@ -340,7 +340,7 @@ function tracePath(pen: Pen, d: string) {
         x = sx; y = sy;
         break;
       default:
-        throw new SvgInvalido(`Comando de caminho "${cmd}" não suportado.`);
+        throw new InvalidSvg(`Path command "${cmd}" is not supported.`);
     }
     prev = C;
   }
@@ -353,7 +353,7 @@ const ensure = (pen: Pen, x: number, y: number) => {
 const quad = (pen: Pen, x0: number, y0: number, qx: number, qy: number, x: number, y: number) =>
   pen.cubic(x0, y0, x0 + (2 / 3) * (qx - x0), y0 + (2 / 3) * (qy - y0), x + (2 / 3) * (qx - x), y + (2 / 3) * (qy - y), x, y);
 
-/** Arco elíptico do SVG (notação de extremos → centro), conforme o apêndice F.6 da especificação. */
+/** SVG elliptical arc (endpoint → center parameterization), per appendix F.6 of the spec. */
 function arc(pen: Pen, x1: number, y1: number, rx: number, ry: number, rotDeg: number, large: boolean, sweep: boolean, x2: number, y2: number) {
   if (rx === 0 || ry === 0) return pen.line(x2, y2);
   rx = Math.abs(rx);
@@ -471,7 +471,7 @@ function shapePen(n: Node, m: M, vb: { w: number; h: number }): Pen | null {
   return pen;
 }
 
-// ---------------------------------------------------------------- documento
+// ---------------------------------------------------------------- document
 
 const UNIT_MM: Record<string, number> = { mm: 1, cm: 10, in: 25.4, pt: 25.4 / 72, pc: 25.4 / 6, px: 25.4 / 96, "": 25.4 / 96 };
 
@@ -484,16 +484,16 @@ function lengthMm(v: string | undefined): number | null {
 
 const SKIP = new Set(["defs", "clipPath", "mask", "symbol", "marker", "pattern", "title", "desc", "metadata", "style", "text", "image", "foreignObject", "linearGradient", "radialGradient", "filter"]);
 
-function parse(texto: string): SvgDesenho {
-  if (!/<svg[\s>]/i.test(texto)) throw new SvgInvalido("O arquivo não parece ser um SVG.");
-  const doc = parseXml(texto);
+function parse(text: string): SvgDrawing {
+  if (!/<svg[\s>]/i.test(text)) throw new InvalidSvg("The file does not look like an SVG.");
+  const doc = parseXml(text);
   const svg = findSvg(doc);
-  if (!svg) throw new SvgInvalido("O arquivo não parece ser um SVG.");
+  if (!svg) throw new InvalidSvg("The file does not look like an SVG.");
 
   const classes = new Map<string, Record<string, string>>();
   collectStyles(svg, classes);
 
-  // Escala de unidades do usuário → mm.
+  // Scale from user units → mm.
   const vb = nums(svg.attrs.viewBox ?? "");
   const wMm = lengthMm(svg.attrs.width);
   const hMm = lengthMm(svg.attrs.height);
@@ -503,7 +503,7 @@ function parse(texto: string): SvgDesenho {
     box = { w: vb[2], h: vb[3] };
     const sx = wMm ? wMm / vb[2] : hMm ? hMm / vb[3] : UNIT_MM.px;
     const sy = hMm ? hMm / vb[3] : sx;
-    const s = Math.min(sx, sy); // preserveAspectRatio padrão (meet)
+    const s = Math.min(sx, sy); // default preserveAspectRatio (meet)
     root = [s, 0, 0, s, -vb[0] * s, -vb[1] * s];
   } else if (wMm && hMm) {
     box = { w: wMm / UNIT_MM.px, h: hMm / UNIT_MM.px };
@@ -525,7 +525,7 @@ function parse(texto: string): SvgDesenho {
     const pen = shapePen(n, mm, box);
     if (!pen) return;
     let r: Region = [];
-    const closedLike = n.tag !== "line"; // polyline também é preenchida (fechada implicitamente)
+    const closedLike = n.tag !== "line"; // polyline is filled too (implicitly closed)
     if (!isNone(s.fill) && closedLike) {
       const polys = pen.subs.filter((p) => p.pts.length >= 3).map((p) => p.pts as PathD);
       if (polys.length) r = unionD(polys as PathsD, s.fillRule === "evenodd" ? FillRule.EvenOdd : FillRule.NonZero);
@@ -545,18 +545,18 @@ function parse(texto: string): SvgDesenho {
   };
   for (const c of svg.children) walk(c, root, inherit(base, ownStyle(svg, classes)));
 
-  if (!any) throw new SvgInvalido("O SVG não tem nenhuma forma que dê para cortar (caminhos, retângulos, círculos...). Textos precisam ser convertidos em curvas.");
-  if (!acc.length) throw new SvgInvalido("O desenho ficou vazio depois de aplicar os preenchimentos.");
+  if (!any) throw new InvalidSvg("The SVG has no shapes that can be cut (paths, rectangles, circles...). Text must be converted to curves.");
+  if (!acc.length) throw new InvalidSvg("The drawing is empty after applying the fills.");
 
-  // Y do SVG cresce para baixo; o da máquina, para cima.
+  // SVG Y grows downward; the machine's grows upward.
   let reg: Region = acc.map((p) => p.map((q) => ({ x: q.x, y: -q.y })).reverse());
   reg = simplify(reg, 0.005);
   const b = bounds(reg);
-  const largura = b.maxX - b.minX;
-  const altura = b.maxY - b.minY;
-  if (!(largura > 0.01 && altura > 0.01)) throw new SvgInvalido("O desenho do SVG é pequeno demais.");
+  const width = b.maxX - b.minX;
+  const height = b.maxY - b.minY;
+  if (!(width > 0.01 && height > 0.01)) throw new InvalidSvg("The SVG drawing is too small.");
   reg = translate(reg, -(b.minX + b.maxX) / 2, -(b.minY + b.maxY) / 2);
-  return { regiao: reg, largura, altura };
+  return { region: reg, width, height };
 }
 
 function findSvg(n: Node): Node | null {

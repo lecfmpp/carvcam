@@ -1,0 +1,12 @@
+/* Bit recommendation inside an issue card (photo, name, why, "I have it", "Buy at Sienci"). */
+.issue-rec { flex-basis: 100%; box-sizing: border-box; min-width: 0; display: flex; gap: 12px; align-items: flex-start; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line-2); background: rgba(255, 255, 255, 0.04); }
+.issue-rec__photo { flex: none; width: 64px; height: 56px; border-radius: 8px; background: #f3f1ec; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.issue-rec__photo img { width: 100%; height: 100%; object-fit: contain; }
+.issue-rec__main { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.issue-rec__eyebrow { font: 600 10.5px var(--font); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); }
+.issue-rec__name { font: 600 13.5px var(--font); color: var(--text); }
+.issue-rec__why { font: 400 12.5px/1.45 var(--font); color: var(--text-2); }
+.issue-rec__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.issue__actions a.btn { text-decoration: none; gap: 4px; }
+.batch-item__fix { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.issue-rec__actions .btn { max-width: 100%; white-space: normal; }

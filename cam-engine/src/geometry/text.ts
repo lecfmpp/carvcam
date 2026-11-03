@@ -1,30 +1,30 @@
 import type opentype from "opentype.js";
 import { bounds, union, type Pt, type Region } from "./clip.js";
 
-const FLATTEN_TOL = 0.05; // mm de erro máximo ao transformar curvas em segmentos
+const FLATTEN_TOL = 0.05; // mm of maximum error when turning curves into segments
 
 /**
- * Converte um texto em região 2D (mm, Y para cima) com a altura das maiúsculas = capHeight.
- * A região vem com a linha de base em y = 0 e começa em x = 0.
+ * Converts text into a 2D region (mm, Y up) with the cap height = capHeight.
+ * The region has its baseline at y = 0 and starts at x = 0.
  */
-export function textToRegion(font: opentype.Font, text: string, capHeight: number, arco?: number): Region {
+export function textToRegion(font: opentype.Font, text: string, capHeight: number, arc?: number): Region {
   const unitScale = capHeight / capHeightUnits(font);
   const fontSize = font.unitsPerEm * unitScale;
-  if (arco) return textOnArc(font, text, fontSize, arco);
+  if (arc) return textOnArc(font, text, fontSize, arc);
   const path = font.getPath(text, 0, 0, fontSize, { kerning: true });
   const contours = flatten(path.commands, FLATTEN_TOL);
-  // getPath usa Y para baixo; invertemos para o sistema da máquina (Y para cima).
+  // getPath uses Y down; we flip it to the machine's system (Y up).
   const flipped = contours.filter((c) => c.length >= 3).map((c) => c.map((p) => ({ x: p.x, y: -p.y })));
-  // NonZero junta letras sobrepostas (fontes cursivas) e respeita os miolos (a, o, e…).
+  // NonZero merges overlapping letters (script fonts) and keeps the counters (a, o, e…).
   return union(flipped);
 }
 
 /**
- * Texto em arco: cada letra fica de pé sobre um círculo de raio |arco| (mm), medido na linha
- * de base. Positivo curva para cima (letras por fora do círculo); negativo curva para baixo
- * (letras por dentro, lendo normalmente). O meio do texto fica em x = 0, y = 0.
+ * Arched text: each letter stands upright on a circle of radius |arc| (mm), measured at the
+ * baseline. Positive curves up (letters on the outside of the circle); negative curves down
+ * (letters on the inside, reading normally). The middle of the text sits at x = 0, y = 0.
  */
-function textOnArc(font: opentype.Font, text: string, fontSize: number, arco: number): Region {
+function textOnArc(font: opentype.Font, text: string, fontSize: number, arc: number): Region {
   const scale = fontSize / font.unitsPerEm;
   const glyphs = font.stringToGlyphs(text);
   const xs: number[] = [];
@@ -35,7 +35,7 @@ function textOnArc(font: opentype.Font, text: string, fontSize: number, arco: nu
     if (i + 1 < glyphs.length) x += font.getKerningValue(g, glyphs[i + 1]) * scale;
   });
   const total = x;
-  const k = 1 / arco;
+  const k = 1 / arc;
   const out: Pt[][] = [];
   glyphs.forEach((g, i) => {
     const adv = (g.advanceWidth ?? 0) * scale;
@@ -61,7 +61,7 @@ function textOnArc(font: opentype.Font, text: string, fontSize: number, arco: nu
   return union(out);
 }
 
-/** Altura do "H" em unidades da fonte, medida no desenho real (mais confiável que a tabela OS/2). */
+/** Height of the "H" in font units, measured on the actual outline (more reliable than the OS/2 table). */
 function capHeightUnits(font: opentype.Font): number {
   const os2 = (font.tables as { os2?: { sCapHeight?: number } }).os2;
   const glyph = font.charToGlyph("H");
@@ -118,7 +118,7 @@ function flatten(commands: Cmd[], tol: number): Pt[][] {
 }
 
 function segmentsFor(p0: Pt, p1: Pt, p2: Pt, p3: Pt, tol: number): number {
-  // Estimativa clássica: o desvio de uma curva cai com o quadrado do número de segmentos.
+  // Classic estimate: a curve's deviation falls with the square of the number of segments.
   const dd = Math.max(
     Math.hypot(p0.x - 2 * p1.x + p2.x, p0.y - 2 * p1.y + p2.y),
     Math.hypot(p1.x - 2 * p2.x + p3.x, p1.y - 2 * p2.y + p3.y),
@@ -139,7 +139,7 @@ function cubic(p0: Pt, p1: Pt, p2: Pt, p3: Pt, t: number): Pt {
   };
 }
 
-/** Centraliza a região (pela caixa envolvente) no ponto dado. */
+/** Centers the region (by its bounding box) on the given point. */
 export function centerAt(r: Region, cx: number, cy: number): Region {
   if (r.length === 0) return r;
   const b = bounds(r);

@@ -1,4 +1,5 @@
 gsender-ui/public/.debug/
+app/public/.debug/
 website/dist/
 website/carvcam-site.html
 website/files.json
@@ -7,3 +8,6 @@ dist/
 .env.local
 *.log
 .DS_Store
+website/.capture/
+website/video/hero-demo/renders/
+desktop/THIRD_PARTY_NOTICES.txt

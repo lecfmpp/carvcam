@@ -1,0 +1,52 @@
+/* Account: top-bar chip, Pro badge, sign-in and upgrade dialogs. Same language as the Connect wizard. */
+.pro-badge { display: inline-flex; align-items: center; height: 18px; padding: 0 6px; border-radius: 5px; background: rgba(255, 91, 31, 0.16); border: 1px solid rgba(255, 91, 31, 0.45); color: var(--accent-hover); font: 600 10.5px var(--font); letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; flex: none; }
+
+.acct-chip { height: 40px; flex: none; display: inline-flex; align-items: center; gap: 8px; padding: 0 12px; border-radius: var(--radius-control); border: 1px solid var(--line-2); background: rgba(255, 255, 255, 0.05); color: var(--text); font: 500 13px var(--font); white-space: nowrap; }
+.acct-chip:hover { background: rgba(255, 255, 255, 0.09); }
+.acct-chip--in { padding: 0 8px 0 4px; gap: 6px; }
+.acct-avatar { width: 30px; height: 30px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.1); color: var(--text); font: 600 12px var(--font); letter-spacing: 0.02em; flex: none; }
+.acct-avatar--lg { width: 44px; height: 44px; border-radius: 12px; font-size: 16px; }
+.acct-chip__dot { width: 6px; height: 6px; border-radius: 50%; background: var(--paused); }
+@media (max-width: 1240px) { .acct-chip__label { display: none; } .acct-chip { padding: 0 10px; } }
+@media (max-width: 1399px) { .acct-chip--job { display: none; } }
+:root[data-panel="1"] .acct-chip { height: 48px; font-size: 14px; }
+
+.acct-modal { position: fixed; inset: 0; z-index: 950; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(8, 9, 10, 0.72); backdrop-filter: blur(6px); animation: acct-in 160ms var(--ease); }
+@keyframes acct-in { from { opacity: 0; } to { opacity: 1; } }
+.acct-card { width: min(440px, 100%); max-height: calc(100vh - 48px); overflow-y: auto; display: flex; flex-direction: column; gap: 18px; padding: 22px 24px 24px; background: var(--surface); border: 1px solid var(--line-2); border-radius: 18px; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5); }
+.acct-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.acct-eyebrow { display: flex; align-items: center; gap: 8px; font: 500 12px var(--font); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); }
+.acct-title { margin: 4px 0 0; font: 600 22px/1.2 var(--font); letter-spacing: -0.02em; color: var(--text); text-wrap: balance; }
+.acct-close { flex: none; width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; border: 1px solid var(--line-2); background: transparent; color: var(--text-2); }
+.acct-close:hover { color: var(--text); background: rgba(255, 255, 255, 0.06); }
+.acct-lead { margin: 0; font: 400 14.5px/1.5 var(--font); color: var(--text-2); text-wrap: pretty; }
+.acct-form { display: flex; flex-direction: column; gap: 14px; }
+.acct-field { display: flex; flex-direction: column; gap: 6px; font: 500 13px var(--font); color: var(--text-3); }
+.acct-field input { height: 44px; padding: 0 12px; border-radius: var(--radius-control); border: 1px solid var(--line-2); background: #0d0e10; color: var(--text); font: 400 15px var(--font); }
+.acct-field input:focus { outline: none; border-color: rgba(255, 255, 255, 0.4); }
+.acct-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.acct-link { padding: 0; border: 0; background: none; color: var(--text-2); font: 500 13px var(--font); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(255, 255, 255, 0.25); display: inline-flex; align-items: center; gap: 4px; }
+.acct-link:hover { color: var(--text); text-decoration-color: currentColor; }
+.acct-error { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border-radius: 10px; background: rgba(242, 107, 94, 0.1); border: 1px solid rgba(242, 107, 94, 0.35); color: var(--alarm-text); font: 500 13px/1.45 var(--font); }
+.acct-note { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border-radius: 10px; background: rgba(242, 193, 78, 0.1); color: var(--paused); font: 500 13px/1.45 var(--font); }
+.acct-error svg, .acct-note svg { flex: none; margin-top: 2px; }
+.acct-foot { display: flex; align-items: center; justify-content: center; gap: 6px; padding-top: 14px; border-top: 1px solid var(--line); font: 400 13px var(--font); color: var(--text-3); }
+.acct-who { display: flex; align-items: center; gap: 14px; padding: 14px; border-radius: 14px; border: 1px solid var(--glass-border); background: rgba(255, 255, 255, 0.025); }
+.acct-who__name { font: 600 15px var(--font); color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.acct-who__mail { font: 400 13px var(--font); color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.acct-plan { display: grid; grid-template-columns: 90px 1fr; column-gap: 12px; padding: 4px 0 12px; border-bottom: 1px dashed var(--line-2); }
+.acct-plan__k { font: 500 12px var(--font); letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-4); padding-top: 3px; }
+.acct-plan__v { font: 600 15px var(--font); color: var(--text); display: flex; align-items: center; gap: 8px; }
+.acct-plan__sub { grid-column: 2; font: 400 12.5px var(--font); color: var(--text-3); margin-top: 2px; }
+.acct-actions { display: flex; gap: 10px; }
+.acct-actions .btn { flex: 1; }
+.acct-perks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.acct-perks li { display: flex; gap: 10px; align-items: flex-start; font: 400 14px/1.45 var(--font); color: var(--text-2); }
+.acct-perks svg { flex: none; margin-top: 3px; color: var(--ready); }
+.acct-stack { display: flex; flex-direction: column; gap: 10px; }
+
+/* Settings › Account */
+.acct-setting { display: flex; align-items: center; gap: 14px; padding: 14px 16px; }
+.acct-setting__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+@keyframes acct-spin { to { transform: rotate(360deg); } }
+.acct-spin { animation: acct-spin 1s linear infinite; }
