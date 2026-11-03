@@ -4,6 +4,7 @@ import { templateFields } from "@carvcam/cam-engine";
 import { ProBadge } from "../../account/ProGate";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { SendToGsender } from "../../components/SendToGsender";
 import { AccItem, Seg, SidePanel, Stepper } from "../../components/ui";
 import { engineKey, engineOptions, runEngine, tabCount } from "../../engine/useEngine";
 import { BITS, bitById, machineName, materialById, PRESET_LABEL, type Preset } from "../../lib/catalog";
@@ -219,10 +220,12 @@ export function PrepareStep({ ctx }: { ctx: JobCtx }) {
             <button className="btn btn--primary btn--lg" disabled={!verified} onClick={() => nav("/position")}>
               Continue to Position →
             </button>
+            <SendToGsender name={design.name} gcode={result?.gcode} disabled={!verified} />
             <button className="btn btn--outline" disabled={!verified || !result?.gcode} onClick={() => result && downloadGcode(design.name, result.gcode)}>
               <Download size={16} strokeWidth={1.75} />
               Download G-code (.nc)
             </button>
+            <div className="sidepanel__hint">No post-processor to pick: the G-code is written for your {machine.controller} and checked line by line.</div>
           </>
         }
       >
@@ -353,7 +356,7 @@ export function PrepareStep({ ctx }: { ctx: JobCtx }) {
             </div>
             {result ? (
               verified ? (
-                <span className="job-verified">
+                <span className="job-verified" title="Every line checked against your machine's travel, bits, feeds and controller. No post-processor needed.">
                   <Check size={13} strokeWidth={2.2} />
                   G-code verified
                 </span>
