@@ -11,13 +11,15 @@ export const plans = {
     points: [
       "Full 2.5D design: text (straight and on an arc), shapes, pen, offset, booleans",
       "V-carve and hatch fill",
+      "Make copies: a grid of parts, a different name on each",
       "SVG and DXF import, tracing and image to vector",
-      "Sienci catalog: machines, heads and 15 bits",
-      "Feeds and speeds from the official Sienci table",
+      "The complete Sienci library: every LongMill and AltMill, router and spindle, and all 38 Sienci bits with photos and the set each comes in (21 of them cut 2.5D toolpaths today)",
+      "Feeds and speeds from Sienci's official tables, marked Official or Estimated",
       "Manufacturability checks, verifier and 2D/3D simulation",
-      "G-code download with no limit on cuts",
-      "Works offline, panel mode for gController",
-      "AI assistant with your own API key",
+      "Runs your machine over USB or Ethernet, no post-processor to pick",
+      "Or Send to gSender, or download the G-code, with no limit on cuts",
+      "Clamp keep-out zones and a printable setup sheet",
+      "Windows, Mac, Linux and Raspberry Pi; works offline; touch panel mode for the gControl",
     ],
   },
   pro: {
@@ -25,17 +27,13 @@ export const plans = {
     price: "$69",
     per: "per year",
     alt: "or $179 once for lifetime",
-    lead: "For makers who cut often, sell what they make, or want to go beyond 2.5D.",
+    lead: "For makers who cut often and sell what they make.",
     points: [
-      "Batch production: a list of names becomes 50 signs (CSV)",
-      "Cost and selling price calculator",
-      "Inlays (two-part V-carve fit)",
-      "Several parts on one board, with material nesting",
-      "Cloud projects and sync with the web and gController",
-      "Hosted AI assistant (no key needed)",
-      "Tiling for parts larger than your machine",
-      "3D and STL, when available",
+      "Batch from CSV: a list of names becomes 50 G-code files",
+      "Cost and selling price calculator: wood, bit wear, machine time, your rate, fees",
+      "Guided V-carve inlays: pocket, plug and glue gap worked out for your V-bit",
     ],
+    coming: ["Cloud projects and sync with the web and the gControl", "Tiling for parts larger than your machine", "3D and STL"],
   },
   school: {
     name: "School / Makerspace",
@@ -53,10 +51,10 @@ const rules = [
 ];
 
 const faq = [
-  ["Is CarvCAM really free?", "Yes. Design, V-carve, the Sienci catalog, the verifier, simulation and G-code export are free with no limit on cuts. Pro adds production tools for people who sell what they make."],
+  ["Is CarvCAM really free?", "Yes. Design, V-carve, Make copies, the full Sienci library, the verifier, simulation, running your machine and G-code export are free with no limit on cuts. Pro adds production tools for people who sell what they make."],
   ["How does the 14-day trial work?", "Start Pro yearly and every Pro feature is unlocked for 14 days. You add a card at checkout, you are charged $69 only when the trial ends, and you can cancel any time before that from your account page."],
   ["What does lifetime mean?", "One payment of $179 unlocks Pro for as long as CarvCAM exists, including future Pro updates. No renewal."],
-  ["Are all Pro tools ready today?", "Not yet. CarvCAM is new and the Pro tools ship one by one, starting with batch production and the cost calculator. Your trial and subscription include each one as it lands, and you can cancel any time if what you need isn't there yet."],
+  ["Are all Pro tools ready today?", "Batch from CSV, the cost and price calculator and guided inlays are in the app today. Cloud sync, tiling and 3D are not built yet; your subscription includes each one when it lands, and you can cancel any time if what you need isn't there yet."],
   ["Can I cancel?", "Yes, any time, from Account › Manage billing. Pro stays on until the end of the period you paid for, then your projects stay and you go back to Free."],
   ["Do prices include tax?", "Prices are in US dollars. Sales tax or VAT is added at checkout where it applies."],
   ["Can a school pay by invoice?", "Yes. Write to us with the name of the school and how many seats you need, and we'll send an invoice you can pay by card or bank transfer, net 30."],
@@ -83,18 +81,18 @@ export function pricingPage({ layout, at, href, asset, esc }) {
   layout({
     path: at("/pricing/"),
     title: "CarvCAM Pricing: Free, Pro $69/year or $179 lifetime",
-    description: "CarvCAM is free for design, V-carving, simulation and G-code with no limit on cuts. Pro adds batch production, cost calculator, inlays and nesting for $69 a year or $179 lifetime, with a 14-day free trial.",
+    description: "CarvCAM is free for design, V-carving, simulation and G-code with no limit on cuts. Pro adds batch production from CSV, a cost and price calculator and guided inlays for $69 a year or $179 lifetime, with a 14-day free trial.",
     crumbs: [["Home", "/"], ["Pricing", "/pricing/"]],
     schema: [offers, faqLd],
     body: `<section class="pricing" data-account="pricing">
 <div class="wrap">
-<div class="sec-head" style="text-align:center"><span class="eyebrow">Pricing</span><h1>Design, check and carve for free.</h1><p class="lede">Pay only when CarvCAM starts making you money: batch orders, pricing your jobs, inlays and nesting.</p></div>
+<div class="sec-head" style="text-align:center"><span class="eyebrow">Pricing</span><h1>Design, check and carve for free.</h1><p class="lede">Pay only when CarvCAM starts making you money: batch orders, pricing your jobs and inlays.</p></div>
 <div class="plans">
 <article class="plan"><h2>${free.name}</h2><p class="plan__price"><b>${free.price}</b> <span>${free.per}</span></p><p class="plan__lead">${esc(free.lead)}</p>
 <a class="btn btn--block plan__second" href="${href("/download/")}">Download free</a>${list(free.points)}</article>
 <article class="plan plan--pro"><span class="plan__badge">14-day free trial</span><h2>${pro.name}</h2><p class="plan__price"><b>${pro.price}</b> <span>${pro.per}</span></p><p class="plan__alt">${esc(pro.alt)}</p><p class="plan__lead">${esc(pro.lead)}</p>
 <button type="button" class="btn btn--primary btn--block" data-plan="pro_yearly">Start free trial</button>
-<button type="button" class="btn btn--block plan__second" data-plan="pro_lifetime">Buy lifetime · $179</button>${list(["Everything in Free, plus:", ...pro.points])}</article>
+<button type="button" class="btn btn--block plan__second" data-plan="pro_lifetime">Buy lifetime · $179</button>${list(["Everything in Free, plus:", ...pro.points])}<p class="plan__lead" style="margin-top:14px">Coming to Pro, included when they ship:</p>${list(pro.coming)}</article>
 <article class="plan"><h2>${esc(school.name)}</h2><p class="plan__price"><b>${school.price}</b> <span>${school.per}</span></p><p class="plan__lead">${esc(school.lead)}</p>
 <button type="button" class="btn btn--block" data-plan="school_yearly">Buy for my school</button>
 <a class="plan__link" href="mailto:hello@carvcam.com?subject=CarvCAM%20school%20invoice">Need an invoice or PO? Write to us</a>${list(school.points)}</article>
