@@ -101,6 +101,13 @@ jobs:
           cd desktop/release
           cp CarvCAM-*-Windows-64Bit.exe CarvCAM-Windows-64Bit.exe
           gh release upload --repo "$RELEASES_REPO" "$RELEASE_TAG" CarvCAM-Windows-64Bit.exe --clobber
+      - name: Mirror to carvcam.com/download (Supabase Storage)
+        if: env.RELEASE_TAG != ''
+        shell: bash
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node desktop/scripts/upload-downloads.mjs desktop/release
       - uses: actions/upload-artifact@v4
         with:
           name: CarvCAM-Windows
@@ -146,6 +153,13 @@ jobs:
             cp "$f" "$fixed"
             gh release upload --repo "$RELEASES_REPO" "$RELEASE_TAG" "$fixed" --clobber
           done
+      - name: Mirror to carvcam.com/download (Supabase Storage)
+        if: env.RELEASE_TAG != ''
+        shell: bash
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node desktop/scripts/upload-downloads.mjs desktop/release
       - uses: actions/upload-artifact@v4
         with:
           name: CarvCAM-Linux
@@ -210,6 +224,13 @@ jobs:
             cp "$f" "$fixed"
             gh release upload --repo "$RELEASES_REPO" "$RELEASE_TAG" "$fixed" --clobber
           done
+      - name: Mirror to carvcam.com/download (Supabase Storage)
+        if: env.RELEASE_TAG != ''
+        shell: bash
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node desktop/scripts/upload-downloads.mjs desktop/release
       - uses: actions/upload-artifact@v4
         with:
           name: CarvCAM-Mac
