@@ -6,7 +6,7 @@ import type { Speed } from "./table.js";
 
 /**
  * Ready-made projects to test the machine and make the first cuts. The order is the one suggested
- * for someone who just assembled the machine (after surfacing the spoilboard with gSender's Surfacing tool).
+ * for someone who just assembled the machine (after surfacing the spoilboard with the Surfacing tool).
  */
 export interface StarterProject {
   id: string;
@@ -129,6 +129,57 @@ export const PROJECTS: StarterProject[] = [
       frame: 15,
       texts: [{ content: "1234", font: "archivo-black", size: 160, mode: "relief", depth: 4 }],
       holes: [{ x: 30, y: 270, diameter: 8 }, { x: 870, y: 270, diameter: 8 }],
+    },
+  },
+  {
+    id: "name-tags",
+    title: "Name tags ×6",
+    description: "Six plywood tags on one board, each with a V-carved name and a cord hole. One tag is designed; the others are linked copies in a grid.",
+    level: "easy",
+    learn: ["Copies in a grid", "Several parts on one board, with tabs", "One bit change for the whole job"],
+    bit: "vbit-60-15mm",
+    cutoutBit: "flat-1-8-upcut",
+    plate: {
+      width: 170, height: 120, thickness: 6, material: "plywood", outerCutout: false, frame: 0,
+      shapes: [
+        { type: "rectangle", x: 46, y: 96, width: 70, height: 28, radius: 5, mode: "part", copies: { rows: 3, cols: 2, dx: 78, dy: 36 } },
+        { type: "circle", x: 18, y: 96, diameter: 6, mode: "cutout", copies: { rows: 3, cols: 2, dx: 78, dy: 36 } },
+      ],
+      texts: [
+        {
+          content: "AVA", font: "archivo-black", size: 10, mode: "engrave", depth: 3, x: 52, y: 96,
+          copies: { rows: 3, cols: 2, dx: 78, dy: 36, texts: ["BEN", "CLARA", "DEV", "ELLA", "FINN"] },
+        },
+      ],
+    },
+  },
+  {
+    id: "heart-inlay",
+    title: "Heart inlay coaster (1/2: pocket)",
+    description: "A 3 mm V-carved pocket in a dark hardwood coaster. Then cut the plug (part 2) in a light wood, glue it in and plane it flush.",
+    level: "intermediate",
+    learn: ["V-carve inlay", "Flat bottom cleared with a flat bit", "Glue gap"],
+    bit: "vbit-60-15mm",
+    cutoutBit: "flat-1-4-upcut",
+    plate: {
+      width: 100, height: 100, thickness: 12, material: "hardwood", outerCutout: false, frame: 0,
+      icons: [{ id: "heart", x: 50, y: 50, size: 50, mode: "engrave", depth: 3 }],
+      inlay: { part: "pocket", depth: 3, glueGap: 0.5, boardGap: 2, clear: true, targets: [{ type: "icon", index: 0 }] },
+    },
+  },
+  {
+    // Made by buildInlay from the pocket above (mirrored heart, board the size of the design).
+    id: "heart-inlay-plug",
+    title: "Heart inlay coaster (2/2: plug)",
+    description: "The heart standing up, mirrored, in a light wood. Flipped, it goes into the pocket from part 1 and leaves 0.5 mm for the glue.",
+    level: "intermediate",
+    learn: ["Plug start depth", "Gluing and planing the inlay flush"],
+    bit: "vbit-60-15mm",
+    cutoutBit: "flat-1-4-upcut",
+    plate: {
+      width: 70, height: 65.09, thickness: 12, material: "softwood", outerCutout: false, frame: 0, margin: 0,
+      icons: [{ id: "heart", x: 35, y: 32.55, size: 50, mode: "engrave", depth: 4.5, mirror: true }],
+      inlay: { part: "plug", depth: 3, glueGap: 0.5, boardGap: 2, clear: true },
     },
   },
 ];

@@ -1,5 +1,5 @@
 {
-  "name": "@gsender-next/cam-engine",
+  "name": "@carvcam/cam-engine",
   "version": "0.1.0",
   "private": true,
   "description": "2.5D CAM for signs and cut-out lettering: JSON spec → toolpaths → verified GRBL G-code",
@@ -11,7 +11,7 @@
     "generate": "tsx src/cli.ts",
     "render": "tsx scripts/render.ts"
   },
-  "license": "MIT",
+  "license": "UNLICENSED",
   "dependencies": {
     "clipper2-ts": "2.0.1-18",
     "opentype.js": "^2.0.0",

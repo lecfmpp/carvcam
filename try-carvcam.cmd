@@ -12,7 +12,7 @@ if errorlevel 1 (
   exit /b 1
 )
 
-for %%D in (cam-engine gsender-ui) do (
+for %%D in (cam-engine app) do (
   if not exist "%%D\node_modules" (
     echo ==^> Installing dependencies for %%D ^(first run only^)...
     pushd %%D
@@ -21,7 +21,7 @@ for %%D in (cam-engine gsender-ui) do (
   )
 )
 
-cd gsender-ui
+cd app
 if "%~1"=="--dev" (
   echo ==^> Development mode at http://localhost:5173
   call npx vite --open

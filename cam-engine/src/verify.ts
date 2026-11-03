@@ -1,4 +1,5 @@
 import { parseLines, toSegments } from "./gcode.js";
+import { lowestPointInBox, zoneBox, zoneClearance, zoneName, type KeepOutZone } from "./keepout.js";
 
 /**
  * G-code verifier. Runs on any file (generated here, by the assistant or imported)
@@ -16,6 +17,13 @@ export interface VerifyLimits {
   maxFeed: number;
   rpmMin: number;
   rpmMax: number;
+  /**
+   * Rectangles the bit must stay out of (clamps, screws). A move is an error when the bit
+   * (the zone grown by `toolRadius`) is over the zone while Z is below the zone's `clearance`.
+   */
+  keepOut?: KeepOutZone[];
+  /** Radius of the largest bit in the file, used to grow the keep-out zones. Default 0. */
+  toolRadius?: number;
 }
 
 export interface Problem {
@@ -73,8 +81,19 @@ export function verifyGcode(gcode: string, lim: VerifyLimits, rapidRate = lim.ma
   const ext = { xMin: Infinity, xMax: -Infinity, yMin: Infinity, yMax: -Infinity, zMin: Infinity, zMax: -Infinity };
   let cut = 0;
   let time = 0;
+  const zones = (lim.keepOut ?? []).map((z, i) => ({ name: zoneName(z, i), top: zoneClearance(z), box: zoneBox(z, lim.toolRadius ?? 0) }));
   for (const s of segs) {
     const pts = [s.from, ...(s.points ?? [s.to])];
+    // Keep-out zones: every straight piece (arcs are already split into points), not just the end points.
+    for (const z of zones) {
+      for (let i = 1; i < pts.length; i++) {
+        const hit = lowestPointInBox(pts[i - 1], pts[i], z.box);
+        if (hit && hit.z < z.top - 1e-6) {
+          err(s.line, `Move passes through keep-out zone "${z.name}" (X${round(hit.x)} Y${round(hit.y)} at Z${round(hit.z)}).`);
+          break;
+        }
+      }
+    }
     for (let i = 1; i < pts.length; i++) {
       const p = pts[i];
       const len = Math.hypot(p.x - pts[i - 1].x, p.y - pts[i - 1].y, p.z - pts[i - 1].z);

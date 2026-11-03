@@ -8,7 +8,8 @@ describe("surfacing the spoilboard", () => {
     expect(r.ok).toBe(true);
     expect(r.verification.problems.filter((p) => p.severity === "error")).toEqual([]);
     expect(r.params.rpm).toBe(17000);
-    expect(r.params.stepover).toBeCloseTo(8.89, 1);
+    // Sienci's metric table (2026-05-13): 22mm Surfacing Bit, 8.8 mm stepover.
+    expect(r.params.stepover).toBeCloseTo(8.8, 1);
     expect(r.passes).toBe(1);
     const hm = simulate(r.gcode, r.tool, { x0: -15, y0: -15, width: 330, height: 230 }, 1);
     for (let y = 0; y <= 200; y += 5) for (let x = 0; x <= 300; x += 5) expect(hm.at(x, y)).toBeCloseTo(-0.5, 3);

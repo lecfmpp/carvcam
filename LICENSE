@@ -1,0 +1,27 @@
+CarvCAM — End User License Agreement
+Copyright (c) 2026 CarvCAM. All rights reserved.
+
+By installing or using CarvCAM ("the Software") you agree to these terms. If you don't agree,
+don't install or use it.
+
+1. License. You may install and use the Software on computers you own or control, for personal
+   or commercial work. Features marked "Pro" require an active CarvCAM Pro or School plan.
+2. Restrictions. You may not copy, sell, rent, sublicense or redistribute the Software; reverse
+   engineer, decompile or disassemble it except where the law expressly allows it; or remove
+   these notices. Files you design and the G-code you generate are yours.
+3. Ownership. The Software is licensed, not sold. CarvCAM keeps all rights not granted here.
+4. Third-party components. The Software includes open-source components under their own
+   licenses (MIT, ISC, BSD, Apache-2.0, BSL-1.0 and SIL Open Font License). Their notices are in
+   THIRD_PARTY_NOTICES.txt, installed with the Software.
+5. Safety. A CNC machine can injure people and damage property. Always follow your machine
+   manufacturer's safety instructions, wear eye and hearing protection, keep the emergency
+   stop within reach and stay with the machine while it runs. Check every job before you run it.
+6. No warranty. The Software is provided "as is", without warranty of any kind. To the extent
+   the law allows, CarvCAM is not liable for damage to machines, material, property or people,
+   or for lost profits, arising from the use of the Software.
+7. Termination. This license ends if you break these terms; you must then uninstall the Software.
+
+LongMill, AltMill, SuperLongBoard, SLB, AutoSpin and gSender are trademarks of Sienci Labs Inc.
+CarvCAM is an independent product and is not affiliated with or endorsed by Sienci Labs.
+
+Contact: hello@carvcam.com

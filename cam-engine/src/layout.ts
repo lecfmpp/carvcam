@@ -1,11 +1,11 @@
 import type opentype from "opentype.js";
 import { fmt, type Warning, type ElementRef } from "./warnings.js";
-import { area, bounds, difference, intersection, offset, translate, union, type Region } from "./geometry/clip.js";
+import { area, bounds, difference, intersection, mirrorX, offset, rotate180, translate, union, type Region } from "./geometry/clip.js";
 import { circle, curve, icon, plateOutline, polygon, slot, star, stroke } from "./geometry/shapes.js";
 import { centerAt, textToRegion } from "./geometry/text.js";
 import { parseDrawing } from "./drawing.js";
 import { placeSvg, InvalidSvg } from "./svg.js";
-import type { FontId, Machine, Mode, PlateSpec, Tool } from "./schema.js";
+import type { Copies, FontId, Machine, Mode, PlateSpec, Tool } from "./schema.js";
 
 type Mods = {
   offset: number;
@@ -13,6 +13,8 @@ type Mods = {
   operation: "normal" | "subtract" | "mask";
   targets?: { type: "text" | "icon" | "shape" | "svg"; index: number }[];
   hatch?: { spacing: number; angle: number };
+  mirror?: boolean;
+  copies?: Copies;
 };
 
 export interface CutElement {
@@ -20,11 +22,13 @@ export interface CutElement {
   label: string;
   ref?: ElementRef;
   /** Relief background only: the raised elements, to know which one a warning refers to. */
-  items?: { ref: ElementRef; region: Region }[];
+  items?: { ref: ElementRef; region: Region; copy?: number }[];
   region: Region;
   depth: number;
   /** Engrave with hatch lines instead of clearing the whole area. */
   hatch?: { spacing: number; angle: number };
+  /** Number of the copy in a copies grid (0 or omitted = the element itself). */
+  copy?: number;
 }
 
 /** Everything in stock coordinates: X0 Y0 at the bottom-left corner, Z0 on the top surface. */
@@ -37,6 +41,8 @@ export interface Layout {
   relief: CutElement | null;
   /** Through-cut (stencil) elements inside the sign. */
   cutouts: CutElement[];
+  /** Elements cut out along the outside, with tabs, as loose parts ("part" mode). */
+  parts: CutElement[];
   holes: CutElement[];
   /** Outer outline to profile cut (bit on the outside). Null when there is no cutout. */
   profile: CutElement | null;
@@ -67,18 +73,19 @@ export function buildLayout(spec: PlateSpec, fonts: FontMap, tool: Tool, cutTool
       severity: "error",
       message: `The cutout bit cuts up to ${fmt(cutTool.cutLength)} mm deep, but the material is ${fmt(spec.thickness)} mm thick.`,
       suggestion: "Use a longer bit or thinner material.",
+      data: { needed: Math.round(through * 10) / 10, cutLength: cutTool.cutLength, role: cutTool === tool ? "main" : "cutout" },
     });
   }
 
   // ---- Elements (text and icons) in part coordinates ----
-  type Placed = { label: string; region: Region; mode: Mode; depth: number; size: number; idx: number; type: "text" | "icon" | "shape" | "svg"; mods: Mods };
+  type Placed = { label: string; region: Region; mode: Mode; depth: number; size: number; idx: number; type: "text" | "icon" | "shape" | "svg"; mods: Mods; copy?: number };
   let placed: Placed[] = [];
 
   const autoTexts: { idx: number; region: Region; size: number }[] = [];
   spec.texts.forEach((t, i) => {
     const font = fonts[t.font];
     if (!font) {
-      warnings.push({ code: "FONT_UNAVAILABLE", severity: "error", message: `The font "${t.font}" was not loaded.` });
+      warnings.push({ code: "FONT_UNAVAILABLE", severity: "error", message: `The font "${t.font}" was not loaded.`, element: { type: "text", index: i }, data: { font: t.font } });
       return;
     }
     const raw = textToRegion(font, t.content, t.size, t.arc || undefined);
@@ -150,6 +157,8 @@ export function buildLayout(spec: PlateSpec, fonts: FontMap, tool: Tool, cutTool
     placed.push({ label: `icon ${i + 1} (${ic.id})`, region: icon(ic.id, ic.x, ic.y, ic.size), mode: ic.mode, depth: ic.depth, size: ic.size, idx: i, type: "icon", mods: ic });
   });
 
+  placed = placed.map((p) => (p.mods.mirror && p.region.length ? { ...p, region: mirrorX(p.region, anchorX(spec, p)) } : p));
+  placed = expandCopies(placed, spec, fonts);
   placed = applyModifiers(placed, warnings);
 
   const toBlock = (r: Region) => translate(r, m, m);
@@ -167,6 +176,7 @@ export function buildLayout(spec: PlateSpec, fonts: FontMap, tool: Tool, cutTool
       engraved: [],
       relief: null,
       cutouts: [],
+      parts: [],
       holes: buildHoles(spec, cutTool, part, m, through, warnings),
       profile: { label: "lettering outline", region: part, depth: through },
       warnings,
@@ -179,10 +189,27 @@ export function buildLayout(spec: PlateSpec, fonts: FontMap, tool: Tool, cutTool
   const hasRelief = placed.some((p) => p.mode === "relief");
   const inner = hasRelief && spec.frame > 0 ? offset(localPart, -spec.frame) : offset(localPart, -1);
 
+  const copiesOut = new Set<string>();
   for (const p of placed) {
     const ref = { type: p.type, index: p.idx } as ElementRef;
+    if (p.copy) {
+      // Copies: one warning per element, and the original's checks are not repeated.
+      const key = `${p.type}:${p.idx}`;
+      if (!copiesOut.has(key) && area(difference(p.region, inner)) >= 0.01) {
+        copiesOut.add(key);
+        warnings.push({
+          code: "COPIES_DO_NOT_FIT",
+          severity: "error",
+          message: `Some copies of ${p.label.replace(/ · copy \d+$/, "")} run past the edge of the sign.`,
+          suggestion: "Use fewer rows or columns, a smaller gap, or a bigger board.",
+          element: ref,
+        });
+      }
+      continue;
+    }
     checkFit(p.region, null, p.label, [p.size], warnings, inner, ref);
-    if (p.mode !== "cutout" && p.depth >= spec.thickness) {
+    const goesThrough = p.mode === "cutout" || p.mode === "part";
+    if (!goesThrough && p.depth >= spec.thickness) {
       warnings.push({
         code: "DEPTH_EXCEEDS",
         severity: "error",
@@ -192,15 +219,18 @@ export function buildLayout(spec: PlateSpec, fonts: FontMap, tool: Tool, cutTool
         fix: { element: ref, field: "depth", value: Math.floor(spec.thickness * 0.6 * 10) / 10 },
       });
     }
-    if (p.mode !== "cutout" && p.depth > tool.cutLength) {
+    if (!goesThrough && p.depth > tool.cutLength) {
       warnings.push({
         code: "TOOL_TOO_SHORT",
         severity: "error",
         message: `The bit cuts up to ${fmt(tool.cutLength)} mm deep, and ${p.label} needs ${fmt(p.depth)} mm.`,
         element: ref,
+        data: { needed: p.depth, cutLength: tool.cutLength, role: "main" },
       });
     }
-    if (tool.type === "vbit" && p.mode !== "engrave") {
+    // Relief uses the main bit; cutouts and parts, the cutout bit.
+    const bitForMode = p.mode === "relief" ? tool : cutTool;
+    if (p.mode !== "engrave" && bitForMode.type === "vbit") {
       warnings.push({
         code: "VBIT_ENGRAVE_ONLY",
         severity: "error",
@@ -213,7 +243,7 @@ export function buildLayout(spec: PlateSpec, fonts: FontMap, tool: Tool, cutTool
 
   const engraved: CutElement[] = placed
     .filter((p) => p.mode === "engrave")
-    .map((p) => ({ label: p.label, ref: { type: p.type, index: p.idx }, region: toBlock(intersection(p.region, localPart)), depth: p.depth, hatch: p.mods.hatch }));
+    .map((p) => ({ label: p.label, ref: { type: p.type, index: p.idx }, region: toBlock(intersection(p.region, localPart)), depth: p.depth, hatch: p.mods.hatch, copy: p.copy }));
 
   let relief: CutElement | null = null;
   const reliefItems = placed.filter((p) => p.mode === "relief");
@@ -234,12 +264,12 @@ export function buildLayout(spec: PlateSpec, fonts: FontMap, tool: Tool, cutTool
       label: "the relief background",
       region: toBlock(floor),
       depth: depth,
-      items: reliefItems.map((p) => ({ ref: { type: p.type, index: p.idx }, region: toBlock(p.region) })),
+      items: reliefItems.map((p) => ({ ref: { type: p.type, index: p.idx }, region: toBlock(p.region), copy: p.copy })),
     };
 
     // An engraving that lands on the cleared background and is shallower than it simply disappears.
     for (const p of placed) {
-      if (p.mode !== "engrave" || p.depth > depth) continue;
+      if (p.mode !== "engrave" || p.depth > depth || p.copy) continue;
       const total = area(p.region);
       if (total <= 0) continue;
       const covered = area(intersection(p.region, floor)) / total;
@@ -262,7 +292,7 @@ export function buildLayout(spec: PlateSpec, fonts: FontMap, tool: Tool, cutTool
     .map((p) => {
       const r = intersection(p.region, inner);
       const islands = r.filter((path) => pathIsHole(path)).length;
-      if (islands > 0) {
+      if (islands > 0 && !p.copy) {
         warnings.push({
           code: "LOOSE_ISLANDS",
           severity: "warning",
@@ -271,18 +301,90 @@ export function buildLayout(spec: PlateSpec, fonts: FontMap, tool: Tool, cutTool
           element: { type: p.type, index: p.idx },
         });
       }
-      return { label: p.label, ref: { type: p.type, index: p.idx } as ElementRef, region: toBlock(r), depth: through };
+      return { label: p.label, ref: { type: p.type, index: p.idx } as ElementRef, region: toBlock(r), depth: through, copy: p.copy };
     });
+
+  const parts: CutElement[] = placed
+    .filter((p) => p.mode === "part" && p.region.length)
+    .map((p) => ({ label: p.label, ref: { type: p.type, index: p.idx } as ElementRef, region: toBlock(intersection(p.region, localPart)), depth: through, copy: p.copy }));
+  if (parts.length && spec.thickness > cutTool.cutLength && !spec.outerCutout) {
+    warnings.push({
+      code: "TOOL_TOO_SHORT",
+      severity: "error",
+      message: `The cutout bit cuts up to ${fmt(cutTool.cutLength)} mm deep, but the material is ${fmt(spec.thickness)} mm thick.`,
+      suggestion: "Use a longer bit or thinner material.",
+      data: { needed: Math.round(through * 10) / 10, cutLength: cutTool.cutLength, role: cutTool === tool ? "main" : "cutout" },
+    });
+  }
 
   const holes = buildHoles(spec, cutTool, part, m, through, warnings);
   const profile = spec.outerCutout ? { label: "sign outline", region: part, depth: through } : null;
 
-  if (!engraved.length && !relief && !cutouts.length && !holes.length && !profile) {
+  if (!engraved.length && !relief && !cutouts.length && !parts.length && !holes.length && !profile) {
     warnings.push({ code: "NOTHING_TO_CUT", severity: "error", message: "There is nothing to cut on this sign." });
   }
 
-  return { stock, part, engraved, relief, cutouts, holes, profile, warnings };
+  return { stock, part, engraved, relief, cutouts, parts, holes, profile, warnings };
 }
+
+/** X of the element's anchor (the element is mirrored around it). */
+function anchorX(spec: PlateSpec, p: { type: string; idx: number; region: Region }): number {
+  if (p.type === "text") {
+    const t = spec.texts[p.idx];
+    if (t?.x !== undefined && t.y !== undefined) return t.x;
+  } else if (p.type === "shape") {
+    const f = spec.shapes[p.idx];
+    if (f) return f.type === "line" ? (f.x + f.x2) / 2 : f.x;
+  } else if (p.type === "icon") {
+    const ic = spec.icons[p.idx];
+    if (ic) return ic.x;
+  } else if (p.type === "svg") {
+    const sv = spec.svgs[p.idx];
+    if (sv) return sv.x;
+  }
+  const b = bounds(p.region);
+  return (b.minX + b.maxX) / 2;
+}
+
+/**
+ * Expands each element's copies grid (see `CopiesSchema`). Copy k (row r, column c,
+ * k = r·cols + c) is the element offset by (c·dx, −r·dy); with `alternate` it is turned 180°
+ * around the pivot when r + c is odd. Texts can have a different content on each copy.
+ */
+function expandCopies<P extends { label: string; region: Region; type: string; idx: number; mods: Mods; copy?: number }>(placed: P[], spec: PlateSpec, fonts: FontMap): P[] {
+  const out: P[] = [];
+  for (const p of placed) {
+    out.push(p);
+    const c = p.mods.copies;
+    if (!c || c.rows * c.cols <= 1 || !p.region.length) continue;
+    const b = bounds(p.region);
+    const cx = (b.minX + b.maxX) / 2;
+    const cy = (b.minY + b.maxY) / 2;
+    const pivot = c.pivot ?? { x: cx, y: cy };
+    const t = p.type === "text" ? spec.texts[p.idx] : undefined;
+    for (let r = 0; r < c.rows; r++) {
+      for (let col = 0; col < c.cols; col++) {
+        const k = r * c.cols + col;
+        if (k === 0) continue;
+        let reg = p.region;
+        let label = `${p.label} · copy ${k + 1}`;
+        const other = t ? c.texts?.[k - 1]?.trim() : undefined;
+        if (t && other && other !== t.content) {
+          const font = fonts[t.font];
+          if (font) {
+            reg = centerAt(textToRegion(font, other, t.size, t.arc || undefined), cx, cy);
+            if (p.mods.mirror) reg = mirrorX(reg, cx);
+            label = `text ${p.idx + 1} (${other})`;
+          }
+        }
+        if (c.alternate && (r + col) % 2 === 1) reg = rotate180(reg, pivot.x, pivot.y);
+        out.push({ ...p, label, region: translate(reg, col * c.dx, -r * c.dy), copy: k });
+      }
+    }
+  }
+  return out;
+}
+
 
 /**
  * Applies each element's modifiers: offset, outline ring and the operations between
@@ -344,7 +446,7 @@ function buildHoles(spec: PlateSpec, tool: Tool, part: Region, m: number, depth:
       return;
     }
     const r = circle(f.x + m, f.y + m, f.diameter / 2);
-    checkInside(r, part, `hole ${i + 1}`, warnings, { type: "hole", index: i });
+    checkInside(r, part, `hole ${i + 1}`, warnings, { type: "hole", index: i }, m, spec);
     out.push({ label: `hole ${i + 1}`, ref: { type: "hole", index: i }, region: r, depth: depth });
   });
   spec.slots.forEach((s, i) => {
@@ -359,15 +461,24 @@ function buildHoles(spec: PlateSpec, tool: Tool, part: Region, m: number, depth:
       return;
     }
     const r = slot(s.x + m, s.y + m, s.length, s.width, s.angle);
-    checkInside(r, part, `slot ${i + 1}`, warnings, { type: "slot", index: i });
+    checkInside(r, part, `slot ${i + 1}`, warnings, { type: "slot", index: i }, m, spec);
     out.push({ label: `slot ${i + 1}`, ref: { type: "slot", index: i }, region: r, depth: depth });
   });
   return out;
 }
 
-function checkInside(r: Region, part: Region, label: string, warnings: Warning[], ref: ElementRef) {
+function checkInside(r: Region, part: Region, label: string, warnings: Warning[], ref: ElementRef, m: number, spec: PlateSpec) {
   if (area(difference(r, part)) > 0.01) {
-    warnings.push({ code: "OUTSIDE_PART", severity: "error", message: `${capitalize(label)} goes outside the part.`, element: ref });
+    // Where it is and how big the part is (part coordinates, like the spec's x/y), so the UI can move it inside.
+    const b = bounds(r);
+    const r1 = (v: number) => Math.round(v * 100) / 100;
+    warnings.push({
+      code: "OUTSIDE_PART",
+      severity: "error",
+      message: `${capitalize(label)} goes outside the part.`,
+      element: ref,
+      data: { bounds: { minX: r1(b.minX - m), minY: r1(b.minY - m), maxX: r1(b.maxX - m), maxY: r1(b.maxY - m) }, part: { width: spec.width, height: spec.height } },
+    });
   }
 }
 

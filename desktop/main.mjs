@@ -1,4 +1,4 @@
-// CarvCAM for desktop (Electron), in the same shape as gSender: a main process that
+// CarvCAM for desktop (Electron): a main process that
 //  1. starts carvcam-bridge (USB through serialport, and Ethernet on the SLB's port 23) on 127.0.0.1:8765;
 //  2. serves the built app (app/) at http://127.0.0.1:4173, always on the same port, because
 //     projects and the workshop live in browser storage, which is separate per address;
@@ -67,7 +67,7 @@ async function start() {
   }
 
   // Web Serial (alternative to the bridge): Electron doesn't show a port picker by itself, so we
-  // pick the first known controller (same chip list as gSender) and grant access.
+  // pick the first known controller (USB chips used by CNC controllers) and grant access.
   const KNOWN_VIDS = ["2E8A", "16C0", "1D50", "0403", "2341", "0042", "1A86", "10C4", "067B", "03EB", "16D0", "0483"];
   session.defaultSession.on("select-serial-port", (e, ports, _wc, pick) => {
     e.preventDefault();

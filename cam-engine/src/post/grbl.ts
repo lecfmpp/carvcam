@@ -20,7 +20,7 @@ export interface PostHeader {
  * GRBL/grblHAL post-processor. Only emits commands on the verifier's allow list:
  * G0 G1 G4 G17 G21 G90 G94, M3 M5 M6 M30, T S F X Y Z P.
  * A tool change (M6) only appears when the job uses more than one bit;
- * gSender handles M6 according to the user's tool change settings.
+ * the sender pauses at M6 so the user can swap the bit and re-zero Z.
  */
 export function postGrbl(header: PostHeader, ops: PostOperation[]): string {
   const out: string[] = [];

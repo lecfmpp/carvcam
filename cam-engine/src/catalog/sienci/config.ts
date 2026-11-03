@@ -4,7 +4,8 @@ import type { MachineInput, MaterialId, ToolInput } from "../../schema.js";
 import { HEADS, nearestDial, type HeadId } from "./heads.js";
 import { compatibility, BIT_BY_ID, toTool, type SienciBit } from "./bits.js";
 import { machineLimits, MACHINES, type MachineId } from "./machines.js";
-import { sienciParams, type Speed } from "./table.js";
+import { sienciFeeds } from "./feeds.js";
+import { MATERIAL_GROUP, type Speed } from "./table.js";
 
 /** Max plunge rate for a straight plunge (resources.sienci.com, "Feeds & Speeds - LongMill"). */
 export const MAX_STRAIGHT_PLUNGE = 300;
@@ -51,16 +52,17 @@ export function resolveSienci(cfg: SienciConfig, material: MaterialId): Resolved
   const manualAdjustments: ManualAdjustment[] = [];
 
   if (!machine.heads.includes(headId)) {
-    warnings.push({ code: "BIT_INCOMPATIBLE", severity: "error", message: `The ${head.name} is not an option for the ${machine.name}.` });
+    warnings.push({ code: "BIT_INCOMPATIBLE", severity: "error", message: `The ${head.name} is not an option for the ${machine.name}.`, data: { reason: "head", head: headId } });
   }
 
   const bits: { f: SienciBit; toolNumber: number; role: string }[] = [];
-  const main = findBit(cfg.bit, warnings);
+  const main = findBit(cfg.bit, warnings, "main");
   if (main) bits.push({ f: main, toolNumber: 1, role: "main" });
-  const cutout = cfg.cutoutBit && cfg.cutoutBit !== cfg.bit ? findBit(cfg.cutoutBit, warnings) : undefined;
+  const cutout = cfg.cutoutBit && cfg.cutoutBit !== cfg.bit ? findBit(cfg.cutoutBit, warnings, "cutout") : undefined;
   if (cutout) bits.push({ f: cutout, toolNumber: 2, role: "cutout" });
 
   const params: Partial<CutParams>[] = [];
+  let estimated = false;
   for (const { f, toolNumber, role } of bits) {
     if (!f.supportedInV1) {
       warnings.push({
@@ -68,28 +70,43 @@ export function resolveSienci(cfg: SienciConfig, material: MaterialId): Resolved
         severity: "error",
         message: `The ${role} bit (${f.name}) is not suitable for signs and lettering.`,
         suggestion: f.bestFor,
+        data: { bit: f.id, role },
       });
     }
     const c = compatibility(f, headId);
-    if (c.status === "incompatible") warnings.push({ code: "BIT_INCOMPATIBLE", severity: "error", message: c.reason });
+    if (c.status === "incompatible") warnings.push({ code: "BIT_INCOMPATIBLE", severity: "error", message: c.reason, data: { reason: "bit", bit: f.id, role } });
     if (c.status === "with-accessory") {
       warnings.push({
         code: "BIT_NEEDS_ACCESSORY",
         severity: "warning",
         message: `To use the ${f.name} in the ${head.name} you need: ${c.accessory.name}.`,
-        data: { url: c.accessory.url },
+        data: { url: c.accessory.url, bit: f.id, role },
       });
     }
 
-    const t = f.tableRow ? sienciParams(f.tableRow, material, speed) : undefined;
-    if (!t) {
+    const r = sienciFeeds(f.id, cfg.machine, headId, MATERIAL_GROUP[material], speed);
+    if (r.status !== "ok") {
+      if (r.status === "not-recommended") {
+        warnings.push({
+          code: "NO_SIENCI_TABLE",
+          severity: "warning",
+          message: `Sienci does not publish parameters for the ${f.name} in this material; using calculated conservative values.`,
+          suggestion: r.reason,
+        });
+      }
+      params.push({});
+      continue;
+    }
+    const t = { ...r.feeds, slotStepdown: r.feeds.slotStepdown ?? r.feeds.pocketStepdown };
+    estimated ||= r.feeds.origin === "estimated";
+    if (r.feeds.reasons.includes("bit") || r.feeds.reasons.includes("head")) {
       warnings.push({
         code: "NO_SIENCI_TABLE",
         severity: "warning",
-        message: `Sienci does not publish parameters for the ${f.name} in this material; using calculated conservative values.`,
+        message: `Sienci's table doesn't list the ${f.name} ${r.feeds.reasons.includes("bit") ? "in this material" : "at the RPM your router or spindle reaches"}; parameters estimated from it.`,
+        suggestion: r.feeds.rules.join(" "),
+        data: { bit: f.id, role, origin: "estimated", reason: r.feeds.reasons.includes("bit") ? "bit" : "head" },
       });
-      params.push({});
-      continue;
     }
     let stepdown = t.slotStepdown;
     if (f.compressionUpcut && stepdown <= f.compressionUpcut) {
@@ -136,12 +153,12 @@ export function resolveSienci(cfg: SienciConfig, material: MaterialId): Resolved
     cutoutCut: cutout ? params[1] : undefined,
     warnings,
     manualAdjustments,
-    source: `Sienci Labs table, ${speed} speed`,
+    source: `Sienci Labs table, ${speed} speed${estimated ? ` (estimated for ${machine.name} + ${head.name})` : ""}`,
   };
 }
 
-function findBit(id: string, warnings: Warning[]): SienciBit | undefined {
+function findBit(id: string, warnings: Warning[], role: "main" | "cutout"): SienciBit | undefined {
   const f = BIT_BY_ID.get(id);
-  if (!f) warnings.push({ code: "BIT_INCOMPATIBLE", severity: "error", message: `Bit "${id}" is not in the Sienci catalog.` });
+  if (!f) warnings.push({ code: "BIT_INCOMPATIBLE", severity: "error", message: `Bit "${id}" is not in the Sienci catalog.`, data: { reason: "unknown", bit: id, role } });
   return f;
 }

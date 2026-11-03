@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "Design, prepare and carve on your LongMill or AltMill, in one app.",
   "author": "CarvCAM",
-  "license": "GPL-3.0-only",
+  "license": "UNLICENSED",
   "homepage": "https://www.carvcam.com",
   "private": true,
   "main": "main.mjs",

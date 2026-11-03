@@ -2,8 +2,7 @@
 
 Without a signature, Windows shows the blue SmartScreen warning ("Windows protected your PC")
 and the user has to click **More info › Run anyway**. Signing replaces "Unknown publisher" with
-the company name and makes the warning go away as the installer builds up reputation. gSender
-signs with **DigiCert KeyLocker**; our CI supports that one plus two other services.
+the company name and makes the warning go away as the installer builds up reputation. Our CI supports three signing services.
 
 > Checked in October 2026. Prices and rules change: confirm on each company's page before
 > buying.
@@ -25,7 +24,7 @@ signs with **DigiCert KeyLocker**; our CI supports that one plus two other servi
 |---|---|---|---|
 | **Azure Artifact Signing** (formerly Trusted Signing) | Companies in the US, Canada, EU or UK; individuals only in the US and Canada | US$ 9.99/month (5,000 signatures) | Yes (`azure`) |
 | **SSL.com eSigner** (OV certificate) | Companies (a CNPJ, the Brazilian company registration, works) or individuals, including in Brazil | Annual certificate + eSigner plan | Yes (`sslcom`) |
-| **DigiCert KeyLocker** (what gSender uses) | Companies | The most expensive of the three | Yes (`digicert`) |
+| **DigiCert KeyLocker** | Companies | The most expensive of the three | Yes (`digicert`) |
 
 **Recommendation for CarvCAM:** if there is a company in the US, Canada, EU or UK, use
 **Azure Artifact Signing**: it is the cheapest and the simplest to maintain. If the company is only
@@ -63,11 +62,11 @@ validates a CNPJ or a personal ID document and signs in the cloud, directly from
 5. Check the CodeSignTool download link in the workflow (`.github/workflows/installers.yml`)
    against SSL.com's current page.
 
-### 2c. DigiCert KeyLocker (same as gSender)
+### 2c. DigiCert KeyLocker
 `WIN_SIGN_PROVIDER` = `digicert`, plus `SM_API_KEY`, `SM_CLIENT_CERT_FILE_BASE64`,
-`SM_CLIENT_CERT_PASSWORD`, `SM_HOST` and `SM_KEYPAIR_ALIAS`. The CI needs the same `smctl`
-installation steps as gSender's CI (gSender's `.github/workflows/CI.yml`); ask and we will add
-them when you pick this option.
+`SM_CLIENT_CERT_PASSWORD`, `SM_HOST` and `SM_KEYPAIR_ALIAS`. The CI also needs DigiCert's `smctl`
+installation steps (see DigiCert's KeyLocker documentation); ask and we will add them when you
+pick this option.
 
 ### 3. Publish a release
 **Option A, from GitHub (recommended):** go to **Actions › Installers › Run workflow**, pick the
@@ -104,4 +103,22 @@ The installer works just the same. For people downloading it:
 - [SmartScreen reputation with EV (Microsoft Tech Community)](https://techcommunity.microsoft.com/discussions/microsoftdefenderthreatintelligence/smartscreen-reputation-issue-for-ev-code-signed-windows-application/4537122)
 - [Reputation after renewing an EV certificate (Microsoft Q&A)](https://learn.microsoft.com/en-us/answers/questions/5900208/smartscreen-reputation-reset-following-ev-certific)
 - [EV or OV? (SSL.com)](https://www.ssl.com/fr/faq/quel-certificat-de-signature-de-code-ai-je-besoin-d%27ev-ov/)
-- [gSender signing: WindowsSigner.js and CI.yml (Sienci Labs, GitHub)](https://github.com/Sienci-Labs/gsender)
+
+## Mac (Developer ID + notarization)
+Needs an [Apple Developer Program](https://developer.apple.com/programs/) membership (US$ 99/year).
+1. In Xcode or developer.apple.com, create a **Developer ID Application** certificate and export it
+   from Keychain Access as a `.p12` with a password.
+2. Create an app-specific password at appleid.apple.com (Sign-In and Security › App-Specific Passwords).
+3. Add these repository secrets (Settings › Secrets and variables › Actions):
+
+| Secret | Value |
+|---|---|
+| `MAC_CERT_P12_BASE64` | `base64 -i DeveloperID.p12` |
+| `MAC_CERT_PASSWORD` | the `.p12` password |
+| `APPLE_ID` | the Apple ID e-mail of the developer account |
+| `APPLE_APP_SPECIFIC_PASSWORD` | the app-specific password |
+| `APPLE_TEAM_ID` | the 10-character Team ID |
+
+With them, the `build-mac` job signs with hardened runtime, notarizes and staples the `.dmg`, so it
+opens with no warning and automatic updates work. Without them, the build is ad-hoc signed
+(see `desktop/README.md`).
