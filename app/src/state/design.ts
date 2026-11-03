@@ -97,6 +97,8 @@ interface DesignState {
   /** Bumped on every spec change, so the UI knows when to regenerate. */
   rev: number;
   setDesign(d: Design): void;
+  /** Replaces the design as its own undo step (never merged with a change made just before it). The assistant uses it: one reply = one undo step. */
+  commit(d: Design): void;
   patch(p: Partial<Design>): void;
   patchSpec(fn: (s: PlateSpecInput) => PlateSpecInput): void;
   newBlank(): void;
@@ -155,6 +157,11 @@ export const useDesign = create<DesignState>()(
         return true;
       },
       setDesign: (design) => set({ design, rev: get().rev + 1 }),
+      commit: (design) => {
+        // The next edit starts its own step too (it is not merged into this one).
+        lastPush = 0;
+        rawSet({ design, rev: get().rev + 1, past: [...get().past, get().design].slice(-MAX_UNDO) });
+      },
       patch: (p) => set({ design: { ...get().design, ...p }, rev: get().rev + 1 }),
       patchSpec: (fn) => set({ design: { ...get().design, spec: fn(structuredClone(get().design.spec)) }, rev: get().rev + 1 }),
       newBlank: () => set({ design: structuredClone(BLANK), rev: get().rev + 1 }),

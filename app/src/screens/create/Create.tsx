@@ -43,7 +43,6 @@ import { fitScale, Stage } from "../../stage/Stage";
 import { SnapGuides, StageRulers, useRulersOn, useSnapGrid } from "../../stage/Rulers";
 import { rectTargets, snapRect, SNAP_PX, type Guide, type Rect } from "../../stage/snap";
 import { ThreeView } from "../../stage/ThreeView";
-import { machineName } from "../../lib/catalog";
 import { AssistantBar } from "./AssistantBar";
 import { assistantEnabled } from "../../lib/features";
 import { CurveEditor, PenLayer, type Geom } from "./pen";
@@ -327,7 +326,19 @@ export default function Create() {
             />
           </>
         }
-        bottomLeft={assistantEnabled() ? <AssistantBar inputRef={assistantInput} issues={issues} bitName={bit?.name ?? "bit"} materialName={`${spec.thickness} mm ${material.id}`} machineName={machineName(machine)} /> : null}
+        bottomLeft={
+          assistantEnabled() ? (
+            <AssistantBar
+              inputRef={assistantInput}
+              issues={issues}
+              onOpenInlay={(ids) => {
+                // The wizard (and its Pro gate) takes over from here.
+                setCopiesFor(null);
+                setInlayFor(ids.length ? (ids as ElementId[]) : [...boxes.keys()].filter((x) => x !== "holes"));
+              }}
+            />
+          ) : null
+        }
         render={(api) => {
           if (api.view === "3d") {
             return eng.sim ? (
