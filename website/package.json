@@ -6,6 +6,7 @@
   "scripts": {
     "build": "node build.mjs",
     "images": "node scripts/images.mjs",
+    "capture": "node scripts/capture-app.mjs",
     "serve": "node scripts/serve.mjs"
   },
   "devDependencies": {
