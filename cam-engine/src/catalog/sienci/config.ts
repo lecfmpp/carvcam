@@ -103,8 +103,9 @@ export function resolveSienci(cfg: SienciConfig, material: MaterialId): Resolved
       warnings.push({
         code: "NO_SIENCI_TABLE",
         severity: "warning",
-        message: `Sienci's table doesn't list the ${f.name} ${r.feeds.reasons.includes("bit") ? "in this material" : "at this speed"}; parameters estimated from it.`,
+        message: `Sienci's table doesn't list the ${f.name} ${r.feeds.reasons.includes("bit") ? "in this material" : "at the RPM your router or spindle reaches"}; parameters estimated from it.`,
         suggestion: r.feeds.rules.join(" "),
+        data: { bit: f.id, role, origin: "estimated", reason: r.feeds.reasons.includes("bit") ? "bit" : "head" },
       });
     }
     let stepdown = t.slotStepdown;
