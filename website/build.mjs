@@ -99,7 +99,7 @@ ${footer()}
   });
   if (linux) return set(/aarch64|arm64/.test(ua) ? ${JSON.stringify(site.downloads.piDeb)} : /armv7|armhf/.test(ua) ? ${JSON.stringify(site.downloads.pi32Deb)} : ${JSON.stringify(site.downloads.appimage)}, pi ? "" : ${JSON.stringify(ICON_LINUX)});
   set(${JSON.stringify(href(site.download + "#mac"))}, ${JSON.stringify(ICON_APPLE)});
-  navigator.userAgentData?.getHighEntropyValues?.(["architecture"]).then((h) => {
+  if (navigator.userAgentData?.platform === "macOS") navigator.userAgentData.getHighEntropyValues(["architecture"]).then((h) => {
     if (h.architecture === "arm") set(${JSON.stringify(site.downloads.macArm)}, ${JSON.stringify(ICON_APPLE)});
     else if (h.architecture === "x86") set(${JSON.stringify(site.downloads.macIntel)}, ${JSON.stringify(ICON_APPLE)});
   }).catch(() => {});
