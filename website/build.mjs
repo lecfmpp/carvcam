@@ -526,6 +526,7 @@ ${c.limits.length ? `<h3 style="margin-top:36px">Limits to know about</h3><ul cl
 <h2>See it in CarvCAM</h2>
 <div class="vclips">${c.clips.map(([scene, cap]) => `<figure>${clip(scene, cap)}<figcaption>${esc(cap)}</figcaption></figure>`).join("")}</div>
 </div></section>
+${LAZY_CLIPS}
 
 <section id="reports" class="vsec soft"><div class="wrap">
 <h2>What ${esc(c.name)} users report</h2>
