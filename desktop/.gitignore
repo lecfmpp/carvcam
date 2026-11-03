@@ -1,0 +1,6 @@
+# Generated at build time
+renderer/
+release/
+build/icon.png
+build/icon-mac.png
+build/icons/
