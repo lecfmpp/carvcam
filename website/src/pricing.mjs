@@ -17,7 +17,7 @@ export const plans = {
       "Feeds and speeds from Sienci's official tables, marked Official or Estimated",
       "Manufacturability checks, verifier and 2D/3D simulation",
       "Runs your machine over USB or Ethernet, no post-processor to pick",
-      "Or Send to gSender, or download the G-code, with no limit on cuts",
+      "Or download the G-code for any other sender, with no limit on cuts",
       "Clamp keep-out zones and a printable setup sheet",
       "Windows, Mac, Linux and Raspberry Pi; works offline; touch panel mode for the gControl",
     ],

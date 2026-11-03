@@ -143,7 +143,7 @@
       "faq": [
         {"q": "Is gSender free?", "a": "Yes. gSender is free, open source (GPLv3) software from Sienci Labs."},
         {"q": "Can gSender design or create toolpaths?", "a": "No. gSender runs G-code you make elsewhere (it can generate surfacing code). You still need CAD/CAM software. CarvCAM combines design, toolpaths and machine control in one app."},
-        {"q": "Do I have to stop using gSender if I use CarvCAM?", "a": "No. CarvCAM can run the machine itself or send the verified job straight to gSender (Send to gSender), and gSender remains a free option for running G-code from any CAM program, and for firmware utilities."},
+        {"q": "Do I have to stop using gSender if I use CarvCAM?", "a": "No, but you don't need it: CarvCAM runs the machine itself. You can still download CarvCAM's verified G-code (.nc) and run it in gSender, and gSender remains a free option for running G-code from any CAM program, and for firmware utilities."},
         {"q": "Does gSender work over Ethernet?", "a": "Yes, gSender connects over USB or Ethernet to grbl and grblHAL controllers including the SuperLongBoard."},
         {"q": "What platforms does gSender support?", "a": "Windows, Mac (Intel and Apple Silicon), Linux and Raspberry Pi."},
         {"q": "Which CAM does Sienci pair with gSender?", "a": "Sienci's docs show Carbide Create + gSender as an example toolchain, and its product pages say most customers use Vectric VCarve Pro or Carveco with gSender."}

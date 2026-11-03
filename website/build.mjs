@@ -323,7 +323,7 @@ function download() {
 <li><h3>Pick the file</h3><p>Pi 4 or 5 on Raspberry Pi OS 64-bit: the <b>64-bit .deb</b>. Older 32-bit systems: the <b>32-bit .deb</b>. Not sure? Run <code>uname -m</code>: <code>aarch64</code> means 64-bit.</p></li>
 <li><h3>Install</h3><p>Run <code>sudo apt install ./CarvCAM-Linux-arm64.deb</code> (or the 32-bit file). USB access is set up for you. 4 GB of memory or more is recommended.</p></li>
 </ol>
-<div class="callout">CarvCAM connects to your machine itself, so you don't need gSender. If gSender or another program is connected to the machine, close it first: only one program can use the connection at a time. Prefer to keep gSender? <a href="${href("/docs/send-to-gsender/")}">Send to gSender</a>.</div>
+<div class="callout">CarvCAM connects to your machine itself, so you don't need gSender. If gSender or another program is connected to the machine, close it first: only one program can use the connection at a time. Prefer another sender? Download the G-code (.nc) in Prepare.</div>
 <p class="note">Updates, uninstall and system requirements: <a href="${href("/docs/install/")}">Install CarvCAM</a>.</p>
 </div></div></section>`,
   });
@@ -866,7 +866,7 @@ await writeFile(
   join(OUT, "llms.txt"),
   `# CarvCAM
 
-> CarvCAM is a desktop app for Windows, Mac (Apple Silicon and Intel), Linux and Raspberry Pi, for Sienci Labs LongMill and AltMill CNC routers, that does sign design, CAM (toolpaths with feeds and speeds from Sienci's tables for the machine, router or spindle and bit, with every Sienci bit set built in) and machine control (connects straight to the controller over USB or Ethernet, guided wiring check, homing, touch-plate zero, carving) in one app that works offline. No separate sender or post-processor is needed; it can also send the checked G-code to gSender. Free, with a Pro plan for guided V-carve inlays, batch from CSV and the cost and price calculator.
+> CarvCAM is a desktop app for Windows, Mac (Apple Silicon and Intel), Linux and Raspberry Pi, for Sienci Labs LongMill and AltMill CNC routers, that does sign design, CAM (toolpaths with feeds and speeds from Sienci's tables for the machine, router or spindle and bit, with every Sienci bit set built in) and machine control (connects straight to the controller over USB or Ethernet, guided wiring check, homing, touch-plate zero, carving) in one app that works offline. No separate sender or post-processor is needed; the checked G-code can also be downloaded for any other sender. Free, with a Pro plan for guided V-carve inlays, batch from CSV and the cost and price calculator.
 
 Every page is also available as Markdown by adding \`index.md\` to its URL. The full documentation in one file: ${site.url}/llms-full.txt
 
