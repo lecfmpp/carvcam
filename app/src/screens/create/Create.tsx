@@ -45,6 +45,7 @@ import { rectTargets, snapRect, SNAP_PX, type Guide, type Rect } from "../../sta
 import { ThreeView } from "../../stage/ThreeView";
 import { machineName } from "../../lib/catalog";
 import { AssistantBar } from "./AssistantBar";
+import { assistantEnabled } from "../../lib/features";
 import { CurveEditor, PenLayer, type Geom } from "./pen";
 import { isImageFile, tracingFromFile, TracingLayer } from "./tracing";
 import { toast } from "../../state/ui";
@@ -234,7 +235,7 @@ export default function Create() {
         toast(useDesign.getState().undo() ? "Undone." : "Nothing to undo.");
         return;
       }
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k" && assistantEnabled()) {
         e.preventDefault();
         assistantInput.current?.focus();
         return;
@@ -326,7 +327,7 @@ export default function Create() {
             />
           </>
         }
-        bottomLeft={<AssistantBar inputRef={assistantInput} issues={issues} bitName={bit?.name ?? "bit"} materialName={`${spec.thickness} mm ${material.id}`} machineName={machineName(machine)} />}
+        bottomLeft={assistantEnabled() ? <AssistantBar inputRef={assistantInput} issues={issues} bitName={bit?.name ?? "bit"} materialName={`${spec.thickness} mm ${material.id}`} machineName={machineName(machine)} /> : null}
         render={(api) => {
           if (api.view === "3d") {
             return eng.sim ? (

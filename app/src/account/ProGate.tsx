@@ -237,11 +237,11 @@ export function UpgradeDialog(props: { feature: ProFeature; open: boolean; onClo
       <ul className="acct-perks">
         <li>
           <Check size={16} strokeWidth={2} />
-          14 days free, then monthly or yearly. Cancel anytime.
+          14 days free, then $69 a year, or $179 once for lifetime. Cancel anytime.
         </li>
         <li>
           <Check size={16} strokeWidth={2} />
-          Batch, nesting, inlays, job costs, cloud projects and the built-in assistant.
+          Batch from CSV, guided inlays, and job costs and prices.
         </li>
         <li>
           <Check size={16} strokeWidth={2} />
