@@ -149,7 +149,7 @@ export const docs = {
     blocks: [
       ["clip", "design", "Add text, pick a font and size it."],
       ["h2", "The layout"],
-      ["table", ["Area", "What's there"], [["Left", "Tools: select, text, rectangle, circle, polygon, star, line, curve (pen) and **Import SVG file**"], ["Middle", "The board, drawn as carved wood, with rulers and a legend that says what each color means. Drag items to move them"], ["Right", "The design name, its status, then four sections: **Wood & bit**, **Shape**, **Upload design** and **Elements**"], ["Bottom", "The assistant: describe a change in plain words"]]],
+      ["table", ["Area", "What's there"], [["Left", "Tools: select, text, rectangle, circle, polygon, star, line, curve (pen) and **Import SVG file**"], ["Middle", "The board, drawn as carved wood, with rulers and a legend that says what each color means. Drag items to move them"], ["Right", "The design name, its status, then four sections: **Wood & bit**, **Shape**, **Upload design** and **Elements**"], ["Bottom", "Zoom, and the **Watch how** video for the step"]]],
       ["h2", "Make a sign in four steps"],
       [
         "steps",
