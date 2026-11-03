@@ -2,7 +2,7 @@ import { AlertTriangle, ArrowDown, ArrowUp, Check, OctagonAlert, Pause, Printer 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Banner, Seg, SidePanel } from "../../components/ui";
-import { dialFor, materialById, TRACK } from "../../lib/catalog";
+import { dialFor, machineName, materialById, TRACK } from "../../lib/catalog";
 import { useMachine, workPos, type AlarmCode } from "../../machine/store";
 import { useDesign } from "../../state/design";
 import { toast } from "../../state/ui";
@@ -17,6 +17,7 @@ import type { JobCtx } from "./Job";
 import { bitNameFor, fmtMin, rpmText, useFlow } from "./jobUtil";
 import { zoneIssues, zoneOverhang } from "./zones";
 import { SetupSheetDialog } from "./SetupSheetDialog";
+import { JobModal } from "./Modal";
 
 /** Alarms with guided recovery (prototype copy). "hold" = pause only, the position is still valid. */
 const ALARMS: Record<AlarmCode, { kind: string; hold?: boolean; title: string; why: string; steps: [string, string][]; resume: string; code: string }> = {
@@ -160,10 +161,17 @@ export function CarveStep({ ctx }: { ctx: JobCtx }) {
   const totalSec = result?.verification?.stats.estimatedTimeSec ?? 0;
   const leftMin = job ? (job.total - m.elapsed) / 60 / (m.feedOverride / 100) : totalSec / 60;
 
-  const start = () => {
+  const runJob = () => {
     if (!result || !b) return;
     useMachine.getState().loadJob({ name: design.name, gcode: result.gcode, tools: result.tools, board: { width: b.width, height: b.height, thickness: b.thickness } });
     useMachine.getState().start();
+  };
+  // First carve on a real controller with this machine: ask for the safety steps once (air cut, E-stop).
+  const firstCutDone = useWorkshop((s) => s.firstCutConfirmed.includes(machine.id));
+  const [firstCut, setFirstCut] = useState(false);
+  const start = () => {
+    if (useMachine.getState().conn === "real" && !firstCutDone) return setFirstCut(true);
+    runJob();
   };
 
   // ---------- Bit change ----------
@@ -405,6 +413,7 @@ export function CarveStep({ ctx }: { ctx: JobCtx }) {
               <Printer size={15} strokeWidth={1.75} />
               Print setup sheet
             </button>
+            {firstCut ? <FirstCutDialog machineName={machineName(machine)} onCancel={() => setFirstCut(false)} onPosition={() => (setFirstCut(false), nav("/position"))} onConfirm={() => (useWorkshop.getState().confirmFirstCut(machine.id), setFirstCut(false), runJob())} /> : null}
             {sheetOpen ? <SetupSheetDialog ctx={ctx} onClose={() => setSheetOpen(false)} /> : null}
           </>
         ) : null}
@@ -676,3 +685,48 @@ function upper(a: number[], v: number) {
 }
 
 const fmtN = (n: number) => String(Math.round(n * 10) / 10);
+
+/**
+ * First carve on a real machine: CarvCAM drives the controller directly, so before the first job on
+ * each machine the person confirms an air cut and a hand on the E-stop. Shown once per machine.
+ */
+function FirstCutDialog(props: { machineName: string; onCancel(): void; onPosition(): void; onConfirm(): void }) {
+  const items = [
+    ["air", "Air cut first: set work zero about 10 mm above the board (or take the board off), so the first run cuts nothing."],
+    ["estop", "My hand is on the E-stop, and I know Esc or Stop in CarvCAM halts the machine."],
+    ["clear", "Clamps, cables and hands are clear of the bit's path, and I'm wearing eye protection."],
+  ] as const;
+  const [ok, setOk] = useState<Record<string, boolean>>({});
+  const all = items.every(([k]) => ok[k]);
+  return (
+    <JobModal
+      label="First carve on this machine"
+      eyebrow="First carve on this machine"
+      title={`Before CarvCAM moves ${props.machineName}`}
+      onClose={props.onCancel}
+      foot={
+        <>
+          <button className="btn btn--outline" onClick={props.onPosition}>
+            Set zero higher first
+          </button>
+          <button className="btn btn--primary" disabled={!all} onClick={props.onConfirm}>
+            Start carving
+          </button>
+        </>
+      }
+    >
+      <p style={{ marginTop: 0 }}>
+        CarvCAM talks to the controller directly, with no other sender in between. Watch the first run on each machine closely: if a move looks wrong, stop it.
+      </p>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {items.map(([k, text]) => (
+          <label key={k} style={{ display: "flex", gap: 10, alignItems: "flex-start", cursor: "pointer" }}>
+            <input type="checkbox" checked={!!ok[k]} onChange={(e) => setOk({ ...ok, [k]: e.target.checked })} style={{ marginTop: 3 }} />
+            <span>{text}</span>
+          </label>
+        ))}
+      </div>
+      <p className="muted" style={{ marginBottom: 0 }}>Asked once per machine. You can always download the G-code in Prepare and run it in another sender instead.</p>
+    </JobModal>
+  );
+}

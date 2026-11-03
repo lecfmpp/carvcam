@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import { Seg } from "../../components/ui";
 import { ArrowUpRight } from "lucide-react";
 import { BitCard } from "../../components/BitCard";
-import { GsenderAddressField } from "../../components/SendToGsender";
 import { MachineCard } from "../../components/MachineCard";
 import { affiliateConfigured, sienciLink } from "../../lib/referral";
 import { bitImage, STORE_CATEGORY_URL } from "../../lib/storeBits";
@@ -479,7 +478,6 @@ function Settings() {
         </div>
       ) : null}
       <PanelSetting />
-      <GsenderAddressField />
       <AccountSetting />
       <div style={{ display: "flex", gap: 10 }}>
         <button className="ws-btn ws-btn--ghost" style={{ height: 48, background: "rgba(255,255,255,.06)", borderColor: "rgba(255,255,255,.18)" }} onClick={() => nav("/workshop/onboarding")}>
