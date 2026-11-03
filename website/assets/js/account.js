@@ -119,6 +119,8 @@ async function signupPage(form) {
 
 /* ---------------- log in ---------------- */
 async function loginPage(form) {
+  const signupLink = $("[data-signup-link]", form);
+  if (signupLink && location.search) signupLink.search = location.search;
   const { data } = await auth.getSession();
   if (data.session) return afterLogin(data.session.user);
   form.addEventListener("submit", async (e) => {
@@ -160,7 +162,7 @@ async function resetPage(form) {
 async function requireUser() {
   const { data } = await auth.getSession();
   if (!data.session) {
-    location.replace(root(`/login/?next=${encodeURIComponent(location.pathname)}`));
+    location.replace(root(`/login/?next=${encodeURIComponent(location.pathname + location.search)}`));
     return null;
   }
   return data.session.user;
@@ -293,7 +295,7 @@ async function accountPage(el) {
   $("[data-edit-answers]", el).hidden = !done;
   $("[data-admin]", el).hidden = profile?.role !== "admin";
   el.hidden = false;
-  await showPlan(el, user);
+  await Promise.all([showPlan(el, user), showDevices(el)]);
   $("[data-logout]", el).addEventListener("click", async () => {
     await auth.signOut();
     location.assign(root("/login/"));
@@ -371,8 +373,104 @@ async function pricingPage(el) {
   if (chosen && data.session) start(chosen, $(`[data-plan="${chosen}"]`, el));
 }
 
+/* ---------------- sign in the app (device code from CarvCAM) ---------------- */
+const normCode = (v) => {
+  const s = String(v || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+  return s.length > 4 ? `${s.slice(0, 4)}-${s.slice(4)}` : s;
+};
+
+async function activatePage(form) {
+  const user = await requireUser();
+  if (!user) return;
+  const input = $("input[name=code]", form);
+  const go = $("[data-go]", form);
+  const deny = $("[data-deny]", form);
+  const confirm = $("[data-confirm]", form);
+  let code = null;
+  input.value = normCode(new URLSearchParams(location.search).get("code"));
+  input.addEventListener("input", () => {
+    input.value = normCode(input.value);
+    if (code && input.value !== code) reset();
+  });
+  function reset() {
+    code = null;
+    confirm.hidden = true;
+    deny.hidden = true;
+    go.textContent = go.dataset.label = "Continue";
+  }
+  async function check() {
+    const c = normCode(input.value);
+    if (c.length !== 9) return say(form, "Type the 8-character code from CarvCAM.");
+    busy(form, true);
+    say(form, "");
+    try {
+      const out = await callFn("app-auth", { action: "lookup", user_code: c });
+      code = c;
+      $("[data-device]", form).textContent = out.device_name || "CarvCAM";
+      $("[data-who]", form).textContent = user.email;
+      confirm.hidden = false;
+      deny.hidden = false;
+      go.dataset.label = "Yes, sign in CarvCAM";
+    } catch (err) {
+      say(form, friendly(err));
+    }
+    busy(form, false);
+  }
+  async function answer(approve) {
+    busy(form, true);
+    deny.disabled = true;
+    try {
+      await callFn("app-auth", { action: "approve", user_code: code, approve });
+      form.hidden = true;
+      $(approve ? "[data-done]" : "[data-denied]").hidden = false;
+    } catch (err) {
+      say(form, friendly(err));
+      reset();
+    }
+    deny.disabled = false;
+    busy(form, false);
+  }
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    code ? answer(true) : check();
+  });
+  deny.addEventListener("click", () => answer(false));
+  // Came from the app with the code in the link: go straight to the confirmation.
+  if (input.value.length === 9) check();
+}
+
+/* ---------------- signed-in computers (account page) ---------------- */
+async function showDevices(el) {
+  const box = $("[data-devices]", el);
+  if (!box) return;
+  const { data: devices, error } = await db.from("app_devices").select("id, name, platform, created_at, last_seen_at").order("last_seen_at", { ascending: false });
+  if (error || !devices?.length) return;
+  const list = $("[data-device-list]", box);
+  list.replaceChildren(
+    ...devices.map((d) => {
+      const li = document.createElement("li");
+      const info = document.createElement("div");
+      info.textContent = d.name;
+      const sub = document.createElement("small");
+      sub.textContent = `Signed in ${fmtDate(d.created_at)} · last seen ${fmtDate(d.last_seen_at)}`;
+      info.append(sub);
+      const btn = Object.assign(document.createElement("button"), { type: "button", className: "btn", textContent: "Sign out" });
+      btn.addEventListener("click", async () => {
+        btn.disabled = true;
+        const { error } = await db.from("app_devices").delete().eq("id", d.id);
+        if (error) return (btn.disabled = false), (btn.textContent = "Try again");
+        li.remove();
+        if (!list.children.length) box.hidden = true;
+      });
+      li.append(info, btn);
+      return li;
+    }),
+  );
+  box.hidden = false;
+}
+
 const page = document.querySelector("[data-account]");
-const run = { signup: signupPage, login: loginPage, reset: resetPage, onboarding: onboardingPage, account: accountPage, pricing: pricingPage }[page?.dataset.account];
+const run = { signup: signupPage, login: loginPage, reset: resetPage, onboarding: onboardingPage, account: accountPage, pricing: pricingPage, activate: activatePage }[page?.dataset.account];
 run?.(page).catch((err) => {
   const form = page.closest("form") || page.querySelector("form") || page;
   if ($(".auth__msg", form)) say(form, friendly(err));

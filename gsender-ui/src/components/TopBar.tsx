@@ -1,3 +1,4 @@
+import { AccountChip } from "./Account";
 import { Brand } from "./Brand";
 import { Check, ChevronDown, Maximize, Menu, Minimize, Monitor, Plus, Square } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -85,6 +86,7 @@ export function TopBar(props: { variant: "app" | "job" | "tool" | "onboarding"; 
       ) : null}
 
       {props.right}
+      {props.variant === "app" ? <AccountChip /> : null}
       <FullscreenButton />
       {props.variant !== "onboarding" ? (
         <>

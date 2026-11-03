@@ -1,0 +1,35 @@
+/* Account: sign-in dialog, top-bar chip and Settings › Account. */
+.acct-modal { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(10, 10, 12, 0.6); backdrop-filter: blur(4px); }
+.acct-modal__card { position: relative; width: min(480px, 100%); display: flex; flex-direction: column; gap: 14px; padding: 28px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line-2); box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5); color: var(--text); }
+.acct-modal__card h2 { margin: 0; font: 600 20px var(--font); }
+.acct-modal__close { position: absolute; top: 12px; right: 12px; width: 36px; height: 36px; border: 0; border-radius: 8px; background: transparent; color: var(--text-2); display: flex; align-items: center; justify-content: center; }
+.acct-modal__close:hover { background: rgba(255, 255, 255, 0.08); color: var(--text); }
+.acct-code { align-self: center; padding: 14px 22px; border-radius: 12px; border: 1px solid var(--line-2); background: var(--surface-2); font: 600 34px var(--mono); letter-spacing: 0.12em; user-select: all; }
+.acct-muted { color: var(--text-3); margin: 0; font: 400 14px/1.5 var(--font); }
+.acct-small { font-size: 13px; }
+.acct-error { margin: 0; color: var(--alarm-text); font: 500 14px/1.5 var(--font); }
+.acct-wait { display: flex; align-items: center; gap: 10px; font: 500 14px var(--font); color: var(--text-2); }
+.acct-spinner { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--line-2); border-top-color: var(--accent); animation: acct-spin 0.9s linear infinite; }
+@keyframes acct-spin { to { transform: rotate(360deg); } }
+.acct-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }
+
+.acct-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 38px; padding: 0 14px; border-radius: 10px; font: 600 14px var(--font); text-decoration: none; cursor: pointer; white-space: nowrap; }
+.acct-btn--lg { height: 48px; padding: 0 20px; font-size: 15px; }
+.acct-btn--primary { border: 0; background: var(--accent); color: var(--graphite); }
+.acct-btn--primary:hover { background: var(--accent-hover); }
+.acct-btn--ghost { border: 1px solid rgba(255, 255, 255, 0.16); background: transparent; color: var(--text); }
+.acct-btn--ghost:hover { background: rgba(255, 255, 255, 0.06); }
+.acct-btn:disabled { opacity: 0.5; cursor: default; }
+
+.acct-chip { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line-2); background: transparent; color: var(--text-2); font: 500 13px var(--font); text-decoration: none; cursor: pointer; white-space: nowrap; }
+.acct-chip:hover { color: var(--text); background: rgba(255, 255, 255, 0.06); }
+.acct-chip--pro { color: var(--accent); border-color: rgba(255, 91, 31, 0.4); }
+
+.acct-panel { display: flex; flex-direction: column; gap: 12px; padding: 16px 18px; border-radius: var(--radius-panel); border: 1px solid var(--line-2); background: rgba(255, 255, 255, 0.03); }
+.acct-panel__row { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.acct-panel__btns { display: flex; gap: 8px; }
+.acct-panel__foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-top: 12px; border-top: 1px solid var(--line); }
+.acct-plan { font: 600 17px var(--font); color: var(--text); }
+
+html[data-panel="1"] .acct-btn { height: 48px; }
+html[data-panel="1"] .acct-chip { height: 44px; }

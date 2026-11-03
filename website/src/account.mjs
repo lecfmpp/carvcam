@@ -98,7 +98,7 @@ ${script(base())}`));
 ${field("E-mail", `<input name="email" type="email" autocomplete="email" required>`)}
 ${field("Password", `<input name="password" type="password" autocomplete="current-password" required>`)}
 ${msg}<button class="btn btn--primary btn--block" type="submit">Log in</button>
-<p class="auth__alt"><button type="button" class="linkbtn" data-forgot>Forgot password?</button> · New here? <a href="${href("/signup/")}">Create an account</a></p>
+<p class="auth__alt"><button type="button" class="linkbtn" data-forgot>Forgot password?</button> · New here? <a href="${href("/signup/")}" data-signup-link>Create an account</a></p>
 </form>${script(base())}`));
 
   page("/reset-password/", "Choose a new password | CarvCAM", "Set a new password for your CarvCAM account.", () =>
@@ -139,6 +139,21 @@ ${msg}
 <p class="wiz__skip"><button type="button" class="linkbtn" data-skip>Skip for now</button></p>
 </form></div></section>${script(base())}`);
 
+
+  page("/activate/", "Sign in to the CarvCAM app", "Confirm the code shown in the CarvCAM app to sign it in to your account.", () =>
+    card(`<h1>Sign in to the app</h1>
+<p class="lede">Type the code CarvCAM shows on your computer or the machine's screen.</p>
+<form class="auth__form" data-account="activate" novalidate>
+${field("Code", `<input name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="9" placeholder="XXXX-XXXX" required class="code-input">`)}
+<div class="activate__confirm" data-confirm hidden><p>Sign in <b data-device>CarvCAM</b> as <b data-who></b>?</p>
+<p class="auth__legal">Only confirm if you just asked for this code in CarvCAM. The app gets your plan, not your password.</p></div>
+${msg}<div class="activate__btns"><button class="btn btn--primary btn--block" type="submit" data-go>Continue</button>
+<button type="button" class="btn btn--block" data-deny hidden>Cancel, it wasn't me</button></div>
+</form>
+<div class="auth__sent" data-done hidden><h2>CarvCAM is signed in</h2><p>Go back to the app: it picks this up in a few seconds. You can close this tab.</p></div>
+<div class="auth__sent" data-denied hidden><h2>Sign-in canceled</h2><p>Nothing was signed in. If someone else shows you a code, never type it here.</p></div>
+${script(base())}`));
+
   page("/account/", "Your account | CarvCAM", "Your CarvCAM account.", () =>
     `<section class="acct"><div class="narrow"><div data-account="account" hidden>
 <div class="note note--ok" data-welcome hidden><b>You're all set.</b> Thanks for telling us about your shop.</div>
@@ -147,6 +162,7 @@ ${msg}
 <p class="lede"><span data-email></span> · <span class="badge" data-role></span></p>
 <div class="plancard" data-plan-box hidden><div><span class="eyebrow">Your plan</span><h2 data-plan-name>Free</h2><p data-plan-detail></p></div>
 <div class="plancard__actions"><a class="btn btn--primary" href="${href("/pricing/")}" data-upgrade>Upgrade to Pro</a><button type="button" class="btn" data-manage hidden>Manage billing</button></div></div>
+<div class="devices" data-devices hidden><h2>Computers signed in to CarvCAM</h2><p class="lede">Sign out a computer you no longer use. To add one, use “Sign in” in the app.</p><ul class="devices__list" data-device-list></ul></div>
 <div class="acct__grid">
 <a class="card" href="${href("/download/")}"><h3>Download CarvCAM</h3><p>Windows, Linux and Raspberry Pi.</p><span class="more">Get the app</span></a>
 <a class="card" href="${href("/onboarding/")}" data-onboarding><h3>Finish your shop profile</h3><p>Five quick questions so CarvCAM fits the way you carve.</p><span class="more">Continue</span></a>

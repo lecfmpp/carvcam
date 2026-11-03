@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
 import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
+import { AccountHost } from "./components/Account";
 import { ConnectWizardHost } from "./components/ConnectWizard";
 import { Toasts } from "./components/ui";
 import { usePanelMode } from "./lib/panel";
@@ -42,6 +43,7 @@ export default function App() {
         </Routes>
       </Suspense>
       <ConnectWizardHost />
+      <AccountHost />
       <Toasts />
     </HashRouter>
   );

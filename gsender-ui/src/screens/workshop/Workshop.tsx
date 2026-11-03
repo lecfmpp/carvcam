@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Seg } from "../../components/ui";
 import { ArrowUpRight } from "lucide-react";
+import { AccountSettings } from "../../components/Account";
 import { BitCard } from "../../components/BitCard";
 import { MachineCard } from "../../components/MachineCard";
 import { affiliateConfigured, sienciLink } from "../../lib/referral";
@@ -396,6 +397,7 @@ function Settings() {
         </div>
       ) : null}
       <PanelSetting />
+      <AccountSettings />
       <div style={{ display: "flex", gap: 10 }}>
         <button className="ws-btn ws-btn--ghost" style={{ height: 48, background: "rgba(255,255,255,.06)", borderColor: "rgba(255,255,255,.18)" }} onClick={() => nav("/workshop/onboarding")}>
           Change machine
