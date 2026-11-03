@@ -317,6 +317,8 @@ export interface Project {
   speed?: Preset;
   spec: PlateSpecInput;
   track?: number;
+  /** V-carve inlay: the second part (the plug), opened from the first part's Inlay card. */
+  inlayPlug?: { title: string; material: string; bits: string[]; spec: PlateSpecInput };
 }
 
 const P = Object.fromEntries(sienci.PROJECTS.map((p) => [p.id, p]));
@@ -336,7 +338,19 @@ export const PROJECTS: Project[] = [
   { id: "welcome-sign", title: "“Welcome” script lettering", level: "Intermediate", learn: "Clean plywood edges with a compression bit", material: "Birch plywood", bits: ["flat-1-8-compression"], speed: "balanced", spec: withTexts("welcome-sign", ["Welcome"]) },
   { id: "acrylic-keychain", title: "Acrylic keychain", level: "Intermediate", learn: "V-carving and cutting plastic cleanly", material: "Acrylic", bits: ["vbit-30-1-8", "flat-1-8-1flute"], spec: withTexts("acrylic-keychain", ["JO"]) },
   { id: "address-sign", title: "Large address sign", level: "Intermediate", learn: "Planning a job that fills a big machine", material: "MDF", bits: ["flat-1-4-upcut"], spec: withTexts("address-sign", ["1428"]) },
+  { id: "name-tags", title: "Name tags ×6", level: "Easy", learn: "Making copies: one tag designed, six cut, one bit change", material: "Birch plywood", bits: ["vbit-60-15mm", "flat-1-8-upcut"], spec: P["name-tags"].plate },
+  {
+    id: "heart-inlay",
+    title: "Heart inlay coaster",
+    level: "Intermediate",
+    learn: "A V-carve inlay: pocket, plug, glue gap. Free to cut, no Pro needed",
+    material: "Walnut",
+    bits: ["vbit-60-15mm", "flat-1-4-upcut"],
+    spec: P["heart-inlay"].plate,
+    inlayPlug: { title: "Heart inlay coaster · plug", material: "Pine", bits: ["vbit-60-15mm", "flat-1-4-upcut"], spec: P["heart-inlay-plug"].plate },
+  },
 ];
+
 
 export const TRACK = [
   { id: "surface", title: "Surface the bed", sub: "Flatten the spoilboard with the 22 mm bit" },

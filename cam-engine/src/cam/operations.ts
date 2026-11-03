@@ -184,6 +184,18 @@ export interface VCarveOpts {
   direction: Direction;
   /** Distance between rings, in mm. */
   step?: number;
+  /**
+   * Start depth: the tip is already this far below the surface at the region's edge, so the cut
+   * reaches `startDepth · tan` outside it. That is what shapes the plug of an inlay.
+   */
+  startDepth?: number;
+  /** Distance between rings on the flat bottom. Default: fine enough for ~0.08 mm ridges. */
+  flatStep?: number;
+  /**
+   * On the flat bottom, only cut this far past where the flat bottom starts (a flat bit clears the
+   * middle). Omitted = the V-bit clears the whole flat bottom.
+   */
+  flatLimit?: number;
 }
 
 export interface VCarveResult {
@@ -201,19 +213,22 @@ export interface VCarveResult {
 export function vcarve(b: PathBuilder, region: Region, o: VCarveOpts): VCarveResult {
   const tan = Math.tan(o.halfAngle);
   const step = o.step ?? 0.2;
-  const dCap = o.maxDepth * tan;
+  const start = o.startDepth ?? 0;
+  const dCap = Math.max(0, o.maxDepth - start) * tan;
   // On the flat bottom, passes close enough that the ridge between them is ~0.08 mm.
-  const flatStep = Math.max(0.1, 2 * 0.08 * tan);
+  const flatStep = o.flatStep ?? Math.max(0.1, 2 * 0.08 * tan);
+  const dMax = o.flatLimit === undefined ? Infinity : dCap + o.flatLimit;
   let flatArea = 0;
 
   type Ring = { d: number; z: number; path: Pt[] };
   for (const comp of components(simplify(region))) {
     const rings: Ring[] = [];
     let d = step / 2;
-    for (let k = 0; k < 20000; k++) {
+    for (let k = 0; k < 20000 && d <= dMax; k++) {
       const cur = simplify(offset(comp, -d));
       if (area(cur) <= 0) break;
-      const z = -Math.min(d / tan, o.maxDepth);
+      const z = -Math.min(d / tan + start, o.maxDepth);
+
       for (const p of cur) rings.push({ d, z, path: orient(p, o.direction, "pocket") });
       d += d < dCap ? step : flatStep;
     }

@@ -58,6 +58,11 @@ const W: Warning[] = [
   { code: "KEEP_OUT_TOO_TALL", severity: "error", message: "x", data: { travelHeight: 90, travelZ: 80 } },
   { code: "INVALID_SPEC", severity: "error", message: "x" },
   { code: "TAB_TOO_NARROW", severity: "warning", message: "x", data: { width: 2, minWidth: 3, suggestedWidth: 6 } },
+  { code: "COPIES_DO_NOT_FIT", severity: "error", message: "x", element: T0 },
+  { code: "INLAY_NEEDS_VBIT", severity: "error", message: "x" },
+  { code: "INLAY_BIT_TOO_SMALL", severity: "error", message: "x", data: { limit: 2.7, depth: 4.5 } },
+  { code: "INLAY_BOARD_TOO_THIN", severity: "error", message: "x", data: { depth: 18, thickness: 18 } },
+  { code: "INLAY_NO_CLEARING", severity: "warning", message: "x" },
 ];
 
 /** Bit problems: the way out must include a bit (owned) or a store link (not owned). */

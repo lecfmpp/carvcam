@@ -44,6 +44,18 @@ const KEY_MAP: Record<string, string> = {
   fechada: "closed",
   nome: "name",
   comprimento: "length",
+  // Copies grid and V-carve inlay (early builds saved these with Portuguese names too)
+  copias: "copies",
+  linhas: "rows",
+  colunas: "cols",
+  alternar: "alternate",
+  centro: "pivot",
+  textos: "texts",
+  espelhar: "mirror",
+  parte: "part",
+  folga: "glueGap",
+  folgaTopo: "boardGap",
+  limpeza: "clear",
   // Tool and machine (CLI example files)
   placa: "plate",
   ferramenta: "tool",
@@ -78,7 +90,8 @@ const VALUE_MAP: Record<string, Record<string, string>> = {
     icone: "icon",
     forma: "shape",
   },
-  mode: { relevo: "relief", gravado: "engrave", recorte: "cutout" },
+  mode: { relevo: "relief", gravado: "engrave", recorte: "cutout", peca: "part" },
+  part: { bolso: "pocket", macho: "plug" },
   material: { compensado: "plywood", madeira_macia: "softwood", madeira_dura: "hardwood", acrilico: "acrylic" },
   operation: { subtrair: "subtract", mascara: "mask" },
   id: { coracao: "heart", estrela: "star", casa: "house", folha: "leaf" },
@@ -140,6 +153,9 @@ export const LEGACY_PROJECT_IDS: Record<string, string> = {
   "letreiro-bem-vindos": "welcome-sign",
   "chaveiro-acrilico": "acrylic-keychain",
   "placa-de-endereco": "address-sign",
+  "etiquetas-de-nome": "name-tags",
+  "inlay-coracao": "heart-inlay",
+  "inlay-coracao-macho": "heart-inlay-plug",
 };
 
 export const migrateLegacyBitId = (id: string) => LEGACY_BIT_IDS[id] ?? id;

@@ -1,7 +1,8 @@
 import { fmt, hasErrors, type Warning } from "./warnings.js";
 import { PathBuilder } from "./cam/builder.js";
 import { hatch, peck, pocket, profile, vcarve, type Direction } from "./cam/operations.js";
-import { area, bounds, difference, intersection, offset, unreachable, type Region } from "./geometry/clip.js";
+import { area, bounds, difference, intersection, offset, unreachable, type Pt, type Region } from "./geometry/clip.js";
+import { planInlay, type InlayPlan } from "./cam/inlay.js";
 import { buildLayout, type CutElement, type FontMap, type Layout } from "./layout.js";
 import { resolveSienci, type ManualAdjustment, type SienciConfig } from "./catalog/sienci/config.js";
 import { cutParams, type CutParams } from "./materials.js";
@@ -122,7 +123,7 @@ export function invalidSpecResult(input: PlateSpecInput, options: GenerateOption
     manualAdjustments: sienci?.manualAdjustments ?? [],
     paramsSource: sienci?.source ?? "Generic chip-load calculation",
     tabs: [],
-    layout: { stock: { width: w, height: h, thickness: Number(input.thickness) || 0 }, part: [], engraved: [], relief: null, cutouts: [], holes: [], profile: null, warnings },
+    layout: { stock: { width: w, height: h, thickness: Number(input.thickness) || 0 }, part: [], engraved: [], relief: null, cutouts: [], parts: [], holes: [], profile: null, warnings },
   };
 }
 
@@ -133,10 +134,11 @@ export function generatePlate(input: PlateSpecInput, options: GenerateOptions): 
   const direction = opts.direction ?? "conventional";
   const layout = buildLayout(spec, opts.fonts, tool, cutTool, machine);
   const warnings = [...(sienci?.warnings ?? []), ...layout.warnings];
+  const inlay = planInlay(spec, layout, tool, cutTool, warnings);
   const keepOut = opts.keepOut ?? [];
   const keepOutNotes: string[] = [];
   if (keepOut.length) {
-    warnings.push(...keepOutOverlaps(layout, keepOut, cutTool.diameter / 2));
+    warnings.push(...keepOutOverlaps(layout, keepOut, cutTool.diameter / 2, inlay));
     // Simple and safe: every travel (between and within operations) goes above the tallest obstacle.
     const travel = Math.max(...keepOut.map(zoneClearance)) + KEEP_OUT_MARGIN;
     if (travel + spec.thickness > machine.travelZ) {
@@ -190,15 +192,53 @@ export function generatePlate(input: PlateSpecInput, options: GenerateOptions): 
     operations.push({ name, type, tool: t.id, depth });
   };
 
+  /**
+   * Cuts the elements nearest-first from where the bit is. With many copies in a grid, the bit goes
+   * from one copy to its neighbour instead of back and forth across the board.
+   */
+  const inOrder = (list: CutElement[], fn: (e: CutElement) => void) => {
+    const todo = list.map((e) => ({ e, b: e.region.length ? bounds(e.region) : null }));
+    while (todo.length) {
+      let bi = 0;
+      let bd = Infinity;
+      todo.forEach((t, i) => {
+        const d = t.b ? distToBox(pos, t.b) : 0;
+        if (d < bd - 1e-9) {
+          bd = d;
+          bi = i;
+        }
+      });
+      fn(todo.splice(bi, 1)[0].e);
+    }
+  };
+
   const rMain = tool.diameter / 2;
   const rCut = cutTool.diameter / 2;
 
-  // 1. Engravings (shallow, with the main bit).
-  for (const g of layout.engraved) {
+  // 0. Inlay: the pocket or the plug, V-carved with the main bit (the flat bottom is cleared later,
+  // with the other flat-bit operations, so the bit is changed only once).
+  if (inlay) {
+    const half = ((tool.angle ?? 60) * Math.PI) / 360;
+    run(`V-carve: ${inlay.label}`, "engrave", tool, pMain, inlay.depth, (b) => {
+      vcarve(b, inlay.region, {
+        halfAngle: half,
+        maxDepth: inlay.depth,
+        stepdown: pMain.stepdown,
+        direction,
+        step: inlay.step,
+        startDepth: inlay.startDepth,
+        flatStep: inlay.flatStep,
+        flatLimit: inlay.clearing ? rCut + inlay.flatStep : undefined,
+      });
+    });
+  }
+
+  // 1. Engravings (shallow, with the main bit), nearest first.
+  inOrder(inlay ? inlay.rest : layout.engraved, (g) => {
     if (g.hatch) {
       const h = g.hatch;
       const width = tool.type === "vbit" ? 2 * g.depth * Math.tan(((tool.angle ?? 60) * Math.PI) / 360) : tool.diameter;
-      if (h.spacing <= width) {
+      if (h.spacing <= width && !g.copy) {
         const suggested = Math.ceil(width * 1.8 * 2) / 2;
         warnings.push({
           code: "HATCH_TOO_DENSE",
@@ -212,7 +252,7 @@ export function generatePlate(input: PlateSpecInput, options: GenerateOptions): 
       run(`Hatch: ${g.label}`, "engrave", tool, pMain, g.depth, (b) => {
         hatch(b, g.region, { radius: tool.type === "vbit" ? 0 : rMain, depth: g.depth, stepdown: pMain.stepdown, spacing: h.spacing, angle: h.angle, direction });
       });
-      continue;
+      return;
     }
     if (tool.type === "vbit") {
       const half = ((tool.angle ?? 60) * Math.PI) / 360;
@@ -220,7 +260,7 @@ export function generatePlate(input: PlateSpecInput, options: GenerateOptions): 
       const max = Math.min(g.depth, tool.cutLength, rMain / Math.tan(half), spec.thickness - 0.5);
       run(`V-carve: ${g.label}`, "engrave", tool, pMain, max, (b) => {
         const res = vcarve(b, g.region, { halfAngle: half, maxDepth: max, stepdown: pMain.stepdown, direction });
-        if (res.flatArea > 1) {
+        if (res.flatArea > 1 && !g.copy) {
           warnings.push({
             code: "VCARVE_FLAT_BOTTOM",
             severity: "warning",
@@ -231,13 +271,13 @@ export function generatePlate(input: PlateSpecInput, options: GenerateOptions): 
           });
         }
       });
-      continue;
+      return;
     }
-    checkDetail(g, rMain, tool, warnings, "engrave");
+    if (!g.copy) checkDetail(g, rMain, tool, warnings, "engrave");
     run(`Engrave: ${g.label}`, "engrave", tool, pMain, g.depth, (b) => {
       pocket(b, g.region, { radius: rMain, stepover: pMain.stepover, depth: g.depth, stepdown: pMain.stepdown, direction });
     });
-  }
+  });
 
   // 2. Relief background.
   if (layout.relief) {
@@ -248,53 +288,75 @@ export function generatePlate(input: PlateSpecInput, options: GenerateOptions): 
     });
   }
 
-  // 3. Through cutouts (stencil), 4. holes and slots, 5. outer profile: cutout bit.
-  for (const v of layout.cutouts) {
-    checkDetail(v, rCut, cutTool, warnings, "cutout");
-    run(`Cutout: ${v.label}`, "cutout", cutTool, pCut, v.depth, (b) => {
-      profile(b, v.region, { radius: rCut, depth: v.depth, stepdown: pCut.stepdown, direction, side: "inside" });
+  // 2b. Flat bottom of the inlay, cleared with the flat bit.
+  if (inlay?.clearing) {
+    const zone = inlay.clearing;
+    run(`Clear flat bottom: ${inlay.label}`, "engrave", cutTool, pCut, inlay.depth, (b) => {
+      pocket(b, zone, { radius: rCut, stepover: pCut.stepover, depth: inlay.depth, stepdown: pCut.stepdown, direction });
     });
   }
 
-  for (const f of layout.holes) {
+  // 3. Through cutouts (stencil), 4. holes and slots, 5. loose parts, 6. outer profile: cutout bit.
+  inOrder(layout.cutouts, (v) => {
+    if (!v.copy) checkDetail(v, rCut, cutTool, warnings, "cutout");
+    run(`Cutout: ${v.label}`, "cutout", cutTool, pCut, v.depth, (b) => {
+      profile(b, v.region, { radius: rCut, depth: v.depth, stepdown: pCut.stepdown, direction, side: "inside" });
+    });
+  });
+
+  const tabCountOpt = opts.tabs?.count ?? 4;
+  const tabs = {
+    count: tabCountOpt,
+    width: opts.tabs?.width ?? DEFAULT_TAB_WIDTH,
+    height: opts.tabs?.height ?? round1(Math.min(3, spec.thickness * 0.35)),
+    thickness: spec.thickness,
+    ...(opts.tabs?.positions ? { positions: opts.tabs.positions.filter(Number.isFinite).map((t) => ((t % 1) + 1) % 1) } : {}),
+  };
+  const tabsOn = tabs.positions ? tabs.positions.length > 0 : tabs.count > 0;
+  if (tabsOn && tabs.width < MIN_TAB_WIDTH && (layout.profile || layout.parts.length)) {
+    warnings.push({
+      code: "TAB_TOO_NARROW",
+      severity: "warning",
+      message: `The holding tabs are only ${fmt(tabs.width)} mm wide; tabs under ${MIN_TAB_WIDTH} mm can snap before the cut is done and let the piece move.`,
+      suggestion: `Make them at least ${MIN_TAB_WIDTH} mm wide (${DEFAULT_TAB_WIDTH} mm is a good default).`,
+      data: { width: tabs.width, minWidth: MIN_TAB_WIDTH, suggestedWidth: DEFAULT_TAB_WIDTH },
+    });
+  }
+  let withoutTabs = 0;
+
+  inOrder(layout.holes, (f) => {
     const bb = bounds(f.region);
     const d = Math.min(bb.maxX - bb.minX, bb.maxY - bb.minY);
     run(`Hole: ${f.label}`, "hole", cutTool, pCut, f.depth, (b) => {
       if (d <= cutTool.diameter + 0.1) peck(b, { x: (bb.minX + bb.maxX) / 2, y: (bb.minY + bb.maxY) / 2 }, f.depth, pCut.stepdown);
       else pocket(b, f.region, { radius: rCut, stepover: pCut.stepover, depth: f.depth, stepdown: pCut.stepdown, direction });
     });
-  }
+  });
+
+  // Loose parts ("part" mode, e.g. a grid of name tags): cut out along the outside with the same
+  // tab settings as the outer profile. Hand-placed tab positions belong to the board's outline, so
+  // parts always get evenly spread tabs (`count` of them).
+  const partTabs = { count: tabCountOpt, width: tabs.width, height: tabs.height, thickness: tabs.thickness };
+  inOrder(layout.parts, (pc) => {
+    run(`Part: ${pc.label}`, "profile", cutTool, pCut, pc.depth, (b) => {
+      withoutTabs += profile(b, pc.region, { radius: rCut, depth: pc.depth, stepdown: pCut.stepdown, direction, side: "outside", tabs: partTabs }).outlinesWithoutTabs;
+    });
+  });
 
   if (layout.profile) {
     const per = layout.profile;
-    const tabs = {
-      count: opts.tabs?.count ?? 4,
-      width: opts.tabs?.width ?? DEFAULT_TAB_WIDTH,
-      height: opts.tabs?.height ?? round1(Math.min(3, spec.thickness * 0.35)),
-      thickness: spec.thickness,
-      ...(opts.tabs?.positions ? { positions: opts.tabs.positions.filter(Number.isFinite).map((t) => ((t % 1) + 1) % 1) } : {}),
-    };
-    const tabsOn = tabs.positions ? tabs.positions.length > 0 : tabs.count > 0;
-    if (tabsOn && tabs.width < MIN_TAB_WIDTH) {
-      warnings.push({
-        code: "TAB_TOO_NARROW",
-        severity: "warning",
-        message: `The holding tabs are only ${fmt(tabs.width)} mm wide; tabs under ${MIN_TAB_WIDTH} mm can snap before the cut is done and let the piece move.`,
-        suggestion: `Make them at least ${MIN_TAB_WIDTH} mm wide (${DEFAULT_TAB_WIDTH} mm is a good default).`,
-        data: { width: tabs.width, minWidth: MIN_TAB_WIDTH, suggestedWidth: DEFAULT_TAB_WIDTH },
-      });
-    }
     run(`Profile: ${per.label}`, "profile", cutTool, pCut, per.depth, (b) => {
       const res = profile(b, per.region, { radius: rCut, depth: per.depth, stepdown: pCut.stepdown, direction, side: "outside", tabs });
       base.tabs = res.tabs.map((t) => ({ ...t, x: round3(t.x), y: round3(t.y), angle: round1(t.angle), t: Math.round(t.t * 1e4) / 1e4, width: tabs.width, height: tabs.height, kerf: cutTool.diameter }));
-      if (res.outlinesWithoutTabs > 0) {
-        warnings.push({
-          code: "SMALL_PART_WITHOUT_TABS",
-          severity: "warning",
-          message: `${res.outlinesWithoutTabs} part(s) are too small for tabs and will come loose at the end of the cut.`,
-          suggestion: "Hold those parts down with double-sided tape before cutting, or make them bigger.",
-        });
-      }
+      withoutTabs += res.outlinesWithoutTabs;
+    });
+  }
+  if (withoutTabs > 0) {
+    warnings.push({
+      code: "SMALL_PART_WITHOUT_TABS",
+      severity: "warning",
+      message: `${withoutTabs} part(s) are too small for tabs and will come loose at the end of the cut.`,
+      suggestion: "Hold those parts down with double-sided tape before cutting, or make them bigger.",
     });
   }
 
@@ -308,7 +370,7 @@ export function generatePlate(input: PlateSpecInput, options: GenerateOptions): 
     ops,
   );
 
-  const rMax = Math.max(rMain, rCut);
+  const rMax = Math.max(rMain, rCut) + (inlay?.outsideMargin ?? 0);
   const verification = verifyGcode(gcode, {
     xMin: -rMax - 1,
     xMax: layout.stock.width + rMax + 1,
@@ -330,9 +392,11 @@ export function generatePlate(input: PlateSpecInput, options: GenerateOptions): 
  * cutouts and holes keep the bit inside their region; the outer profile cuts a ring one bit
  * diameter wide outside the outline.
  */
-function keepOutOverlaps(layout: Layout, zones: KeepOutZone[], rCut: number): Warning[] {
+function keepOutOverlaps(layout: Layout, zones: KeepOutZone[], rCut: number, inlay: InlayPlan | null): Warning[] {
+  const ring = (r: Region) => difference(offset(r, 2 * rCut), r);
   const cuts: { label: string; ref?: CutElement["ref"]; region: Region }[] = [
-    ...layout.engraved,
+    ...(inlay ? [{ label: `the ${inlay.label}`, region: inlay.region }, ...inlay.rest] : layout.engraved),
+    ...layout.parts.map((p) => ({ ...p, region: ring(p.region) })),
     ...(layout.relief ? [{ ...layout.relief, label: "the relief background" }] : []),
     ...layout.cutouts,
     ...layout.holes,
@@ -406,6 +470,14 @@ function defaultTitle(texts: string[]) {
 }
 
 const round1 = (v: number) => Math.round(v * 10) / 10;
+
+/** Distance from a point to a box (0 inside it). */
+function distToBox(p: Pt, b: { minX: number; minY: number; maxX: number; maxY: number }) {
+  const dx = Math.max(b.minX - p.x, 0, p.x - b.maxX);
+  const dy = Math.max(b.minY - p.y, 0, p.y - b.maxY);
+  return Math.hypot(dx, dy);
+}
+
 const round3 = (v: number) => Math.round(v * 1000) / 1000;
 
 /** Default tab width (wood left along the edge), mm. */
