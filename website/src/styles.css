@@ -422,16 +422,18 @@ a.card:hover { border-color: #d9d5ce; transform: translateY(-2px); box-shadow: 0
 /* Account: sign up, log in, onboarding wizard, account home */
 .auth [hidden], .wiz [hidden], .acct [hidden] { display: none !important; }
 .auth { padding: 56px 20px 88px; background: var(--bg-soft); min-height: calc(100vh - var(--header-h)); }
-/* Workshop photo behind the sign-up / log-in card (assets/img, made by `npm run auth-bg`). A dark
-   overlay keeps the white card readable; without the photo, the plain background shows. */
+/* Workshop photo behind the sign-up / log-in card. The original lives in the public Supabase
+   Storage bucket "site-assets" (auth-bg.jpg); the render endpoint resizes it and serves WebP to
+   browsers that support it. A dark overlay keeps the white card readable; until the photo is
+   uploaded, the plain dark background shows. */
 .auth {
   background-color: #1a1b1e;
-  background-image: linear-gradient(rgba(17, 18, 20, 0.55), rgba(17, 18, 20, 0.7)), url("img/auth-bg.webp");
+  background-image: linear-gradient(rgba(17, 18, 20, 0.55), rgba(17, 18, 20, 0.7)), url("https://zveqsvizefgbicwvjvdu.supabase.co/storage/v1/render/image/public/site-assets/auth-bg.jpg?width=1920&height=1080&resize=cover&quality=70");
   background-size: cover;
   background-position: center;
 }
 @media (max-width: 960px) {
-  .auth { background-image: linear-gradient(rgba(17, 18, 20, 0.55), rgba(17, 18, 20, 0.7)), url("img/auth-bg-960.webp"); }
+  .auth { background-image: linear-gradient(rgba(17, 18, 20, 0.55), rgba(17, 18, 20, 0.7)), url("https://zveqsvizefgbicwvjvdu.supabase.co/storage/v1/render/image/public/site-assets/auth-bg.jpg?width=960&height=1280&resize=cover&quality=68"); }
 }
 .auth .auth__card { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1), 0 24px 60px rgba(0, 0, 0, 0.35); }
 .auth__card { width: min(440px, 100%); margin: 0 auto; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); padding: 32px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 12px 32px rgba(0, 0, 0, 0.05); }

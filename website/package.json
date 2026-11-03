@@ -6,8 +6,7 @@
   "scripts": {
     "build": "node build.mjs",
     "images": "node scripts/images.mjs",
-    "serve": "node scripts/serve.mjs",
-    "auth-bg": "node scripts/auth-bg.mjs"
+    "serve": "node scripts/serve.mjs"
   },
   "devDependencies": {
     "sharp": "^0.33.5"
