@@ -4,7 +4,7 @@ import { VIDEOS } from "../lib/videos";
 import { useUi } from "../state/ui";
 import { VideoTheater } from "./VideoTheater";
 
-/** Segmented control (Top/3D, Simple/Pro, Whole bed/Custom area…). */
+/** Segmented control (Top/3D, Simple/Advanced, Whole bed/Custom area…). */
 export function Seg<T extends string>(props: { options: [T, ReactNode][]; value: T; onChange(v: T): void; label: string; size?: "lg"; style?: React.CSSProperties }) {
   return (
     <div role="group" aria-label={props.label} className={`seg ${props.size === "lg" ? "seg--lg" : ""}`} style={props.style}>

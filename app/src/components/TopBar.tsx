@@ -22,7 +22,7 @@ const FILL: Record<JobStep, number> = { create: 16, prepare: 40, position: 64, c
 /**
  * App header. Variants:
  * - "app": workshop navigation (First cuts / My bits / Settings)
- * - "job": the 4 steps Create → Carve, Simple/Pro mode
+ * - "job": the 4 steps Create → Carve, Simple/Advanced view (stored as mode "pro")
  * - "tool": breadcrumb for a tool (e.g. Tools › Surface the bed)
  * - "onboarding": first-run steps (content comes in `center`)
  */
@@ -85,7 +85,7 @@ export function TopBar(props: { variant: "app" | "job" | "tool" | "onboarding"; 
           onChange={setMode}
           options={[
             ["simple", "Simple"],
-            ["pro", "Pro"],
+            ["pro", "Advanced"],
           ]}
         />
       ) : null}

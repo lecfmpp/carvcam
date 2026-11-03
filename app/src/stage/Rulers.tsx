@@ -4,7 +4,7 @@ import { useCanvasPrefs } from "../state/ui";
 import { useWorkshop } from "../state/workshop";
 import { GRID_STEPS, rulerSteps, type Guide } from "./snap";
 
-/** Rulers are on in Pro mode and off in Simple mode until the user toggles them (then remembered). */
+/** Rulers are on in the Advanced view and off in Simple until the user toggles them (then remembered). */
 export function useRulersOn() {
   const pref = useCanvasPrefs((s) => s.rulers);
   const pro = useWorkshop((s) => s.mode === "pro");
