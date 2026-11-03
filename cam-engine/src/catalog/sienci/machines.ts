@@ -1,5 +1,6 @@
 import type { MachineInput } from "../../schema.js";
 import { HEADS, type HeadId } from "./heads.js";
+import type { Source } from "./table.js";
 
 /**
  * Sienci Labs machines. Travel and max rates come from each machine's firmware defaults
@@ -32,6 +33,17 @@ export interface SienciMachine {
   defaultSpeed: "reduced" | "regular" | "maximum";
   notes: string[];
   url: string;
+  /**
+   * Status of Sienci's feeds and speeds table on this machine. "official": Sienci points to the
+   * table for it. "estimated": Sienci hasn't published its own numbers yet and CarvCAM starts from
+   * the LongMill table, as Sienci itself advises.
+   */
+  feedsTable: { status: "official" | "estimated"; reason: string; source: Source };
+  /**
+   * Multiplier on the table feed when estimating bits Sienci doesn't list (feeds.ts).
+   * 1 everywhere: Sienci hasn't published anything that justifies going past the table, not even on the AltMill.
+   */
+  rigidityFactor: number;
 }
 
 const LONGMILL_MK2 = {
@@ -42,8 +54,17 @@ const LONGMILL_MK2 = {
   heads: ["makita-rt0701", "autospin-t1", "spindle-1-5kw-er20"] as HeadId[],
   defaultHead: "makita-rt0701" as HeadId,
   defaultSpeed: "regular" as const,
-  notes: ["The 1.5 kW spindle kit requires the SuperLongBoard."],
+  notes: [
+    "The 1.5 kW spindle kit requires the SuperLongBoard.",
+    "Includes the MK2.5 (shipped since May 2024: SuperLongBoard and spring-loaded anti-backlash nuts). Sienci treats both as the same family.",
+  ],
   url: "https://resources.sienci.com/",
+  feedsTable: {
+    status: "official" as const,
+    reason: "Sienci's table was measured on a LongMill MK2 (NEMA 23).",
+    source: { title: "Sienci Labs · Feeds & Speeds", url: "https://resources.sienci.com/view/cnc-feeds-speeds/", checkedOn: "2026-11-03" },
+  },
+  rigidityFactor: 1,
 };
 
 const LONGMILL_MK3 = {
@@ -56,6 +77,12 @@ const LONGMILL_MK3 = {
   defaultSpeed: "regular" as const,
   notes: ["The AutoSpin T1 comes in the Beginner's Kit.", "With an 80 mm spindle and a dust shoe, the cutting area gets smaller."],
   url: "https://resources.sienci.com/view/lmk3-specifications/",
+  feedsTable: {
+    status: "official" as const,
+    reason: "The MK3 docs say to use Sienci's same feeds & speeds table (FeedsSpeedsMetric.pdf).",
+    source: { title: "LongMill MK3 · Prep For Your MK3", url: "https://resources.sienci.com/view/lmk3-prep-for-your-mk3/", checkedOn: "2026-11-03" },
+  },
+  rigidityFactor: 1,
 };
 
 const ALTMILL = {
@@ -68,6 +95,13 @@ const ALTMILL = {
   defaultSpeed: "maximum" as const,
   notes: ["The Sienci table was measured on a LongMill MK2; the stiffer AltMill handles the table's maximum speed as a starting point."],
   url: "https://sienci.com/product/altmill-2x4/",
+  feedsTable: {
+    status: "estimated" as const,
+    reason:
+      "Sienci hasn't published an AltMill table yet; their team says to start from the LongMill table's maximum speed and work up from there.",
+    source: { title: "Sienci forum · AltMill Feeds and Speeds (staff reply)", url: "https://forum.sienci.com/t/altmill-feeds-and-speeds/14176", checkedOn: "2026-11-03" },
+  },
+  rigidityFactor: 1,
 };
 
 export const MACHINES: Record<MachineId, SienciMachine> = {

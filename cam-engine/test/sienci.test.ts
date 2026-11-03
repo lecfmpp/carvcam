@@ -26,7 +26,8 @@ describe("Sienci catalog", () => {
   it("has complete data for every bit", () => {
     for (const fr of BITS) {
       expect(fr.diameter).toBeGreaterThan(0);
-      expect(fr.cutLength).toBeGreaterThan(0);
+      // Sienci lists "n/a" as the cutting length of the 1-1/2″ surfacing bit.
+      if (fr.type !== "surfacing") expect(fr.cutLength).toBeGreaterThan(0);
       expect(fr.url).toMatch(/^https:\/\/sienci\.com\//);
       if (fr.type === "vbit") expect(fr.angle).toBeGreaterThan(0);
     }
@@ -39,9 +40,9 @@ describe("Sienci catalog", () => {
     expect(compatibility(bit("vbit-60-15mm"), "spindle-2-2kw-er20").status).toBe("compatible");
   });
 
-  it("converts the official table to mm (softwood, regular speed, 1/8″ straight)", () => {
+  it("uses the official metric table (softwood, regular speed, 1/8″ straight)", () => {
     expect(sienciParams("1/8-straight", "mdf", "regular")).toEqual({
-      feed: 2159, plunge: 1092, stepover: 1.52, slotStepdown: 4.06, pocketStepdown: 9.14, rpm: 17000,
+      feed: 2160, plunge: 1080, stepover: 1.45, slotStepdown: 4.1, pocketStepdown: 9.1, rpm: 17000,
     });
     expect(sienciParams("surfacing-22", "acrylic", "regular")).toBeUndefined();
   });
@@ -69,7 +70,7 @@ describe("generation with a Sienci machine", () => {
 
   it("uses the Sienci table with a capped plunge for straight descent", () => {
     const r = generatePlate(plate, { fonts: f, sienci: { machine: "longmill-mk3-30x30", bit: "flat-1-8-upcut", speed: "regular" } });
-    expect(r.params.main).toMatchObject({ rpm: 17000, feed: 2159, stepdown: 4.06, plunge: MAX_STRAIGHT_PLUNGE });
+    expect(r.params.main).toMatchObject({ rpm: 17000, feed: 2160, stepdown: 4.1, plunge: MAX_STRAIGHT_PLUNGE });
     expect(r.paramsSource).toMatch(/Sienci/);
   });
 
