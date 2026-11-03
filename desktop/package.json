@@ -1,0 +1,40 @@
+{
+  "name": "carvcam-desktop",
+  "productName": "CarvCAM",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CarvCAM for Mac, Windows and Linux: the gsender-ui app in Electron, talking to gSender",
+  "homepage": "https://www.carvcam.com",
+  "author": {
+    "name": "CarvCAM",
+    "email": "support@carvcam.com"
+  },
+  "license": "GPL-3.0-only",
+  "main": "src/main.js",
+  "desktopName": "carvcam.desktop",
+  "scripts": {
+    "renderer": "node scripts/prepare-renderer.mjs",
+    "icons": "node scripts/make-icons.mjs",
+    "prepare-build": "npm run renderer && npm run icons",
+    "dev": "node scripts/dev.mjs",
+    "start": "npm run renderer && electron .",
+    "test": "node --test \"test/*.test.js\"",
+    "dist": "npm run prepare-build && electron-builder --config electron-builder.config.js --publish never",
+    "dist:mac": "npm run prepare-build && electron-builder --config electron-builder.config.js --mac --publish never",
+    "dist:win": "npm run prepare-build && electron-builder --config electron-builder.config.js --win --publish never",
+    "dist:linux": "npm run prepare-build && electron-builder --config electron-builder.config.js --linux --x64 --publish never",
+    "dist:pi": "npm run prepare-build && electron-builder --config electron-builder.config.js --linux --arm64 --armv7l --publish never",
+    "dist:dir": "npm run prepare-build && electron-builder --config electron-builder.config.js --dir --publish never"
+  },
+  "dependencies": {
+    "electron-updater": "6.8.10"
+  },
+  "devDependencies": {
+    "electron": "43.8.3",
+    "electron-builder": "26.17.0",
+    "sharp": "0.33.5"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

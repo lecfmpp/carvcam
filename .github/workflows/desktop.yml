@@ -1,0 +1,142 @@
+# CarvCAM desktop app (desktop/): builds installers for macOS, Windows and Linux (x64 + Raspberry Pi)
+# on every push/PR that touches the app, and on tags v* gathers everything into a DRAFT GitHub
+# Release of this repository. Signing secrets are optional; without them the builds are unsigned.
+name: Desktop app
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+    paths: ["desktop/**", "gsender-ui/**", "cam-engine/**", ".github/workflows/desktop.yml"]
+  pull_request:
+    paths: ["desktop/**", "gsender-ui/**", "cam-engine/**", ".github/workflows/desktop.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS (universal)
+            os: macos-latest
+            args: --mac
+          - name: Windows (x64)
+            os: windows-latest
+            args: --win
+          - name: Linux (x64)
+            os: ubuntu-latest
+            args: --linux --x64
+          - name: Linux (Raspberry Pi arm64 + armv7l)
+            os: ubuntu-latest
+            args: --linux --arm64 --armv7l
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            cam-engine/package-lock.json
+            gsender-ui/package-lock.json
+            desktop/package-lock.json
+
+      - name: Build the app (cam-engine + gsender-ui)
+        run: |
+          (cd cam-engine && npm ci --no-audit --no-fund)
+          cd gsender-ui
+          npm ci --no-audit --no-fund
+          npx vite build
+
+      - name: Install desktop dependencies
+        working-directory: desktop
+        run: npm ci --no-audit --no-fund
+
+      - name: Unit tests (URL allowlist, local HTTP bridge)
+        if: runner.os == 'Linux'
+        working-directory: desktop
+        run: npm test
+
+      - name: Version from the tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        working-directory: desktop
+        run: npm version --no-git-tag-version --allow-same-version "${GITHUB_REF_NAME#v}"
+
+      - name: Package
+        working-directory: desktop
+        env:
+          # macOS: Developer ID certificate (.p12, base64) and notarization. Empty = unsigned build.
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.CSC_LINK != '' }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # Windows: code signing certificate (optional).
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+          # Auto-update feed (GitHub Releases of this repo): set the repository variable
+          # CARVCAM_UPDATES=1 once releases are public.
+          CARVCAM_UPDATES: ${{ vars.CARVCAM_UPDATES || '0' }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "$RUNNER_OS" = "macOS" ] && [ -z "$CSC_LINK" ]; then
+            echo "::notice::No CSC_LINK secret: the macOS build is unsigned (ad-hoc) and not notarized."
+            unset CSC_LINK CSC_KEY_PASSWORD
+          fi
+          [ -z "$WIN_CSC_LINK" ] && unset WIN_CSC_LINK WIN_CSC_KEY_PASSWORD
+          npm run prepare-build
+          npx electron-builder --config electron-builder.config.js ${{ matrix.args }} --publish never
+
+      - name: List artifacts
+        run: ls -la desktop/release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: carvcam-${{ runner.os }}-${{ strategy.job-index }}
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            desktop/release/CarvCAM-*
+            desktop/release/latest*.yml
+
+  release:
+    name: Draft GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Files
+        run: ls -la dist
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          name: CarvCAM ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          fail_on_unmatched_files: false
+          files: |
+            dist/CarvCAM-*
+            dist/latest*.yml
