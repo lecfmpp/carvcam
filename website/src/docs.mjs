@@ -137,8 +137,8 @@ export const docs = {
       ["p", "CarvCAM runs on your computer and talks directly to your machine's controller over USB or Ethernet. The controller drives the motors and switches the router or spindle on and off."],
       ["table", ["Part", "Role"], [["CarvCAM", "Design, toolpaths and machine control"], ["Controller (LongBoard, SuperLongBoard, SLB-LITE, SLB-EXT)", "Runs the motors and reads the sensors"], ["Router or spindle", "Spins the bit; the AutoSpin and spindles get their speed from CarvCAM"], ["Touch plate", "Measures where the bit tip is"]]],
       ["callout", "tip", "No separate sender needed", "Because CarvCAM also runs the machine, you don't export G-code into another program, and there is no post-processor to pick. If you prefer to run jobs from gSender, [Send to gSender](/docs/send-to-gsender/) loads the checked file into it, or download the G-code."],
-      ["h2", "Simple and Pro view"],
-      ["p", "In Prepare, Position and Carve, the **Simple** / **Pro** switch in the top bar shows or hides the raw numbers: RPM, feed, plunge, depth per pass and stepover. It only changes what you see; it isn't the Pro plan."],
+      ["h2", "Simple and Advanced view"],
+      ["p", "In Prepare, Position and Carve, the **Simple** / **Advanced** switch in the top bar shows or hides the raw numbers: RPM, feed, plunge, depth per pass and stepover, plus the rulers. It only changes what you see, not what you can use."],
     ],
   },
   create: {
@@ -451,7 +451,7 @@ export const docs = {
   copies: {
     title: "Make copies and name tags",
     nav: "Make copies",
-    description: "Repeat a design in a grid on one board with Make copies: rows, columns, gaps, Fill the board, a different name on each copy, and nesting by turning every other copy 180°.",
+    description: "Repeat a design in a grid on one board with Make copies: rows, columns, gaps, Fill the board, a different name on each copy, and turning every other copy 180° so shapes like hearts fit closer.",
     lead: "Design one piece and fill the board with it. Copies stay linked to the original, and each one can carry its own text, so six name tags are one design.",
     time: "PT5M",
     blocks: [
