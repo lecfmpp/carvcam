@@ -7,8 +7,8 @@ export const site = {
   // Netlify sets URL during the build (the site's primary address); outside it, the final domain.
   url: (process.env.SITE_URL || process.env.URL || "https://www.carvcam.com").replace(/\/$/, ""),
   download: "/download/",
-  // Installers: carvcam.com/download/<platform> redirects (root netlify.toml) to the newest release in
-  // the public Supabase Storage bucket "downloads", which the Installers workflow fills on each tag.
+  // Installers: carvcam.com/download/<platform> redirects (root netlify.toml) to the newest release's
+  // fixed-name files (GitHub Releases today; the Supabase Storage mirror once its secrets are set).
   // Links stay on the CarvCAM domain and never change between releases.
   downloads: {
     windows: "/download/windows",
@@ -20,7 +20,7 @@ export const site = {
     piDeb: "/download/raspberry-pi-deb",
     piAppImage: "/download/raspberry-pi-appimage",
     pi32Deb: "/download/raspberry-pi-32bit-deb",
-    releases: "/download/",
+    releases: "https://github.com/lecfmpp/carvcam/releases",
   },
   checked: "October 2026",
 };
