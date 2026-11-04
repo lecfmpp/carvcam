@@ -286,3 +286,33 @@ export function useProGate(feature: ProFeature): { allowed: boolean; ask(): void
   const close = useCallback(() => setOpen(false), []);
   return { allowed, ask, dialog: open ? <UpgradeDialog feature={feature} open onClose={close} /> : null };
 }
+
+/** The web app (app.carvcam.com and its Netlify previews) needs an account; the desktop app and local dev don't. */
+export const WEB_NEEDS_ACCOUNT = typeof location !== "undefined" && /(^|\.)carvcam\.com$|\.netlify\.app$/.test(location.hostname);
+
+/** Web app gate: signed-out visitors see sign-in / create account instead of the app. */
+export function AccountGate({ children }: { children: ReactNode }): JSX.Element {
+  const a = useAccount();
+  if (!WEB_NEEDS_ACCOUNT || a.status === "signed-in") return <>{children}</>;
+  if (a.status === "loading") return <div className="app" />;
+  return (
+    <div className="acct-gate">
+      <div className="acct-card acct-gate__card">
+        <a className="acct-gate__brand" href="https://carvcam.com/" aria-label="CarvCAM website">
+          <img src="/carvcam-icon.svg" width={28} height={28} alt="" /> CarvCAM
+        </a>
+        <h1 className="acct-title">Sign in to use CarvCAM online</h1>
+        <p className="acct-lead">
+          The web app needs a free account. New accounts get every Pro tool for {TRIAL_DAYS} days, no card needed. Prefer no account? The <a className="acct-link" href="https://carvcam.com/download/">desktop app</a> works without one.
+        </p>
+        <button className="btn btn--primary btn--lg" onClick={() => openSite(SITE.signup)}>
+          Create a free account <ArrowUpRight size={18} strokeWidth={1.5} />
+        </button>
+        <div className="acct-gate__or">
+          <span>or sign in</span>
+        </div>
+        <SignInForm />
+      </div>
+    </div>
+  );
+}

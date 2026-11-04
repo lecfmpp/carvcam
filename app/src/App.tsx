@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Autosave } from "./components/Autosave";
+import { AccountGate } from "./account/ProGate";
 import { ConnectWizardHost } from "./components/ConnectWizard";
 import { Toasts } from "./components/ui";
 import { usePanelMode } from "./lib/panel";
@@ -28,6 +29,7 @@ export default function App() {
   return (
     <HashRouter>
       <Autosave />
+      <AccountGate>
       <Suspense fallback={<div className="app" />}>
         <Routes>
           <Route path="/" element={<Home />} />
@@ -44,6 +46,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
+      </AccountGate>
       <ConnectWizardHost />
       <Toasts />
     </HashRouter>

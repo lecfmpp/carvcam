@@ -50,3 +50,9 @@
 .acct-setting__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 @keyframes acct-spin { to { transform: rotate(360deg); } }
 .acct-spin { animation: acct-spin 1s linear infinite; }
+.acct-gate { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 32px 16px; background: var(--bg, #141517); }
+.acct-gate__card { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 16px; }
+.acct-gate__brand { display: inline-flex; align-items: center; gap: 10px; font: 700 18px var(--font); color: var(--text); text-decoration: none; }
+.acct-gate__or { display: flex; align-items: center; gap: 12px; color: var(--text-3); font-size: 13px; }
+.acct-gate__or::before, .acct-gate__or::after { content: ""; flex: 1; height: 1px; background: var(--glass-border, rgba(255,255,255,.12)); }
+.acct-gate .acct-foot { display: none; }
