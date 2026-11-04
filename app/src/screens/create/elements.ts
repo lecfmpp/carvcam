@@ -420,20 +420,20 @@ export function svgAspect(content: string) {
  * Imports an SVG file as a new element, centered at (x, y). The width starts at the file's
  * natural size, capped at 60% of the sign (and whatever fits in the height).
  */
-export function addSvg(spec: PlateSpecInput, content: string, name: string, x: number, y: number): [PlateSpecInput, ElementId, number] | { error: string } {
+export function addSvg(spec: PlateSpecInput, content: string, name: string, x: number, y: number): [PlateSpecInput, ElementId, number, string[]] | { error: string } {
   let d;
   try {
     d = parseDrawing(content);
   } catch (e) {
-    return { error: e instanceof InvalidSvg ? e.message : "This file is not a valid SVG or DXF." };
+    return { error: e instanceof InvalidSvg ? e.message : "This file is not a valid SVG, DXF or PDF drawing." };
   }
   const s = structuredClone(spec);
   const sign = s.type !== "lettering";
   const maxW = Math.min(s.width * 0.6, (s.height * 0.6 * d.width) / d.height);
   const width = Math.max(5, Math.round(Math.min(d.width, maxW) * 10) / 10);
   const rx = (v: number) => Math.round(v * 10) / 10;
-  s.svgs = [...(s.svgs ?? []), { content, name: name.replace(/\.(svg|dxf)$/i, "").slice(0, 60), x: rx(x), y: rx(y), width, mode: sign ? "engrave" : "cutout", depth: 2 }];
-  return [s, `s:${s.svgs.length - 1}`, d.openPaths ?? 0];
+  s.svgs = [...(s.svgs ?? []), { content, name: name.replace(/\.(svg|dxf|pdf|ai)$/i, "").slice(0, 60), x: rx(x), y: rx(y), width, mode: sign ? "engrave" : "cutout", depth: 2 }];
+  return [s, `s:${s.svgs.length - 1}`, d.openPaths ?? 0, d.notes ?? []];
 }
 
 // ------------------------------------------------------------------ generic element access

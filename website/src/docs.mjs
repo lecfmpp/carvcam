@@ -204,13 +204,15 @@ export const docs = {
     ],
   },
   "import-and-trace": {
-    title: "Import SVG or DXF and trace images",
+    title: "Import SVG, DXF, PDF or Illustrator files and trace images",
     nav: "Import and trace images",
-    description: "Bring in SVG or DXF drawings, place a photo underneath to trace over, or convert an image or logo to vectors, with Polish to clean up a rough trace.",
+    description: "Bring in SVG, DXF, PDF or Illustrator (.ai) drawings exactly as drawn, place a photo underneath to trace over, or convert an image or logo to vectors, with Polish to clean up a rough trace.",
     lead: "Bring your own artwork in three ways: import a drawing, trace over a photo, or let CarvCAM convert an image to vectors. Importing and tracing are **Pro** tools (every new account gets 7 days of Pro).",
     blocks: [
       ["h2", "Import a drawing"],
-      ["p", "Click **Import SVG file** on the left, open **Upload design** in the panel and choose an SVG or DXF file, or drop the file on the board. Drawings from Inkscape, Illustrator, Affinity, Fusion or LightBurn come in ready to carve, and can be styled like any other item."],
+      ["p", "Click **Import SVG file** on the left, open **Upload design** in the panel and choose a file, or drop it on the board. Drawings come in at their real size and can be styled like any other item."],
+      ["table", ["Format", "Comes in from", "Notes"], [["SVG", "Illustrator, Inkscape, Affinity, Figma, Canva, icon sites", "Symbols and clones (`<use>`), clipping masks and nested artboards are kept"], ["DXF", "Fusion, LightBurn, AutoCAD, Inkscape, QCAD", "Blocks (with scale, rotation and arrays), filled hatches, arcs, splines and ellipses. Open lines are carved as 1 mm grooves"], ["PDF", "Any vector PDF (print or save as PDF)", "The first page; transforms, fills, strokes and clipping are kept"], ["Illustrator (.ai)", "Illustrator, saved with **Create PDF Compatible File** (the default)", "Read like a PDF"]]],
+      ["callout", "note", "Text and pictures", "Live text can't be carved until it's converted to shapes: **Type › Create Outlines** in Illustrator, **Path › Object to Path** in Inkscape, **Flatten** in Figma. Pictures inside a file are left out; trace them below instead. CarvCAM tells you when it left something out."],
       ["h2", "Convert an image to vectors"],
       [
         "steps",

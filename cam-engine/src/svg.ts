@@ -1,5 +1,5 @@
 import { EndType, FillRule, inflatePathsD, JoinType, unionD, type PathD, type PathsD } from "clipper2-ts";
-import { bounds, difference, simplify, translate, union, type Pt, type Region } from "./geometry/clip.js";
+import { bounds, difference, intersection, simplify, translate, union, type Pt, type Region } from "./geometry/clip.js";
 
 /**
  * SVG importer: converts the drawing into a 2D region in mm (Y up, centered on the origin).
@@ -7,7 +7,10 @@ import { bounds, difference, simplify, translate, union, type Pt, type Region } 
  * Runs in the worker (no DOMParser), so it has its own minimal XML reader. Supports path
  * (all commands), rect, circle, ellipse, line, polyline, polygon, groups with transform,
  * fill-rule, strokes (a stroke becomes a band as wide as the stroke) and simple class rules in <style>.
+ * Also <use> (of shapes, groups, symbols and nested svgs, as Illustrator, Inkscape and Figma export
+ * them), clip-path (shapes are cut to their clipping path) and nested <svg> viewports.
  * Shapes with a white fill are subtracted from what came before (the way the eye sees the drawing).
+ * Live text and embedded pictures can't be cut: they are left out and listed in `notes`.
  */
 
 export interface SvgDrawing {
@@ -16,6 +19,8 @@ export interface SvgDrawing {
   /** Natural size in mm (from the file's units; px = 1/96 in). */
   width: number;
   height: number;
+  /** What was left out (live text, embedded pictures), for the UI to mention. */
+  notes?: string[];
 }
 
 export class InvalidSvg extends Error {}
@@ -483,6 +488,26 @@ function lengthMm(v: string | undefined): number | null {
 }
 
 const SKIP = new Set(["defs", "clipPath", "mask", "symbol", "marker", "pattern", "title", "desc", "metadata", "style", "text", "image", "foreignObject", "linearGradient", "radialGradient", "filter"]);
+const CONTAINERS = new Set(["g", "a", "switch"]);
+const TEXT_HELP = "Convert text to outlines before exporting (Illustrator: Type › Create Outlines · Inkscape: Path › Object to Path · Figma: Flatten).";
+
+/** Transform of a viewport (nested <svg>, or a <use>d <symbol>) with a viewBox, into its parent's user space. */
+function viewportMatrix(a: Record<string, string>, box: { w: number; h: number }, w?: number, h?: number): M {
+  const x = len(a.x, box.w), y = len(a.y, box.h);
+  const vb = nums(a.viewBox ?? "");
+  const t: M = [1, 0, 0, 1, x, y];
+  if (vb.length !== 4 || !(vb[2] > 0 && vb[3] > 0)) return t;
+  const vw = w ?? (a.width !== undefined ? len(a.width, box.w) : vb[2]);
+  const vh = h ?? (a.height !== undefined ? len(a.height, box.h) : vb[3]);
+  const sx = vw / vb[2], sy = vh / vb[3];
+  if ((a.preserveAspectRatio ?? "").trim().startsWith("none")) return mul(t, [sx, 0, 0, sy, -vb[0] * sx, -vb[1] * sy]);
+  const sc = Math.min(sx, sy); // xMidYMid meet
+  const ox = (vw - vb[2] * sc) / 2, oy = (vh - vb[3] * sc) / 2;
+  return mul(t, [sc, 0, 0, sc, ox - vb[0] * sc, oy - vb[1] * sc]);
+}
+
+const hrefOf = (a: Record<string, string>) => (a.href ?? a["xlink:href"] ?? "").trim();
+const urlId = (v: string | undefined) => /url\(\s*['"]?#([^'")\s]+)/.exec(v ?? "")?.[1];
 
 function parse(text: string): SvgDrawing {
   if (!/<svg[\s>]/i.test(text)) throw new InvalidSvg("The file does not look like an SVG.");
@@ -512,18 +537,19 @@ function parse(text: string): SvgDrawing {
   let acc: Region = [];
   let any = false;
   const base: Style = { fill: "#000", stroke: "none", strokeWidth: 1, fillRule: "nonzero", display: true };
+  const ids = new Map<string, Node>();
+  const index = (n: Node) => {
+    if (n.attrs.id) ids.set(n.attrs.id, n);
+    for (const c of n.children) index(c);
+  };
+  index(svg);
+  let texts = 0;
+  let images = 0;
 
-  const walk = (n: Node, m: M, st: Style) => {
-    if (SKIP.has(n.tag)) return;
-    const s = inherit(st, ownStyle(n, classes));
-    if (!s.display) return;
-    const mm = mul(m, parseTransform(n.attrs.transform));
-    if (n.tag === "g" || n.tag === "svg" || n.tag === "a" || n.tag === "switch") {
-      for (const c of n.children) walk(c, mm, s);
-      return;
-    }
+  /** Region of a shape (fill and stroke), in mm, or [] when it paints nothing. */
+  const shapeRegion = (n: Node, mm: M, s: Style): Region => {
     const pen = shapePen(n, mm, box);
-    if (!pen) return;
+    if (!pen) return [];
     let r: Region = [];
     const closedLike = n.tag !== "line"; // polyline is filled too (implicitly closed)
     if (!isNone(s.fill) && closedLike) {
@@ -539,13 +565,109 @@ function parse(text: string): SvgDrawing {
       if (closed.length) strokes.push(...inflatePathsD(closed, w / 2, JoinType.Round, EndType.Joined, 2, 4, 0.02));
       if (strokes.length) r = union(r, strokes);
     }
+    return r;
+  };
+
+  /** The area a <clipPath> keeps, for an element whose user space is `mm` (null = clips everything away). */
+  const clipRegion = (cp: Node, mm: M, bbox: () => Region, depth: number): Region => {
+    let m = mul(mm, parseTransform(cp.attrs.transform));
+    if ((cp.attrs.clipPathUnits ?? "").trim() === "objectBoundingBox") {
+      const b = bounds(bbox());
+      if (!(b.maxX > b.minX)) return [];
+      // The bounding box is in mm already: map the unit square onto it.
+      m = mul([b.maxX - b.minX, 0, 0, b.maxY - b.minY, b.minX, b.minY], parseTransform(cp.attrs.transform));
+    }
+    let r: Region = [];
+    const add = (n: Node, nm: M, d: number) => {
+      if (d > 8) return;
+      const t = mul(nm, parseTransform(n.attrs.transform));
+      if (n.tag === "use") {
+        const ref = ids.get(hrefOf(n.attrs).replace(/^#/, ""));
+        if (ref) add(ref, mul(t, [1, 0, 0, 1, len(n.attrs.x, box.w), len(n.attrs.y, box.h)]), d + 1);
+        return;
+      }
+      if (CONTAINERS.has(n.tag)) return n.children.forEach((c) => add(c, t, d + 1));
+      const own = ownStyle(n, classes);
+      const st: Style = { ...base, fillRule: (own["clip-rule"] ?? n.attrs["clip-rule"] ?? "").trim() === "evenodd" ? "evenodd" : "nonzero" };
+      r = union(r, shapeRegion(n, t, st));
+    };
+    for (const c of cp.children) add(c, m, depth);
+    return r;
+  };
+
+  /** Draws `n`; `clip` is the area the enclosing clip-paths keep (null = no clipping). */
+  const walk = (n: Node, m: M, st: Style, clip: Region | null, depth: number) => {
+    if (depth > 24) return; // <use> loops and absurd nesting
+    if (n.tag === "text") texts++;
+    if (n.tag === "image") images++;
+    if (SKIP.has(n.tag)) return;
+    const s = inherit(st, ownStyle(n, classes));
+    if (!s.display) return;
+    let mm = mul(m, parseTransform(n.attrs.transform));
+
+    // clip-path (attribute, or style property) clips this element and everything inside it.
+    const own = ownStyle(n, classes);
+    const cpId = urlId(n.attrs["clip-path"] ?? own["clip-path"]);
+    let c = clip;
+    if (cpId) {
+      const cp = ids.get(cpId);
+      if (cp && cp.tag === "clipPath") {
+        const kept = clipRegion(cp, mm, () => subtree(n, mm, s, depth), depth);
+        c = c ? intersection(c, kept) : kept;
+        if (!c.length) return;
+      }
+    }
+
+    if (n.tag === "use") {
+      const ref = ids.get(hrefOf(n.attrs).replace(/^#/, ""));
+      if (!ref) return;
+      const um = mul(mm, [1, 0, 0, 1, len(n.attrs.x, box.w), len(n.attrs.y, box.h)]);
+      if (ref.tag === "symbol" || ref.tag === "svg") {
+        const w = n.attrs.width !== undefined ? len(n.attrs.width, box.w) : undefined;
+        const h = n.attrs.height !== undefined ? len(n.attrs.height, box.h) : undefined;
+        const vm = mul(um, viewportMatrix({ ...ref.attrs, x: "0", y: "0" }, box, w, h));
+        const rs = inherit(s, ownStyle(ref, classes));
+        for (const ch of ref.children) walk(ch, vm, rs, c, depth + 1);
+      } else walk(ref, um, s, c, depth + 1);
+      return;
+    }
+    if (n.tag === "svg") {
+      const vm = mul(mm, viewportMatrix(n.attrs, box));
+      for (const ch of n.children) walk(ch, vm, s, c, depth + 1);
+      return;
+    }
+    if (CONTAINERS.has(n.tag)) {
+      for (const ch of n.children) walk(ch, mm, s, c, depth + 1);
+      return;
+    }
+    let r = shapeRegion(n, mm, s);
+    if (c) r = intersection(r, c);
     if (!r.length) return;
     any = true;
     acc = !isNone(s.fill) && isWhite(s.fill) && isNone(s.stroke) ? difference(acc, r) : union(acc, r);
   };
-  for (const c of svg.children) walk(c, root, inherit(base, ownStyle(svg, classes)));
 
-  if (!any) throw new InvalidSvg("The SVG has no shapes that can be cut (paths, rectangles, circles...). Text must be converted to curves.");
+  /** Everything `n` would paint, unclipped (for clipPathUnits="objectBoundingBox"). */
+  const subtree = (n: Node, m: M, st: Style, depth: number): Region => {
+    const saved = acc, savedAny = any;
+    acc = [];
+    const ns = { ...n, attrs: { ...n.attrs, "clip-path": "" } };
+    walk(ns, m, st, null, depth + 1);
+    const out = acc;
+    acc = saved;
+    any = savedAny;
+    return out;
+  };
+
+  for (const ch of svg.children) walk(ch, root, inherit(base, ownStyle(svg, classes)), null, 0);
+  const notes: string[] = [];
+  if (texts) notes.push(`${texts} text element${texts > 1 ? "s were" : " was"} left out: ${TEXT_HELP}`);
+  if (images) notes.push(`${images} embedded picture${images > 1 ? "s were" : " was"} left out. Trace a picture with Upload design › Trace a picture.`);
+
+  if (!any)
+    throw new InvalidSvg(
+      texts ? `The SVG only has live text, which can't be cut. ${TEXT_HELP}` : images ? "The SVG only has an embedded picture. Use Upload design › Trace a picture to turn it into shapes." : "The SVG has no shapes that can be cut (paths, rectangles, circles...).",
+    );
   if (!acc.length) throw new InvalidSvg("The drawing is empty after applying the fills.");
 
   // SVG Y grows downward; the machine's grows upward.
@@ -556,7 +678,7 @@ function parse(text: string): SvgDrawing {
   const height = b.maxY - b.minY;
   if (!(width > 0.01 && height > 0.01)) throw new InvalidSvg("The SVG drawing is too small.");
   reg = translate(reg, -(b.minX + b.maxX) / 2, -(b.minY + b.maxY) / 2);
-  return { region: reg, width, height };
+  return { region: reg, width, height, ...(notes.length ? { notes } : {}) };
 }
 
 function findSvg(n: Node): Node | null {
