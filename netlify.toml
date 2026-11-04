@@ -1,8 +1,12 @@
 # Static site: the build generates dist/ from src/ (no framework, no runtime dependencies).
 [build]
   base = "website"
-  command = "node build.mjs"
+  # The MCP server (netlify/functions/mcp.mts) bundles the CAM engine, so its dependencies are installed first.
+  command = "npm --prefix ../cam-engine ci --no-audit --no-fund && node build.mjs"
   publish = "dist"
+
+[functions]
+  node_bundler = "esbuild"
 
 [build.environment]
   NODE_VERSION = "20"

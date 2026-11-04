@@ -13,6 +13,7 @@ const Onboarding = lazy(() => import("./screens/workshop/Onboarding"));
 const Surfacing = lazy(() => import("./screens/surfacing/Surfacing"));
 const Create = lazy(() => import("./screens/create/Create"));
 const Job = lazy(() => import("./screens/job/Job"));
+const ImportProject = lazy(() => import("./screens/ImportProject"));
 
 function Home() {
   const onboarded = useWorkshop((s) => s.onboarded);
@@ -43,6 +44,7 @@ export default function App() {
           <Route path="/prepare" element={<Job step="prepare" />} />
           <Route path="/position" element={<Job step="position" />} />
           <Route path="/carve" element={<Job step="carve" />} />
+          <Route path="/import" element={<ImportProject />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>

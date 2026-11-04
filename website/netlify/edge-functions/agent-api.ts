@@ -1,5 +1,5 @@
-// Public, read-only agent API for carvcam.com (no auth, nothing stored):
-//   POST /mcp            MCP server over Streamable HTTP (JSON responses), tools below
+// Public, read-only REST API for carvcam.com (no auth, nothing stored). The MCP server lives in
+// netlify/functions/mcp.mts (it runs the CAM engine).
 //   GET  /api/search?q=  pages matching a query (from llms.txt)
 //   GET  /api/page?path= a page as Markdown
 //   GET  /api/downloads  installer links
@@ -9,7 +9,6 @@
 import type { Context } from "https://edge.netlify.com";
 
 const VERSION = "1.0.0";
-const PROTOCOL = "2025-06-18";
 const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -51,64 +50,6 @@ async function page(origin: string, path: string): Promise<string | null> {
 }
 const downloads = (origin: string) => Object.fromEntries(Object.entries(DOWNLOADS).map(([k, v]) => [k, origin + v]));
 
-// ---------------------------------------------------------------- MCP
-const TOOLS = [
-  { name: "search_docs", description: "Search the CarvCAM website and docs (CNC design, CAM and carving software for Sienci Labs LongMill and AltMill). Returns matching pages with URLs and summaries.", inputSchema: { type: "object", properties: { query: { type: "string", description: "What to look for, e.g. 'touch plate', 'Ethernet', 'V-carve'" } }, required: ["query"] }, annotations: { readOnlyHint: true } },
-  { name: "read_page", description: "Read a CarvCAM page as Markdown, e.g. /docs/quickstart/, /pricing/ or /machines/longmill-mk3/.", inputSchema: { type: "object", properties: { path: { type: "string", description: "Path on carvcam.com" } }, required: ["path"] }, annotations: { readOnlyHint: true } },
-  { name: "get_download_links", description: "Links to the latest CarvCAM desktop installers (Windows, Mac, Linux, Raspberry Pi).", inputSchema: { type: "object", properties: {} }, annotations: { readOnlyHint: true } },
-  { name: "get_pricing", description: "CarvCAM plans and prices (Free, Pro, School / Makerspace) and what each includes.", inputSchema: { type: "object", properties: {} }, annotations: { readOnlyHint: true } },
-];
-const text = (t: string) => ({ content: [{ type: "text", text: t }] });
-
-async function callTool(origin: string, name: string, args: Record<string, unknown>) {
-  if (name === "search_docs") {
-    const hits = await search(origin, String(args.query ?? ""));
-    return text(hits.length ? hits.map((p) => `- ${p.title}: ${p.url}\n  ${p.description}`).join("\n") : "No matching page. The full index is at https://carvcam.com/llms.txt");
-  }
-  if (name === "read_page") {
-    const md = await page(origin, String(args.path ?? "/"));
-    return md ? text(md) : { ...text(`No page at ${args.path}`), isError: true };
-  }
-  if (name === "get_download_links")
-    return text(Object.entries(downloads(origin)).map(([k, v]) => `- ${k}: ${v}`).join("\n") + `\n\nAfter installing, sign in with a free account (${origin}/signup/). New accounts get 7 days of Pro, no card.`);
-  if (name === "get_pricing") return text((await page(origin, "/pricing/")) ?? "See https://carvcam.com/pricing/");
-  return null;
-}
-
-async function mcp(req: Request, origin: string) {
-  if (req.method === "GET") return json({ error: "This MCP server answers POST requests (Streamable HTTP, JSON responses)." }, 405, { Allow: "POST, OPTIONS" });
-  let msg: { jsonrpc?: string; id?: string | number | null; method?: string; params?: Record<string, unknown> };
-  try {
-    msg = await req.json();
-  } catch {
-    return json({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "Parse error" } }, 400);
-  }
-  if (Array.isArray(msg)) return json({ jsonrpc: "2.0", id: null, error: { code: -32600, message: "Batches are not supported" } }, 400);
-  const { id, method, params = {} } = msg;
-  if (id === undefined || id === null) return new Response(null, { status: 202, headers: CORS }); // notification
-  const ok = (result: unknown) => json({ jsonrpc: "2.0", id, result });
-  const fail = (code: number, message: string) => json({ jsonrpc: "2.0", id, error: { code, message } });
-  switch (method) {
-    case "initialize":
-      return ok({
-        protocolVersion: typeof params.protocolVersion === "string" ? params.protocolVersion : PROTOCOL,
-        capabilities: { tools: { listChanged: false } },
-        serverInfo: { name: "carvcam", title: "CarvCAM", version: VERSION },
-        instructions: "Read-only access to CarvCAM's website and docs: search pages, read any page as Markdown, get installer links and pricing.",
-      });
-    case "ping":
-      return ok({});
-    case "tools/list":
-      return ok({ tools: TOOLS });
-    case "tools/call": {
-      const r = await callTool(origin, String(params.name ?? ""), (params.arguments as Record<string, unknown>) ?? {});
-      return r ? ok(r) : fail(-32602, `Unknown tool: ${params.name}`);
-    }
-    default:
-      return fail(-32601, `Method not found: ${method}`);
-  }
-}
-
 // ---------------------------------------------------------------- REST
 function openapi(origin: string) {
   const get = (summary: string, params: unknown[] = []) => ({ get: { summary, parameters: params, responses: { "200": { description: "OK" } } } });
@@ -146,11 +87,11 @@ export default async (req: Request, _context: Context) => {
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
   const url = new URL(req.url);
   try {
-    return url.pathname === "/mcp" || url.pathname === "/mcp/" ? await mcp(req, url.origin) : await api(req, url);
+    return await api(req, url);
   } catch (err) {
     console.error("[agent-api]", err);
     return json({ error: "Something went wrong" }, 500);
   }
 };
 
-export const config = { path: ["/mcp", "/mcp/", "/api", "/api/*"] };
+export const config = { path: ["/api", "/api/*"] };
