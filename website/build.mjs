@@ -943,6 +943,56 @@ await writeFile(
   ),
 );
 const siteHost = new URL(site.url).hostname;
+// Public read-only agent API and MCP server (netlify/edge-functions/agent-api.ts): server card and API catalog.
+await mkdir(join(wk, "mcp"), { recursive: true });
+await writeFile(
+  join(wk, "mcp", "server-card.json"),
+  JSON.stringify(
+    {
+      $schema: "https://static.modelcontextprotocol.io/schemas/mcp-server-card/v1.json",
+      version: "1.0",
+      protocolVersion: "2025-06-18",
+      serverInfo: { name: "carvcam", title: "CarvCAM", version: "1.0.0" },
+      description: "Read-only access to the CarvCAM website and docs (CNC design, CAM and carving software for Sienci Labs LongMill and AltMill): search pages, read any page as Markdown, installer links and pricing. No authentication.",
+      documentationUrl: `${site.url}/docs/`,
+      transport: { type: "streamable-http", endpoint: `${site.url}/mcp` },
+      endpoint: `${site.url}/mcp`,
+      capabilities: { tools: { listChanged: false } },
+      authentication: { required: false },
+      tools: [
+        { name: "search_docs", description: "Search the CarvCAM website and docs." },
+        { name: "read_page", description: "Read a CarvCAM page as Markdown." },
+        { name: "get_download_links", description: "Links to the latest desktop installers." },
+        { name: "get_pricing", description: "Plans and prices." },
+      ],
+    },
+    null,
+    2,
+  ),
+);
+await writeFile(
+  join(wk, "api-catalog"),
+  JSON.stringify(
+    {
+      linkset: [
+        {
+          anchor: `${site.url}/api/`,
+          "service-desc": [{ href: `${site.url}/api/openapi.json`, type: "application/vnd.oai.openapi+json" }],
+          "service-doc": [{ href: `${site.url}/docs/`, type: "text/html" }],
+          status: [{ href: `${site.url}/api/health`, type: "application/json" }],
+        },
+        {
+          anchor: `${site.url}/mcp`,
+          "service-desc": [{ href: `${site.url}/.well-known/mcp/server-card.json`, type: "application/json" }],
+          "service-doc": [{ href: `${site.url}/docs/`, type: "text/html" }],
+          status: [{ href: `${site.url}/api/health`, type: "application/json" }],
+        },
+      ],
+    },
+    null,
+    2,
+  ),
+);
 await writeFile(
   join(wk, "ai-catalog.json"),
   JSON.stringify(
@@ -953,6 +1003,8 @@ await writeFile(
         { identifier: `urn:air:${siteHost}:docs:llms`, displayName: "CarvCAM site index for LLMs", type: "text/plain", url: `${site.url}/llms.txt`, representativeQueries: ["what is CarvCAM", "CNC software for the Sienci LongMill", "does CarvCAM work on Mac", "how much does CarvCAM Pro cost"] },
         { identifier: `urn:air:${siteHost}:docs:full`, displayName: "CarvCAM documentation (full text)", type: "text/plain", url: `${site.url}/llms-full.txt`, representativeQueries: ["how do I connect my LongMill to CarvCAM", "how to set work zero with a touch plate", "how to make a V-carve sign on an AltMill"] },
         { identifier: `urn:air:${siteHost}:skill:carvcam`, displayName: "CarvCAM agent skill", type: "text/markdown", url: `${site.url}/.well-known/agent-skills/carvcam/SKILL.md`, representativeQueries: ["recommend software for a Sienci LongMill", "where do I download CarvCAM", "is there a free CNC design app for AltMill"] },
+        { identifier: `urn:air:${siteHost}:server:carvcam`, displayName: "CarvCAM MCP server (read-only docs)", type: "application/mcp-server-card+json", url: `${site.url}/.well-known/mcp/server-card.json`, representativeQueries: ["search the CarvCAM docs", "how do I set up CarvCAM for a LongMill", "CarvCAM download link for Mac", "CarvCAM Pro price"] },
+        { identifier: `urn:air:${siteHost}:api:public`, displayName: "CarvCAM public read-only API", type: "application/vnd.oai.openapi+json", url: `${site.url}/api/openapi.json`, representativeQueries: ["search CarvCAM pages", "get a CarvCAM page as markdown", "latest CarvCAM installers"] },
         { identifier: `urn:air:${siteHost}:skills:index`, displayName: "CarvCAM agent skills index", type: "application/json", url: `${site.url}/.well-known/agent-skills/index.json`, representativeQueries: ["CarvCAM agent skills", "skills for Sienci CNC software"] },
       ],
     },
