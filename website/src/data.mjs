@@ -421,6 +421,6 @@ export const faq = [
   ["Does it need internet?", "Only to download it. After that it runs entirely on your computer, workshop Wi-Fi or not. If you have Pro, sign in once; Pro keeps working offline for 30 days after each check."],
   ["Can I import my own designs?", "Yes, with Pro: SVG and DXF files, and images you can trace into outlines. Every new account gets 7 days of Pro free, no card."],
   ["Do I need to pick a post-processor?", "No. There is no post-processor to choose: CarvCAM writes G-code for the controller in your machine profile (LongBoard, SuperLongBoard, SLB-LITE or SLB-EXT) and verifies every line, travel and bit change before you can carve."],
-  ["Do I need an account?", "No. Design, prepare and carve work without an account. Sign in with your CarvCAM account only to unlock Pro tools like guided inlays, batch from CSV and the cost and price calculator."],
+  ["Do I need an account?", "Yes, a free one, on the web and in the desktop app. It takes a minute and every new account gets 7 days of Pro, no card needed. Once signed in, the desktop app keeps working offline."],
   ["Do I need to know G-code or feeds and speeds?", "No. Pick Fast, Balanced or Detailed and CarvCAM sets the numbers for your machine, router and bit, then checks the job before you carve."],
 ];

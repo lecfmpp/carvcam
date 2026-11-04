@@ -9,6 +9,7 @@ export const plans = {
     per: "forever",
     lead: "Everything you need to go from an idea to a safe first cut.",
     points: [
+      "A free CarvCAM account: sign up in a minute, no card",
       "Full 2.5D design: text (straight and on an arc), shapes, pen, offset, booleans",
       "V-carve and hatch fill",
       "The complete Sienci library: every LongMill and AltMill, router and spindle, and all 38 Sienci bits with photos and the set each comes in (21 of them cut 2.5D toolpaths today)",

@@ -51,7 +51,7 @@ export function AccountSetting() {
             {signedIn ? (a.name ?? a.email) : "Not signed in"}
             {a.pro ? <ProBadge /> : null}
           </span>
-          <span className="tiny muted">{signedIn || a.pro ? planLabel(a) : "Sign in to unlock Pro. Everything else is free, no account needed."}</span>
+          <span className="tiny muted">{signedIn || a.pro ? planLabel(a) : "Sign in with your CarvCAM account."}</span>
         </span>
         <button className="btn btn--outline btn--sm" onClick={() => setOpen(true)}>
           {signedIn ? "Manage" : "Sign in"}
