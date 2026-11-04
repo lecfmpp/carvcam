@@ -295,7 +295,7 @@ export default async (req: Request) => {
         return ok({
           protocolVersion: typeof params.protocolVersion === "string" ? params.protocolVersion : PROTOCOL,
           capabilities: { tools: { listChanged: false }, resources: { listChanged: false }, extensions: { "io.modelcontextprotocol/ui": {} } },
-          serverInfo: { name: "carvcam", title: "CarvCAM", version: VERSION },
+          serverInfo: { name: "carvcam", title: "CarvCAM", version: VERSION, websiteUrl: "https://carvcam.com", icons: [{ src: "https://carvcam.com/assets/carvcam-icon.svg", mimeType: "image/svg+xml", sizes: ["any"] }, { src: "https://carvcam.com/assets/email/carvcam-icon.png", mimeType: "image/png", sizes: ["128x128"] }] },
           instructions:
             "CarvCAM designs and carves signs on Sienci Labs LongMill and AltMill CNC routers. To make a project: call list_design_options, then design_project and fix what it reports until the status is 'Ready to carve'; give the person the openInCarvCAM link (they review the 3D preview, set zero and carve in the app). When the person asks for a change, call design_project again with the same projectId and the full updated design: the new link updates their existing project in the app (it doesn't add a new one). Use export_gcode only when they want the .nc file. Never claim the machine will move: carving always starts from the CarvCAM app.",
         });
