@@ -78,15 +78,26 @@ ${ld.map((j) => `<script type="application/ld+json">${JSON.stringify(j)}</script
 <a class="logo" href="${href("/")}" aria-label="CarvCAM home"><img src="${asset("/assets/carvcam-icon.svg")}" alt="" width="28" height="28"><span class="wordmark">Carv<span>CAM</span></span></a>
 <nav class="nav" aria-label="Main">${navHtml}</nav>
 <a class="hdr__login hdr__web" href="${site.webApp}">Use online</a>
-<a class="hdr__login" href="${href("/login/")}">Log in</a>
+<a class="hdr__login hdr__acct" href="${href("/login/")}">Log in</a>
 <a class="btn btn--primary" data-dl="short" href="${site.downloads.windows}"><span>Download</span></a>
-</div></header>
+<button class="hdr__burger" type="button" aria-label="Menu" aria-expanded="false" aria-controls="mnav"><span></span><span></span><span></span></button>
+</div>
+<nav class="mnav" id="mnav" aria-label="Menu" hidden><div class="wrap">${navHtml}<hr><a class="mnav__web" href="${site.webApp}">Use online <small>in your browser</small></a><a class="hdr__acct" href="${href("/login/")}">Log in</a></div></nav>
+</header>
 <main id="main">
 ${crumbs ? `<div class="wrap" style="padding-top:28px">${crumbHtml}</div>` : ""}
 ${body}
 </main>
 ${footer()}
-<script>try { if (localStorage.getItem("sb-zveqsvizefgbicwvjvdu-auth-token")) { const a = document.querySelector(".hdr__login:not(.hdr__web)"); a.href = ${JSON.stringify(href("/account/"))}; a.textContent = "Account"; } } catch {}</script>
+<script>try { if (localStorage.getItem("sb-zveqsvizefgbicwvjvdu-auth-token")) document.querySelectorAll(".hdr__acct").forEach((a) => { a.href = ${JSON.stringify(href("/account/"))}; a.textContent = "Account"; }); } catch {}</script>
+<script>(() => {
+  const b = document.querySelector(".hdr__burger"), m = document.getElementById("mnav");
+  const set = (open) => { b.setAttribute("aria-expanded", String(open)); m.hidden = !open; document.documentElement.classList.toggle("mnav-open", open); };
+  b.addEventListener("click", () => set(m.hidden));
+  m.addEventListener("click", (e) => { if (e.target.closest("a")) set(false); });
+  addEventListener("keydown", (e) => { if (e.key === "Escape" && !m.hidden) { set(false); b.focus(); } });
+  matchMedia("(min-width: 1081px)").addEventListener("change", (e) => e.matches && set(false));
+})();</script>
 <script>(() => {
   // Download buttons: Windows by default; on Linux they become the AppImage (or the Pi .deb on ARM); on Mac the
   // Apple Silicon or Intel .dmg when the browser tells the chip (Chrome, Edge), otherwise the Mac section of the
