@@ -11,3 +11,4 @@ dist/
 website/.capture/
 website/video/hero-demo/renders/
 desktop/THIRD_PARTY_NOTICES.txt
+website/netlify/functions/
