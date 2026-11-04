@@ -48,6 +48,7 @@ export const nav = [
 export const machines = [
   {
     slug: "longmill-mk3",
+    photo: "longmill-mk3-30x30",
     name: "LongMill MK3",
     status: "Current model",
     sizes: "30×30 and 48×30",
@@ -69,6 +70,7 @@ export const machines = [
   },
   {
     slug: "altmill",
+    photo: "altmill-4x4",
     name: "AltMill",
     status: "Current model",
     sizes: "2×4, 4×4 and 4×8",
@@ -90,6 +92,7 @@ export const machines = [
   },
   {
     slug: "longmill-mk2",
+    photo: "longmill-mk2",
     name: "LongMill MK2",
     status: "Still supported",
     sizes: "12×30, 30×30 and 48×30",
