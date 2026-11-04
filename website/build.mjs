@@ -861,6 +861,8 @@ for (const p of pages) {
 await mkdir(join(OUT, "assets"), { recursive: true });
 await cp(new URL("./assets/", import.meta.url).pathname, join(OUT, "assets"), { recursive: true });
 await cp(new URL("./src/styles.css", import.meta.url).pathname, join(OUT, "assets/site.css"));
+// Fonts for the CAM engine in the MCP server (netlify/functions/mcp.mts loads them from the site).
+await cp(new URL("../cam-engine/fonts/", import.meta.url).pathname, join(OUT, "assets/cam-fonts"), { recursive: true });
 const urls = pages.filter((p) => !p.path.endsWith(".html") && p.index);
 const TODAY = new Date().toISOString().slice(0, 10);
 await writeFile(join(OUT, "sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((p) => `<url><loc>${site.url}${p.path}</loc><lastmod>${TODAY}</lastmod></url>`).join("\n")}\n</urlset>\n`);
@@ -952,8 +954,8 @@ await writeFile(
       $schema: "https://static.modelcontextprotocol.io/schemas/mcp-server-card/v1.json",
       version: "1.0",
       protocolVersion: "2025-06-18",
-      serverInfo: { name: "carvcam", title: "CarvCAM", version: "1.0.0" },
-      description: "Read-only access to the CarvCAM website and docs (CNC design, CAM and carving software for Sienci Labs LongMill and AltMill): search pages, read any page as Markdown, installer links and pricing. No authentication.",
+      serverInfo: { name: "carvcam", title: "CarvCAM", version: "2.0.0" },
+      description: "CarvCAM (CNC design, CAM and carving software for Sienci Labs LongMill and AltMill): design and check sign projects with the real CAM engine, export verified G-code, open the project in the CarvCAM app, and search the docs. No authentication; nothing moves a machine.",
       documentationUrl: `${site.url}/docs/`,
       transport: { type: "streamable-http", endpoint: `${site.url}/mcp` },
       endpoint: `${site.url}/mcp`,
@@ -964,6 +966,9 @@ await writeFile(
         { name: "read_page", description: "Read a CarvCAM page as Markdown." },
         { name: "get_download_links", description: "Links to the latest desktop installers." },
         { name: "get_pricing", description: "Plans and prices." },
+        { name: "list_design_options", description: "Machines, bits, materials, fonts and cut modes for a design." },
+        { name: "design_project", description: "Build and check a sign project; returns status, fixes and an Open in CarvCAM link." },
+        { name: "export_gcode", description: "Verified G-code for a project that is ready to carve." },
       ],
     },
     null,
