@@ -360,12 +360,12 @@ function TracingSection({ n, open, onToggle, spec, onAdded }: { n: number; open:
   };
   return (
     <>
-      <AccItem n={n} title="Upload design" summary={t ? `SVG or DXF file · tracing ${t.name}` : "SVG or DXF file, or trace a picture"} open={open} onToggle={onToggle}>
+      <AccItem n={n} title="Upload design" summary={t ? `SVG, DXF, PDF or AI file · tracing ${t.name}` : "SVG, DXF, PDF or AI file, or trace a picture"} open={open} onToggle={onToggle}>
         <div className="create-upload">
           <div className="create-upload__title">
             <FileUp size={16} strokeWidth={1.75} color="var(--accent)" /> Design file {gate.allowed ? null : <ProBadge />}
           </div>
-          <div className="tiny muted">Vector drawings from Inkscape, Illustrator, Affinity, Fusion or LightBurn come in ready to carve. You can also drop the file on the board.</div>
+          <div className="tiny muted">Vector drawings from Illustrator (.ai or PDF), Inkscape, Affinity, Figma, Fusion or LightBurn come in ready to carve. You can also drop the file on the board.</div>
           <button
             className="btn btn--primary"
             onClick={async () => {
@@ -377,7 +377,7 @@ function TracingSection({ n, open, onToggle, spec, onAdded }: { n: number; open:
               onAdded(out[1]);
             }}
           >
-            <FileUp size={16} /> Upload SVG or DXF…
+            <FileUp size={16} /> Upload SVG, DXF, PDF or AI…
           </button>
         </div>
         <div className="create-upload__or">

@@ -3,8 +3,9 @@ import { bounds, simplify, translate, union, type Pt, type Region } from "./geom
 import { InvalidSvg, type SvgDrawing } from "./svg.js";
 
 /**
- * DXF (ASCII) importer: LINE, LWPOLYLINE and POLYLINE (with bulge), CIRCLE, ARC, ELLIPSE and
- * SPLINE (NURBS). Open pieces whose ends touch are joined into closed outlines; closed
+ * DXF (ASCII) importer: LINE, LWPOLYLINE and POLYLINE (with bulge), CIRCLE, ARC, ELLIPSE,
+ * SPLINE (NURBS), HATCH (its boundary becomes a filled area) and INSERT (block references, with
+ * scale, rotation, mirroring and column/row arrays, nested). Open pieces whose ends touch are joined into closed outlines; closed
  * outlines become areas (even-odd, so outlines inside outlines are holes).
  * Whatever is left open becomes a thin 1 mm stroke, to engrave.
  *
@@ -36,12 +37,23 @@ interface Ent {
   g: Pair[];
 }
 
-/** Splits the file into sections and entities. */
-function readEntities(ps: Pair[]): { ents: Ent[]; insunits: number } {
+interface Block {
+  base: Pt;
+  ents: Ent[];
+}
+
+/** Splits the file into sections: header units, the BLOCKS table and the ENTITIES. */
+function readEntities(ps: Pair[]): { ents: Ent[]; insunits: number; blocks: Map<string, Block> } {
   let insunits = 0;
   const ents: Ent[] = [];
+  const blocks = new Map<string, Block>();
   let section = "";
   let cur: Ent | null = null;
+  let block: { name: string; head: Ent; ents: Ent[] } | null = null;
+  const closeBlock = () => {
+    if (block) blocks.set(block.name, { base: { x: num(block.head, 10), y: num(block.head, 20) }, ents: block.ents });
+    block = null;
+  };
   for (let i = 0; i < ps.length; i++) {
     const [c, v] = ps[i];
     if (c === 0 && v === "SECTION") {
@@ -50,6 +62,7 @@ function readEntities(ps: Pair[]): { ents: Ent[]; insunits: number } {
       continue;
     }
     if (c === 0 && v === "ENDSEC") {
+      closeBlock();
       section = "";
       cur = null;
       continue;
@@ -58,13 +71,34 @@ function readEntities(ps: Pair[]): { ents: Ent[]; insunits: number } {
       insunits = parseInt(ps[i + 1]?.[1] ?? "0", 10) || 0;
       continue;
     }
+    if (section === "BLOCKS") {
+      if (c === 0 && v === "BLOCK") {
+        closeBlock();
+        const head: Ent = { type: "BLOCK", g: [] };
+        block = { name: "", head, ents: [] };
+        cur = head;
+        continue;
+      }
+      if (c === 0 && v === "ENDBLK") {
+        if (block) block.name = block.head.g.find((x) => x[0] === 2)?.[1] ?? "";
+        closeBlock();
+        cur = null;
+        continue;
+      }
+      if (!block) continue;
+      if (c === 0) {
+        cur = { type: v, g: [] };
+        block.ents.push(cur);
+      } else cur?.g.push([c, v]);
+      continue;
+    }
     if (section !== "ENTITIES") continue;
     if (c === 0) {
       cur = { type: v, g: [] };
       ents.push(cur);
     } else cur?.g.push([c, v]);
   }
-  return { ents, insunits };
+  return { ents, insunits, blocks };
 }
 
 const num = (e: Ent, code: number, def = 0) => {
@@ -157,9 +191,87 @@ function nurbs(deg: number, knots: number[], ctrl: Pt[], w: number[]): Pt[] {
   return out;
 }
 
-function pieces(ents: Ent[]): { pieces: Piece[]; ignored: Set<string> } {
+/** Boundary loops of a HATCH (polyline boundaries with bulges, and edge boundaries: lines, arcs, ellipses, splines). */
+function hatchLoops(e: Ent): Pt[][] {
+  const g = e.g;
+  let i = g.findIndex((x) => x[0] === 91);
+  if (i < 0) return [];
+  const nLoops = parseInt(g[i][1], 10) || 0;
+  const loops: Pt[][] = [];
+  const at = (code: number) => {
+    while (i < g.length && g[i][0] !== code) i++;
+    return i < g.length ? parseFloat(g[i++][1]) : 0;
+  };
+  i++;
+  for (let L = 0; L < nLoops && i < g.length; L++) {
+    const flags = at(92);
+    const loop: Pt[] = [];
+    if (flags & 2) {
+      const hasBulge = at(72);
+      at(73);
+      const n = at(93);
+      const v: { x: number; y: number; b: number }[] = [];
+      for (let k = 0; k < n; k++) {
+        const x = at(10), y = at(20);
+        let b = 0;
+        if (hasBulge && g[i]?.[0] === 42) b = parseFloat(g[i++][1]);
+        v.push({ x, y, b });
+      }
+      loop.push(...bulgePath(v, true));
+    } else {
+      const nEdges = at(93);
+      for (let k = 0; k < nEdges; k++) {
+        const type = at(72);
+        if (type === 1) {
+          const x0 = at(10), y0 = at(20), x1 = at(11), y1 = at(21);
+          loop.push({ x: x0, y: y0 }, { x: x1, y: y1 });
+        } else if (type === 2) {
+          const cx = at(10), cy = at(20), r = at(40);
+          let a0 = (at(50) * Math.PI) / 180, a1 = (at(51) * Math.PI) / 180;
+          const ccw = at(73);
+          if (!ccw) [a0, a1] = [-a0, -a1];
+          const pts = arcPts(cx, cy, r, Math.min(a0, a1), Math.max(a0, a1));
+          loop.push(...(ccw ? pts : pts.map((q) => ({ x: q.x, y: 2 * cy - q.y })).reverse()));
+        } else if (type === 3) {
+          const cx = at(10), cy = at(20), mx = at(11), my = at(21), ratio = at(40);
+          let p0 = (at(50) * Math.PI) / 180, p1 = (at(51) * Math.PI) / 180;
+          const ccw = at(73);
+          if (!ccw) [p0, p1] = [-p0, -p1];
+          if (p1 <= p0) p1 += 2 * Math.PI;
+          const a = Math.hypot(mx, my), rot = Math.atan2(my, mx);
+          const n = Math.max(16, Math.ceil(((p1 - p0) * a) / step));
+          const pts: Pt[] = [];
+          for (let q = 0; q <= n; q++) {
+            const t = p0 + ((p1 - p0) * q) / n;
+            const x = a * Math.cos(t), y = a * ratio * Math.sin(t) * (ccw ? 1 : -1);
+            pts.push({ x: cx + x * Math.cos(rot) - y * Math.sin(rot), y: cy + x * Math.sin(rot) + y * Math.cos(rot) });
+          }
+          loop.push(...pts);
+        } else if (type === 4) {
+          const deg = at(94);
+          at(73);
+          at(74);
+          const nk = at(95), nc = at(96);
+          const knots: number[] = [];
+          for (let q = 0; q < nk; q++) knots.push(at(40));
+          const ctrl: Pt[] = [];
+          const weights: number[] = [];
+          for (let q = 0; q < nc; q++) {
+            ctrl.push({ x: at(10), y: at(20) });
+            if (g[i]?.[0] === 42) weights.push(parseFloat(g[i++][1]));
+          }
+          if (ctrl.length >= 2) loop.push(...nurbs(deg || 3, knots, ctrl, weights));
+        } else break;
+      }
+    }
+    if (loop.length >= 3) loops.push(loop);
+    // Source boundary objects (97 count, then 330 handles) follow; at() skips them.
+  }
+  return loops;
+}
+
+function pieces(ents: Ent[], blocks: Map<string, Block> = new Map(), depth = 0, ignored = new Set<string>()): { pieces: Piece[]; ignored: Set<string> } {
   const out: Piece[] = [];
-  const ignored = new Set<string>();
   for (let i = 0; i < ents.length; i++) {
     const e = ents[i];
     // Extrusion direction (0,0,-1) mirrors X in the object coordinate system (common in AutoCAD arcs).
@@ -236,6 +348,40 @@ function pieces(ents: Ent[]): { pieces: Piece[]; ignored: Set<string> } {
         if (pts.length >= 2) out.push({ pts, closed: closed || dist(pts[0], pts[pts.length - 1]) < 1e-6 });
         break;
       }
+      case "HATCH":
+        for (const loop of hatchLoops(e)) {
+          const pts = loop.map((q) => ({ x: q.x * fx, y: q.y }));
+          if (pts.length >= 3) out.push({ pts, closed: true });
+        }
+        break;
+      case "INSERT": {
+        const name = e.g.find((x) => x[0] === 2)?.[1] ?? "";
+        const blk = blocks.get(name);
+        if (!blk || depth > 12) {
+          ignored.add(blk ? "INSERT (nested too deep)" : "INSERT");
+          break;
+        }
+        const inner = pieces(blk.ents, blocks, depth + 1, ignored).pieces;
+        const sx = num(e, 41, 1) * fx, sy = num(e, 42, 1);
+        const rot = (num(e, 50) * Math.PI) / 180;
+        const cs = Math.cos(rot), sn = Math.sin(rot);
+        const cols = Math.max(1, num(e, 70, 1)), rows = Math.max(1, num(e, 71, 1));
+        const dc = num(e, 44), dr = num(e, 45);
+        const px = num(e, 10) * fx, py = num(e, 20);
+        for (let r = 0; r < rows; r++)
+          for (let c = 0; c < cols; c++) {
+            // Array spacing runs along the block's rotated axes.
+            const ox = px + cs * c * dc - sn * r * dr, oy = py + sn * c * dc + cs * r * dr;
+            for (const pc of inner) {
+              const pts = pc.pts.map((q) => {
+                const x = (q.x - blk.base.x) * sx, y = (q.y - blk.base.y) * sy;
+                return { x: ox + cs * x - sn * y, y: oy + sn * x + cs * y };
+              });
+              out.push({ pts: sx * sy < 0 ? pts.reverse() : pts, closed: pc.closed });
+            }
+          }
+        break;
+      }
       case "VERTEX":
       case "SEQEND":
         break;
@@ -280,13 +426,18 @@ function chain(open: Pt[][], tol: number): { closed: Pt[][]; open: Pt[][] } {
 }
 
 export function parseDxf(text: string): SvgDrawing & { openPaths: number } {
-  const { ents, insunits } = readEntities(pairs(text));
+  const { ents, insunits, blocks } = readEntities(pairs(text));
   const u = INSUNITS_MM[insunits] ?? 1;
   step = STEP / u;
-  const { pieces: ps, ignored } = pieces(ents);
+  const { pieces: ps, ignored } = pieces(ents, blocks);
+  const notes: string[] = [];
+  const textTypes: string[] = [...ignored].filter((t) => t === "TEXT" || t === "MTEXT" || t === "ATTRIB");
+  if (textTypes.length) notes.push("Text in the DXF was left out: explode or convert text to outlines before exporting.");
+  const other = [...ignored].filter((t) => !textTypes.includes(t) && t !== "ATTDEF" && t !== "POINT");
+  if (other.length) notes.push(`Left out (not cuttable): ${other.join(", ")}.`);
   if (!ps.length) {
     const extra = ignored.size ? ` Only found: ${[...ignored].join(", ")}.` : "";
-    throw new InvalidSvg(`The DXF has no lines, arcs, circles, polylines or splines.${extra} Explode blocks and text before exporting.`);
+    throw new InvalidSvg(`The DXF has no lines, arcs, circles, polylines, splines, hatches or blocks.${extra} Convert text to outlines before exporting.`);
   }
   const scaled = ps.map((p) => ({ closed: p.closed, pts: p.pts.map((q) => ({ x: q.x * u, y: q.y * u })) }));
   const { closed: chained, open } = chain(
@@ -306,5 +457,5 @@ export function parseDxf(text: string): SvgDrawing & { openPaths: number } {
   const height = b.maxY - b.minY;
   if (!(width > 0.01 && height > 0.01)) throw new InvalidSvg("The DXF drawing is too small.");
   reg = translate(reg, -(b.minX + b.maxX) / 2, -(b.minY + b.maxY) / 2);
-  return { region: reg, width, height, openPaths: open.length };
+  return { region: reg, width, height, openPaths: open.length, ...(notes.length ? { notes } : {}) };
 }

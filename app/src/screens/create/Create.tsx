@@ -315,7 +315,7 @@ export default function Create() {
         overlay={
           <>
             <ToolRail tool={tool} setTool={setTool} onImport={() => void pickSvgFile().then(importSvg)} />
-            {dropping ? <div className="create-drop">Drop an SVG or DXF to carve it, or a picture to trace over, on the {spec.type === "lettering" ? "board" : "sign"}</div> : null}
+            {dropping ? <div className="create-drop">Drop an SVG, DXF, PDF or AI file to carve it, or a picture to trace over, on the {spec.type === "lettering" ? "board" : "sign"}</div> : null}
             <IssueTray errors={errors + (eng.error ? 1 : 0)} warnings={warnings} open={trayOpen} setOpen={setTrayOpen}>
               {eng.error ? <IssueCard issue={engineErrorIssue(eng.error, issueCtx)} onRun={runIssue} /> : null}
               {issues.map((i) => (
