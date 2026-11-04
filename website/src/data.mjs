@@ -3,9 +3,8 @@
 
 export const site = {
   name: "CarvCAM",
-  // TODO: final domain.
-  // Netlify sets URL during the build (the site's primary address); outside it, the final domain.
-  url: (process.env.SITE_URL || process.env.URL || "https://www.carvcam.com").replace(/\/$/, ""),
+  // Netlify sets URL during the build (the site's primary address, carvcam.com: www redirects there).
+  url: (process.env.SITE_URL || process.env.URL || "https://carvcam.com").replace(/\/$/, ""),
   download: "/download/",
   // Installers: carvcam.com/download/<platform> redirects (root netlify.toml) to the newest release's
   // fixed-name files (GitHub Releases today; the Supabase Storage mirror once its secrets are set).

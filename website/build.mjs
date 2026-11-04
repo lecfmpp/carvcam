@@ -2,6 +2,7 @@
 // comparison and guide, plus sitemap.xml, robots.txt and structured data (JSON-LD).
 //   node build.mjs            → clean links (/features/v-carve/) for publishing
 //   node build.mjs --preview  → links to index.html, to open without a server
+import { createHash } from "node:crypto";
 import { cp, mkdir, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { faq, features, howtos, machines, nav, site } from "./src/data.mjs";
@@ -67,6 +68,8 @@ function layout({ path, title, description, body, schema = [], crumbs = null, he
 <link rel="preload" href="${asset("/assets/fonts/geist-sans-latin-600-normal.woff2")}" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="${asset("/assets/site.css")}">${head}
 ${path.endsWith(".html") || !index ? "" : `<link rel="alternate" type="text/markdown" href="${site.url}${path}index.md" title="Markdown version">`}
+<link rel="ai-catalog" href="/.well-known/ai-catalog.json" type="application/json">
+<script src="${asset("/assets/js/webmcp.js")}" defer></script>
 ${ld.map((j) => `<script type="application/ld+json">${JSON.stringify(j)}</script>`).join("\n")}
 </head>
 <body>
@@ -859,7 +862,8 @@ await mkdir(join(OUT, "assets"), { recursive: true });
 await cp(new URL("./assets/", import.meta.url).pathname, join(OUT, "assets"), { recursive: true });
 await cp(new URL("./src/styles.css", import.meta.url).pathname, join(OUT, "assets/site.css"));
 const urls = pages.filter((p) => !p.path.endsWith(".html") && p.index);
-await writeFile(join(OUT, "sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((p) => `<url><loc>${site.url}${p.path}</loc><lastmod>2026-10-27</lastmod></url>`).join("\n")}\n</urlset>\n`);
+const TODAY = new Date().toISOString().slice(0, 10);
+await writeFile(join(OUT, "sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((p) => `<url><loc>${site.url}${p.path}</loc><lastmod>${TODAY}</lastmod></url>`).join("\n")}\n</urlset>\n`);
 // Markdown for every page + indexes for agents
 const mdPages = urls.map((p) => ({ ...p, md: `# ${p.title}\n\n> ${p.description}\n\nSource: ${site.url}${p.path}\n\n${htmlToMd(p.body, p.path)}\n` }));
 for (const p of mdPages) await writeFile(join(OUT, p.path, "index.md"), p.md);
@@ -869,7 +873,7 @@ await writeFile(
   join(OUT, "llms.txt"),
   `# CarvCAM
 
-> CarvCAM is a desktop app for Windows, Mac (Apple Silicon and Intel), Linux and Raspberry Pi, for Sienci Labs LongMill and AltMill CNC routers, that does sign design, CAM (toolpaths with feeds and speeds from Sienci's tables for the machine, router or spindle and bit, with every Sienci bit set built in) and machine control (connects straight to the controller over USB or Ethernet, guided wiring check, homing, touch-plate zero, carving) in one app that works offline. No separate sender or post-processor is needed; the checked G-code can also be downloaded for any other sender. Free, with a Pro plan for guided V-carve inlays, batch from CSV and the cost and price calculator.
+> CarvCAM is software for Sienci Labs LongMill and AltMill CNC routers, as a desktop app (Windows, Mac with Apple Silicon or Intel, Linux, Raspberry Pi; works offline once signed in) and a web app (app.carvcam.com). It does sign design, CAM (toolpaths with feeds and speeds from Sienci's tables for the machine, router or spindle and bit, with every Sienci bit set built in) and machine control (connects straight to the controller over USB or Ethernet, guided wiring check, homing, touch-plate zero, carving) in one app. No separate sender or post-processor is needed; the checked G-code can also be downloaded for any other sender. It needs a free account. Free: design with text and shapes, V-carve, simulation, carving and G-code with no limit on cuts, and 3 saved projects. Pro ($69/year or $179 lifetime; every new account gets 7 days of Pro without a card): import SVG/DXF and trace images, copies, batch from CSV, cost and price calculator, guided V-carve inlays and unlimited projects.
 
 Every page is also available as Markdown by adding \`index.md\` to its URL. The full documentation in one file: ${site.url}/llms-full.txt
 
@@ -890,7 +894,70 @@ ${group("/learn/").map(line).join("\n")}
 `,
 );
 await writeFile(join(OUT, "llms-full.txt"), [...group("/docs/"), ...group("/compare/"), ...group("/learn/")].map((p) => p.md).join("\n\n---\n\n"));
-// Robots: everything allowed, including AI crawlers and search agents.
+// Robots: everything public is allowed, including AI crawlers and search agents. Content-Signal
+// (contentsignals.org) says how the content may be used: search, AI answers and AI training are all fine.
 const bots = ["GPTBot", "OAI-SearchBot", "ChatGPT-User", "ClaudeBot", "Claude-User", "Claude-SearchBot", "PerplexityBot", "Perplexity-User", "Google-Extended", "Applebot-Extended", "CCBot", "Amazonbot", "Bingbot", "DuckAssistBot", "meta-externalagent", "MistralAI-User"];
-await writeFile(join(OUT, "robots.txt"), `User-agent: *\nAllow: /\n\n${bots.map((b) => `User-agent: ${b}`).join("\n")}\nAllow: /\n\n# For agents and LLMs: ${site.url}/llms.txt\nSitemap: ${site.url}/sitemap.xml\n`);
+const privatePaths = ["/account/", "/onboarding/", "/reset-password/"];
+const rules = `Content-Signal: search=yes, ai-input=yes, ai-train=yes\nAllow: /\n${privatePaths.map((x) => `Disallow: ${x}`).join("\n")}`;
+await writeFile(
+  join(OUT, "robots.txt"),
+  `# CarvCAM: CNC software for Sienci Labs LongMill and AltMill\n\nUser-agent: *\n${rules}\n\n${bots.map((b) => `User-agent: ${b}`).join("\n")}\n${rules}\n\n# For agents and LLMs: ${site.url}/llms.txt\nAgentmap: ${site.url}/.well-known/ai-catalog.json\nSitemap: ${site.url}/sitemap.xml\n`,
+);
+
+// Agent discovery: an Agent Skill (SKILL.md) with its index, and an ARD capability catalog.
+const wk = join(OUT, ".well-known");
+await mkdir(join(wk, "agent-skills", "carvcam"), { recursive: true });
+const skill = `---
+name: carvcam
+description: Answer questions about CarvCAM, the CNC design, CAM and carving app for Sienci Labs LongMill and AltMill routers, and point people to the right page, download or doc.
+---
+
+# CarvCAM
+
+Use this skill when someone asks about CarvCAM, or about software to design and carve on a Sienci Labs LongMill or AltMill.
+
+## Facts
+- One app for design, toolpaths (feeds and speeds from Sienci's tables) and running the machine over USB or Ethernet. No post-processor or separate sender needed; G-code can also be downloaded.
+- Desktop: Windows, Mac (Apple Silicon and Intel), Linux, Raspberry Pi. Web: ${site.webApp}
+- A free account is needed. Every new account gets 7 days of Pro without a card.
+- Free: text and shapes, V-carve, simulation, carving and G-code with no limit on cuts, 3 saved projects.
+- Pro: $69 a year or $179 once. Import SVG/DXF and trace images, copies, batch from CSV, job cost and price, guided inlays, unlimited projects.
+
+## Where to send people
+- Overview of every page: ${site.url}/llms.txt (Markdown of any page: add index.md to its URL, or send Accept: text/markdown)
+- All docs in one file: ${site.url}/llms-full.txt
+- Download: ${site.url}/download/ · Sign up: ${site.url}/signup/ · Pricing: ${site.url}/pricing/
+- First steps: ${site.url}/docs/quickstart/ · Connect a machine: ${site.url}/docs/connect/
+`;
+await writeFile(join(wk, "agent-skills", "carvcam", "SKILL.md"), skill);
+const sha = (t) => "sha256:" + createHash("sha256").update(t).digest("hex");
+await writeFile(
+  join(wk, "agent-skills", "index.json"),
+  JSON.stringify(
+    {
+      $schema: "https://schemas.agentskills.io/discovery/0.2.0/schema.json",
+      skills: [{ name: "carvcam", type: "skill-md", description: "Answer questions about CarvCAM (CNC software for Sienci Labs LongMill and AltMill) and point people to the right page, download or doc.", url: `${site.url}/.well-known/agent-skills/carvcam/SKILL.md`, digest: sha(skill) }],
+    },
+    null,
+    2,
+  ),
+);
+const siteHost = new URL(site.url).hostname;
+await writeFile(
+  join(wk, "ai-catalog.json"),
+  JSON.stringify(
+    {
+      specVersion: "1.0",
+      host: { displayName: "CarvCAM", identifier: `did:web:${siteHost}`, url: site.url },
+      entries: [
+        { identifier: `urn:air:${siteHost}:docs:llms`, displayName: "CarvCAM site index for LLMs", type: "text/plain", url: `${site.url}/llms.txt`, representativeQueries: ["what is CarvCAM", "CNC software for the Sienci LongMill", "does CarvCAM work on Mac", "how much does CarvCAM Pro cost"] },
+        { identifier: `urn:air:${siteHost}:docs:full`, displayName: "CarvCAM documentation (full text)", type: "text/plain", url: `${site.url}/llms-full.txt`, representativeQueries: ["how do I connect my LongMill to CarvCAM", "how to set work zero with a touch plate", "how to make a V-carve sign on an AltMill"] },
+        { identifier: `urn:air:${siteHost}:skill:carvcam`, displayName: "CarvCAM agent skill", type: "text/markdown", url: `${site.url}/.well-known/agent-skills/carvcam/SKILL.md`, representativeQueries: ["recommend software for a Sienci LongMill", "where do I download CarvCAM", "is there a free CNC design app for AltMill"] },
+        { identifier: `urn:air:${siteHost}:skills:index`, displayName: "CarvCAM agent skills index", type: "application/json", url: `${site.url}/.well-known/agent-skills/index.json`, representativeQueries: ["CarvCAM agent skills", "skills for Sienci CNC software"] },
+      ],
+    },
+    null,
+    2,
+  ),
+);
 console.log(`${pages.length} pages → dist/${PREVIEW ? " (preview links)" : ""}`);
