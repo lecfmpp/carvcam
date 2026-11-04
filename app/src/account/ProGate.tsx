@@ -206,7 +206,7 @@ export function SignInDialog(props: { open: boolean; onClose(): void }): JSX.Ele
         <AccountPanel a={a} onClose={props.onClose} />
       ) : (
         <>
-          <p className="acct-lead">Sign in to unlock your Pro plan on this computer. Everything else in CarvCAM works without an account.</p>
+          <p className="acct-lead">Sign in with your CarvCAM account. Your plan follows you to every computer.</p>
           <SignInForm />
         </>
       )}
@@ -287,13 +287,16 @@ export function useProGate(feature: ProFeature): { allowed: boolean; ask(): void
   return { allowed, ask, dialog: open ? <UpgradeDialog feature={feature} open onClose={close} /> : null };
 }
 
-/** The web app (app.carvcam.com and its Netlify previews) needs an account; the desktop app and local dev don't. */
-export const WEB_NEEDS_ACCOUNT = typeof location !== "undefined" && /(^|\.)carvcam\.com$|\.netlify\.app$/.test(location.hostname);
+/**
+ * CarvCAM needs an account, on the web and in the desktop app. Only the Vite dev server (tests and the
+ * website's screenshot script) skips it. Signed in once, the session works offline (see fromCache).
+ */
+export const NEEDS_ACCOUNT = !import.meta.env.DEV;
 
-/** Web app gate: signed-out visitors see sign-in / create account instead of the app. */
+/** Account gate: signed-out people see sign-in / create account instead of the app. */
 export function AccountGate({ children }: { children: ReactNode }): JSX.Element {
   const a = useAccount();
-  if (!WEB_NEEDS_ACCOUNT || a.status === "signed-in") return <>{children}</>;
+  if (!NEEDS_ACCOUNT || a.status === "signed-in") return <>{children}</>;
   if (a.status === "loading") return <div className="app" />;
   return (
     <div className="acct-gate">
@@ -301,10 +304,8 @@ export function AccountGate({ children }: { children: ReactNode }): JSX.Element 
         <a className="acct-gate__brand" href="https://carvcam.com/" aria-label="CarvCAM website">
           <img src="/carvcam-icon.svg" width={28} height={28} alt="" /> CarvCAM
         </a>
-        <h1 className="acct-title">Sign in to use CarvCAM online</h1>
-        <p className="acct-lead">
-          The web app needs a free account. New accounts get every Pro tool for {TRIAL_DAYS} days, no card needed. Prefer no account? The <a className="acct-link" href="https://carvcam.com/download/">desktop app</a> works without one.
-        </p>
+        <h1 className="acct-title">Sign in to CarvCAM</h1>
+        <p className="acct-lead">CarvCAM is free with an account. New accounts get every Pro tool for {TRIAL_DAYS} days, no card needed.</p>
         <button className="btn btn--primary btn--lg" onClick={() => openSite(SITE.signup)}>
           Create a free account <ArrowUpRight size={18} strokeWidth={1.5} />
         </button>

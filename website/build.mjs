@@ -294,13 +294,13 @@ function download() {
     schema: [app],
     body: `<section class="article"><div class="narrow">
 <h1>Download CarvCAM</h1>
-<p class="lede">Windows, Mac, Linux and Raspberry Pi. Every link downloads the latest version. Step-by-step help: <a href="${href("/docs/install/")}">Install CarvCAM</a>.</p>
+<p class="lede">Windows, Mac, Linux and Raspberry Pi. Every link downloads the latest version. Then sign in with your free <a href="${href("/signup/")}">CarvCAM account</a>. Step-by-step help: <a href="${href("/docs/install/")}">Install CarvCAM</a>.</p>
 <div class="dlcards">
 <div class="dlcard on" id="windows"><b>${ICON_WIN} Windows</b><p class="note">Windows 10 and 11, 64-bit</p>${btn(site.downloads.windows, ICON_WIN, "Download for Windows")}<p class="note">CarvCAM-Windows-64Bit.exe</p></div>
 <div class="dlcard on" id="mac"><b>${ICON_APPLE} Mac</b><p class="note">Apple Silicon (M1 and newer) or Intel</p>${btn(site.downloads.macArm, ICON_APPLE, "Apple Silicon")} ${btn(site.downloads.macIntel, ICON_APPLE, "Intel")}<p class="note">Not sure? Apple menu › About This Mac: “Chip: Apple M…” is Apple Silicon. <a href="#install-on-a-mac">First open needs one extra click</a>.</p></div>
 <div class="dlcard on" id="linux"><b>${ICON_LINUX} Linux</b><p class="note">64-bit PC: Ubuntu, Debian, Mint, Fedora and others</p>${btn(site.downloads.appimage, ICON_LINUX, "AppImage")} ${btn(site.downloads.deb, ICON_LINUX, ".deb")}<p class="note">.deb for Ubuntu, Debian and Mint · AppImage for any distro</p></div>
 <div class="dlcard on" id="pi"><b>Raspberry Pi</b><p class="note">Pi 4 and 5 · Raspberry Pi OS</p>${btn(site.downloads.piDeb, "", "64-bit .deb")} ${btn(site.downloads.pi32Deb, "", "32-bit .deb")}<p class="note">64-bit: Pi 4 and 5 on Raspberry Pi OS 64-bit · <a href="${site.downloads.piAppImage}">64-bit AppImage</a></p></div>
-<div class="dlcard on" id="online"><b>In your browser</b><p class="note">No install. Sign in with a free account (7 days of Pro included, no card) and design, prepare and download G-code in any browser</p>${btn(site.webApp, "", "Use CarvCAM online")}<p class="note">To carve over USB, use Chrome or Edge on a computer. Ethernet needs the desktop app.</p></div>
+<div class="dlcard on" id="online"><b>In your browser</b><p class="note">No install. Sign in with your free account and design, prepare and download G-code in any browser</p>${btn(site.webApp, "", "Use CarvCAM online")}<p class="note">To carve over USB, use Chrome or Edge on a computer. Ethernet needs the desktop app.</p></div>
 </div>
 <div class="prose">
 <h2 id="install-on-windows">Install on Windows</h2>
