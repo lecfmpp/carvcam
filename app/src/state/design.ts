@@ -28,6 +28,8 @@ export interface Design {
   jobCost?: JobCost;
   /** Id in My projects once saved; later changes are saved there automatically. */
   savedId?: string;
+  /** Id given by the CarvCAM connector (MCP server): a newer link with the same id updates this project. */
+  externalId?: string;
   /**
    * V-carve inlay: the other part of the pair (the plug when this is the pocket, and the other way
    * round). They are two separate jobs; the panel's Inlay card switches between them.
