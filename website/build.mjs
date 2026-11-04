@@ -74,6 +74,7 @@ ${ld.map((j) => `<script type="application/ld+json">${JSON.stringify(j)}</script
 <header class="hdr"><div class="wrap">
 <a class="logo" href="${href("/")}" aria-label="CarvCAM home"><img src="${asset("/assets/carvcam-icon.svg")}" alt="" width="28" height="28"><span class="wordmark">Carv<span>CAM</span></span></a>
 <nav class="nav" aria-label="Main">${navHtml}</nav>
+<a class="hdr__login hdr__web" href="${site.webApp}">Use online</a>
 <a class="hdr__login" href="${href("/login/")}">Log in</a>
 <a class="btn btn--primary" data-dl="short" href="${site.downloads.windows}"><span>Download</span></a>
 </div></header>
@@ -157,8 +158,8 @@ ${col("Learn", howtos.slice(0, 4).map((h) => [h.short, `/learn/${h.slug}/`]))}
 
 const downloadCta = (center = false) => `<div class="cta"${center ? ' style="justify-content:center"' : ""}>
 <a class="btn btn--accent btn--lg" data-dl="long" href="${site.downloads.windows}">${ICON_WIN}<span>Download for Windows</span></a>
-<a class="btn btn--ghost btn--lg" href="${href("/#how")}">See how it works</a>
-<span class="note"${center ? ' style="text-align:center"' : ""}>Windows 10 and 11 · <a href="${href(site.download + "#mac")}">Mac</a> · <a href="${site.downloads.appimage}" data-dl-alt>Linux</a> · <a href="${site.downloads.piDeb}">Raspberry Pi</a> · Works offline · <a href="${href(site.download)}">All downloads</a></span>
+<a class="btn btn--ghost btn--lg" href="${site.webApp}">Use online</a>
+<span class="note"${center ? ' style="text-align:center"' : ""}>Windows 10 and 11 · <a href="${href(site.download + "#mac")}">Mac</a> · <a href="${site.downloads.appimage}" data-dl-alt>Linux</a> · <a href="${site.downloads.piDeb}">Raspberry Pi</a> · Works offline · <a href="${href(site.download)}">All downloads</a> · <a href="${href("/#how")}">See how it works</a></span>
 </div>`;
 
 const app = {
@@ -299,6 +300,7 @@ function download() {
 <div class="dlcard on" id="mac"><b>${ICON_APPLE} Mac</b><p class="note">Apple Silicon (M1 and newer) or Intel</p>${btn(site.downloads.macArm, ICON_APPLE, "Apple Silicon")} ${btn(site.downloads.macIntel, ICON_APPLE, "Intel")}<p class="note">Not sure? Apple menu › About This Mac: “Chip: Apple M…” is Apple Silicon. <a href="#install-on-a-mac">First open needs one extra click</a>.</p></div>
 <div class="dlcard on" id="linux"><b>${ICON_LINUX} Linux</b><p class="note">64-bit PC: Ubuntu, Debian, Mint, Fedora and others</p>${btn(site.downloads.appimage, ICON_LINUX, "AppImage")} ${btn(site.downloads.deb, ICON_LINUX, ".deb")}<p class="note">.deb for Ubuntu, Debian and Mint · AppImage for any distro</p></div>
 <div class="dlcard on" id="pi"><b>Raspberry Pi</b><p class="note">Pi 4 and 5 · Raspberry Pi OS</p>${btn(site.downloads.piDeb, "", "64-bit .deb")} ${btn(site.downloads.pi32Deb, "", "32-bit .deb")}<p class="note">64-bit: Pi 4 and 5 on Raspberry Pi OS 64-bit · <a href="${site.downloads.piAppImage}">64-bit AppImage</a></p></div>
+<div class="dlcard on" id="online"><b>In your browser</b><p class="note">No install. Design, prepare and download G-code in any browser</p>${btn(site.webApp, "", "Use CarvCAM online")}<p class="note">To carve over USB, use Chrome or Edge on a computer. Ethernet needs the desktop app.</p></div>
 </div>
 <div class="prose">
 <h2 id="install-on-windows">Install on Windows</h2>

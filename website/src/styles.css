@@ -525,3 +525,4 @@ a.card:hover { border-color: #d9d5ce; transform: translateY(-2px); box-shadow: 0
 .plancard p { margin: 0; color: var(--ink-2); }
 .plancard__actions { display: flex; gap: 10px; }
 .pricing .sec-head { max-width: 720px; margin: 0 auto; }
+@media (max-width: 820px) { .hdr__web { display: none; } }
