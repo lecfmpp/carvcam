@@ -8,6 +8,7 @@ import { usePanelMode } from "../lib/panel";
 import { useMachine } from "../machine/store";
 import { openConnect } from "../state/ui";
 import { useActiveMachine, useWorkshop } from "../state/workshop";
+import { JobModal } from "../screens/job/Modal";
 import { Seg } from "./ui";
 
 export type JobStep = "create" | "prepare" | "position" | "carve";
@@ -36,6 +37,7 @@ export function TopBar(props: { variant: "app" | "job" | "tool" | "onboarding"; 
   // a connected machine offers Disconnect.
   const moving = status === "running" || status === "paused" || status === "toolchange" || status === "homing";
   useStopShortcuts();
+  const panel = usePanelMode();
 
   return (
     <header className="topbar" style={props.variant === "app" || props.variant === "onboarding" ? { paddingLeft: 20 } : undefined}>
@@ -45,7 +47,15 @@ export function TopBar(props: { variant: "app" | "job" | "tool" | "onboarding"; 
         </button>
       ) : null}
       <div className="topbar__brand">
-        <Brand size={28} />
+        {/* The logo opens carvcam.com (in the browser; the desktop app hands web links to it). Not in
+            Panel mode: on a gControl kiosk there is no browser to send people to. */}
+        {panel ? (
+          <Brand size={28} />
+        ) : (
+          <a className="topbar__home" href="https://carvcam.com/" target="_blank" rel="noopener noreferrer" title="Open carvcam.com" aria-label="CarvCAM website (opens in your browser)">
+            <Brand size={28} />
+          </a>
+        )}
       </div>
 
       {props.variant === "app" ? (
@@ -286,14 +296,45 @@ export function StopButton() {
   );
 }
 
-/** Disconnect: shown while a connected machine is idle (or in alarm, or done). */
+/** Disconnect: shown while a connected machine is idle (or in alarm, or done). Asks first, so a stray click doesn't drop the machine. */
 function DisconnectButton() {
   const disconnect = useMachine((s) => s.disconnect);
+  const { machine } = useActiveMachine();
+  const [ask, setAsk] = useState(false);
   return (
-    <button className="btn btn--outline btn--sm topbar__disconnect" onClick={disconnect} title="Close the connection to the machine">
-      <Unplug size={15} strokeWidth={1.75} />
-      Disconnect
-    </button>
+    <>
+      <button className="btn btn--outline btn--sm topbar__disconnect" onClick={() => setAsk(true)} title="Close the connection to the machine">
+        <Unplug size={15} strokeWidth={1.75} />
+        Disconnect
+      </button>
+      {ask ? (
+        <JobModal
+          label="Disconnect the machine"
+          title="Disconnect the machine?"
+          onClose={() => setAsk(false)}
+          foot={
+            <>
+              <button className="btn btn--outline" onClick={() => setAsk(false)} autoFocus>
+                Stay connected
+              </button>
+              <button
+                className="btn btn--danger"
+                onClick={() => {
+                  setAsk(false);
+                  disconnect();
+                }}
+              >
+                Disconnect
+              </button>
+            </>
+          }
+        >
+          <p style={{ margin: 0, font: "400 14px/1.5 var(--font)", color: "var(--text-2)" }}>
+            CarvCAM stops talking to your {machineName(machine)}. To carve again you'll connect again, and it's safest to find home and set the work zero again before the next carve.
+          </p>
+        </JobModal>
+      ) : null}
+    </>
   );
 }
 
