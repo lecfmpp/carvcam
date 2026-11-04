@@ -2,16 +2,16 @@ import { Check, FolderOpen, Plus, RotateCcw, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDesign, type Design } from "../../state/design";
-import { captureThumb, useProjects } from "../../state/projects";
+import { captureThumb, isEmptyDesign, useProjects } from "../../state/projects";
 import { toast } from "../../state/ui";
 import { JobModal } from "../job/Modal";
 
-const isEmpty = (d: Design) => !d.tracing && !d.spec.texts?.length && !d.spec.shapes?.length && !d.spec.icons?.length && !d.spec.svgs?.length && !d.spec.holes?.length && !d.spec.slots?.length;
+const isEmpty = isEmptyDesign;
 
-/** Saves the design to My projects; false (with a message) when the browser storage is full. */
+/** Saves the design to My projects now; false (with a message) when the browser storage is full. */
 export function saveDesign(d: Design): boolean {
   try {
-    const id = useProjects.getState().save(d, captureThumb());
+    const id = useProjects.getState().save(d, captureThumb(), "create");
     if (d.savedId !== id) useDesign.getState().markSaved(id);
     return true;
   } catch {
@@ -30,19 +30,14 @@ export function ProjectActions({ onReset }: { onReset(): void }) {
   const [ask, setAsk] = useState<null | "clear" | "new">(null);
   const saved = useProjects((s) => !!design.savedId && s.projects.some((p) => p.id === design.savedId));
 
-  // Once saved, every change is saved again (after a short pause, so dragging doesn't write each step).
-  useEffect(() => {
-    if (!design.savedId) return;
-    const t = setTimeout(() => saveDesign(useDesign.getState().design), 1500);
-    return () => clearTimeout(t);
-  }, [design]);
+  // Saving after each change is done app-wide by <Autosave /> (it also covers Prepare, Position and Carve).
 
   // Ctrl/Cmd+S saves.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
         e.preventDefault();
-        if (saveDesign(useDesign.getState().design)) toast("Saved to My projects. Changes now save automatically.");
+        if (saveDesign(useDesign.getState().design)) toast("Saved to My projects. Changes save automatically.");
       }
     };
     window.addEventListener("keydown", onKey);
@@ -70,7 +65,7 @@ export function ProjectActions({ onReset }: { onReset(): void }) {
             <Check size={14} strokeWidth={2.2} /> Saved
           </span>
         ) : (
-          <button className="proj-actions__btn" title="Save to My projects (Ctrl+S)" aria-label="Save to My projects" onClick={() => saveDesign(design) && toast("Saved to My projects. Changes now save automatically.")}>
+          <button className="proj-actions__btn" title="Save to My projects (Ctrl+S)" aria-label="Save to My projects" onClick={() => saveDesign(design) && toast("Saved to My projects. Changes save automatically.")}>
             <Save size={15} strokeWidth={1.75} />
           </button>
         )}

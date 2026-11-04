@@ -354,10 +354,10 @@ export const PROJECTS: Project[] = [
 
 
 export const TRACK = [
-  { id: "surface", title: "Surface the bed", sub: "Flatten the spoilboard with the 22 mm bit" },
-  { id: "depth-test", title: "Depth test" },
-  { id: "coaster", title: "Coaster" },
-  { id: "door-sign", title: "Door sign" },
+  { id: "surface", title: "Surface the bed", sub: "Flatten the spoilboard so every cut is even" },
+  { id: "depth-test", title: "Depth test", sub: "See what 1, 2 and 3 mm deep look like" },
+  { id: "coaster", title: "Coaster", sub: "Cut a shape out with holding tabs" },
+  { id: "door-sign", title: "Door sign", sub: "Your first real sign: raised letters" },
 ];
 
 /** Whether a project's board (with margin when it is cut out) fits the machine. */

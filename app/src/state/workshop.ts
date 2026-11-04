@@ -26,6 +26,8 @@ export interface WorkshopState {
   active: number;
   bits: string[];
   trackDone: string[];
+  /** The person hid the beginner path on First cuts ("I already know my machine"). */
+  trackHidden: boolean;
   mode: "simple" | "pro";
   /** Panel mode (gControl touchscreen): automatic, always on or off. */
   panel: "auto" | "on" | "off";
@@ -46,6 +48,7 @@ export interface WorkshopState {
   toggleBit(id: string): void;
   setBits(ids: string[]): void;
   markDone(trackId: string): void;
+  setTrackHidden(hidden: boolean): void;
   setMode(mode: "simple" | "pro"): void;
   setPanel(panel: "auto" | "on" | "off"): void;
   markWired(key: string): void;
@@ -62,6 +65,7 @@ export const useWorkshop = create<WorkshopState>()(
       active: 0,
       bits: KIT.slice(),
       trackDone: [],
+      trackHidden: false,
       mode: "simple",
       panel: "auto",
       wired: [],
@@ -90,6 +94,7 @@ export const useWorkshop = create<WorkshopState>()(
       markDone: (trackId) => {
         if (!get().trackDone.includes(trackId)) set({ trackDone: [...get().trackDone, trackId] });
       },
+      setTrackHidden: (trackHidden) => set({ trackHidden }),
       setMode: (mode) => set({ mode }),
       setPanel: (panel) => set({ panel }),
       markWired: (key) => {
