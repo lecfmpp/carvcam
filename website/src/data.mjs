@@ -22,6 +22,8 @@ export const site = {
     pi32Deb: "/download/raspberry-pi-32bit-deb",
     releases: "https://github.com/lecfmpp/carvcam/releases",
   },
+  // The same app in the browser (Netlify site carvcam-app). USB carving needs Chrome or Edge on a computer.
+  webApp: "https://app.carvcam.com/",
   checked: "October 2026",
 };
 
