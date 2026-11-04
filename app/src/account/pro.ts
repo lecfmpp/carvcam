@@ -179,6 +179,11 @@ export function useAccount(): AccountState {
   return useMemo(() => withForce(s, force), [s, force]);
 }
 
+/** Pro right now, outside React (same rule as useAccount). */
+export function isProNow(): boolean {
+  return withForce(useStore.getState().s, forcePro()).pro;
+}
+
 /** True when Pro features are unlocked. */
 export function usePro(): boolean {
   return useAccount().pro;

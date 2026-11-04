@@ -3,12 +3,25 @@ import { useLocation } from "react-router-dom";
 import { useDesign } from "../state/design";
 import { captureThumb, isEmptyDesign, useProjects, type ProjectStep } from "../state/projects";
 import { toast } from "../state/ui";
+import { isProNow } from "../account/pro";
+import { FREE_PROJECTS, TRIAL_DAYS } from "../account/logic";
+
+/** False when the open design is new and the Free plan's project limit is reached. */
+export function canAddProject(): boolean {
+  const d = useDesign.getState().design;
+  const list = useProjects.getState().projects;
+  if (d.savedId && list.some((p) => p.id === d.savedId)) return true;
+  return isProNow() || list.length < FREE_PROJECTS;
+}
+
+export const LIMIT_MESSAGE = `Not saved: the Free plan keeps ${FREE_PROJECTS} projects. Delete one in My projects, or go Pro for unlimited projects (${TRIAL_DAYS} days free with a new account).`;
 
 const STEPS: Record<string, ProjectStep> = { "/create": "create", "/prepare": "prepare", "/position": "position", "/carve": "carve" };
 
 /** Saves the open design to My projects; false when the browser storage is full. */
 export function saveNow(step?: ProjectStep): boolean {
   const d = useDesign.getState().design;
+  if (!canAddProject()) return false;
   try {
     const id = useProjects.getState().save(d, captureThumb(), step);
     if (d.savedId !== id) useDesign.getState().markSaved(id);
@@ -29,17 +42,25 @@ export function Autosave() {
   const design = useDesign((s) => s.design);
   const warned = useRef(false);
   const announced = useRef<string | null>(null);
+  // The limit message shows once, not on every edit (again only after a save worked).
+  const limitWarned = useRef(false);
 
   useEffect(() => {
     if (!step) return;
     const d = useDesign.getState().design;
     if (!d.savedId && isEmptyDesign(d)) return;
+    if (!canAddProject()) {
+      if (!limitWarned.current) toast(LIMIT_MESSAGE, 8000);
+      limitWarned.current = true;
+      return;
+    }
     const isNew = !d.savedId || !useProjects.getState().projects.some((p) => p.id === d.savedId);
     // A new step is saved right away; edits wait for a short pause so dragging doesn't write each move.
     const t = setTimeout(
       () => {
         if (saveNow(step)) {
           warned.current = false;
+          limitWarned.current = false;
           const id = useDesign.getState().design.savedId ?? null;
           if (isNew && id && announced.current !== id) {
             announced.current = id;

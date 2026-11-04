@@ -4,7 +4,12 @@
  */
 
 export type Plan = "free" | "pro" | "school";
-export type ProFeature = "batch" | "cost" | "nesting" | "inlay" | "cloud" | "hosted-ai";
+export type ProFeature = "batch" | "cost" | "nesting" | "inlay" | "cloud" | "hosted-ai" | "import" | "copies" | "projects";
+
+/** Days of Pro every new account gets, without a card. */
+export const TRIAL_DAYS = 7;
+/** My projects keeps this many projects on the Free plan. */
+export const FREE_PROJECTS = 3;
 
 export interface AccountState {
   status: "loading" | "signed-out" | "signed-in";
@@ -14,6 +19,8 @@ export interface AccountState {
   pro: boolean;
   lifetime: boolean;
   trialEnd?: string;
+  /** The trial is the no-card one every new account gets (it simply ends; nothing renews). */
+  freeTrial?: boolean;
   periodEnd?: string;
   /** Time (ms) of the last successful check against the server. */
   checkedAt?: number;
@@ -53,17 +60,25 @@ export const LOADING: AccountState = { ...SIGNED_OUT, status: "loading" };
 
 const LIVE_STATUSES = ["trialing", "active", "past_due"];
 
-/** Pro is active when plan is pro/school and (lifetime, manual grant, or a live Stripe status). */
-export function entitlementActive(e: EntitlementRow | null | undefined): boolean {
+/** The no-card trial row every new account gets (source "trial"). */
+const isFreeTrial = (e: EntitlementRow) => e.source === "trial";
+
+/**
+ * Pro is active when plan is pro/school and (lifetime, manual grant, a live Stripe status, or the
+ * no-card trial before its trial_end).
+ */
+export function entitlementActive(e: EntitlementRow | null | undefined, now: number = Date.now()): boolean {
   if (!e) return false;
   if (e.plan !== "pro" && e.plan !== "school") return false;
+  if (isFreeTrial(e)) return !!e.trial_end && Date.parse(e.trial_end) > now;
   return !!e.lifetime || e.source === "manual" || LIVE_STATUSES.includes(e.status ?? "");
 }
 
 /** Builds the signed-in state from the user, profile and entitlement rows. */
 export function toAccountState(user: { email?: string | null }, profile: ProfileRow | null | undefined, e: EntitlementRow | null | undefined, now: number): AccountState {
-  const active = entitlementActive(e);
+  const active = entitlementActive(e, now);
   const plan: Plan = active ? (e!.plan as Plan) : "free";
+  const freeTrial = active && isFreeTrial(e!);
   return {
     status: "signed-in",
     email: profile?.email || user.email || undefined,
@@ -71,7 +86,8 @@ export function toAccountState(user: { email?: string | null }, profile: Profile
     plan,
     pro: active,
     lifetime: active && !!e!.lifetime,
-    trialEnd: active && e!.status === "trialing" && e!.trial_end ? e!.trial_end : undefined,
+    trialEnd: active && (freeTrial || e!.status === "trialing") && e!.trial_end ? e!.trial_end : undefined,
+    freeTrial: freeTrial || undefined,
     periodEnd: active && !e!.lifetime && e!.current_period_end ? e!.current_period_end : undefined,
     cancels: active && !e!.lifetime && !!e!.cancel_at_period_end,
     checkedAt: now,
@@ -88,6 +104,9 @@ export function fromCache(cached: AccountState | null | undefined, now: number, 
   if (!cached || cached.status !== "signed-in") return { ...SIGNED_OUT, offline };
   const age = now - (cached.checkedAt ?? 0);
   const base: AccountState = { ...cached, offline, stale: false, forced: false };
+  // The no-card trial ends on its date, online or not.
+  if (cached.pro && cached.freeTrial && cached.trialEnd && Date.parse(cached.trialEnd) <= now)
+    return { ...base, plan: "free", pro: false, trialEnd: undefined, freeTrial: undefined };
   if (!cached.pro || age <= GRACE_MS) return base;
   return { ...base, plan: "free", pro: false, lifetime: false, trialEnd: undefined, stale: true };
 }
@@ -104,12 +123,19 @@ function shortDate(iso: string) {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+/** "3 days left", "1 day left", "last day" until an ISO date. */
+export function daysLeft(iso: string, now: number = Date.now()): string {
+  const d = Math.ceil((Date.parse(iso) - now) / 86400000);
+  return d <= 1 ? "last day" : `${d} days left`;
+}
+
 /** "Free", "Pro · trial until Nov 10", "Pro · Lifetime", "School"… */
 export function planLabel(s: AccountState): string {
   if (s.forced) return "Pro · test mode";
   if (!s.pro) return "Free";
   if (s.plan === "school") return "School";
   if (s.lifetime) return "Pro · Lifetime";
+  if (s.freeTrial && s.trialEnd) return `Pro trial · ${daysLeft(s.trialEnd)}`;
   if (s.trialEnd) return `Pro · trial until ${shortDate(s.trialEnd)}`;
   if (s.cancels && s.periodEnd) return `Pro · until ${shortDate(s.periodEnd)}`;
   return "Pro";
@@ -159,4 +185,7 @@ export const FEATURES: Record<ProFeature, FeatureInfo> = {
   inlay: { title: "Inlays", body: "Make matching V-carve inlay pockets and plugs that fit together on the first try." },
   cloud: { title: "Cloud projects", body: "Keep your projects in your CarvCAM account and open them on any computer, including the gControl." },
   "hosted-ai": { title: "Built-in AI assistant", body: "Describe the sign you want and the assistant lays it out for you. No API key needed." },
+  import: { title: "Import and trace artwork", body: "Bring in SVG and DXF files, or turn a photo or logo into shapes you can carve." },
+  copies: { title: "Make copies", body: "Lay out a grid of the same part, with a different name or number on each one, and cut them in one job." },
+  projects: { title: "Unlimited projects", body: `The Free plan keeps up to ${FREE_PROJECTS} projects in My projects. Pro keeps every project you make.` },
 };

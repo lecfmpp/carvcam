@@ -302,7 +302,11 @@ async function accountPage(el) {
 
 /* ---------------- plan and billing ---------------- */
 const fmtDate = (iso) => new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
-const hasPro = (e) => !!e && (e.plan === "pro" || e.plan === "school") && (e.lifetime || e.source === "manual" || ["trialing", "active", "past_due"].includes(e.status));
+// The no-card trial (source "trial") counts until its trial_end; the app uses the same rule.
+const freeTrial = (e) => !!e && e.source === "trial";
+const hasPro = (e) =>
+  !!e && (e.plan === "pro" || e.plan === "school") &&
+  (freeTrial(e) ? !!e.trial_end && Date.parse(e.trial_end) > Date.now() : e.lifetime || e.source === "manual" || ["trialing", "active", "past_due"].includes(e.status));
 
 async function showPlan(el, user) {
   const box = $("[data-plan-box]", el);
@@ -316,16 +320,18 @@ async function showPlan(el, user) {
     await new Promise((r) => setTimeout(r, 2000));
   }
   const pro = hasPro(e);
-  const name = !pro ? "Free" : e.plan === "school" ? "School / Makerspace" : e.lifetime ? "Pro · Lifetime" : "Pro";
+  const name = !pro ? "Free" : e.plan === "school" ? "School / Makerspace" : e.lifetime ? "Pro · Lifetime" : freeTrial(e) ? "Pro · free trial" : "Pro";
   let detail = "Design, check and carve with no limit on cuts.";
+  if (!pro && freeTrial(e)) detail = "Your 7-day Pro trial has ended. Design, check and carve stay free; upgrade to keep the Pro tools.";
   if (pro && e.lifetime) detail = "Pro forever. Thanks for backing CarvCAM.";
+  else if (pro && freeTrial(e)) detail = `Every Pro tool is on until ${fmtDate(e.trial_end)}. No card, nothing to cancel: after that you're back on Free unless you upgrade.`;
   else if (pro && e.status === "trialing" && e.trial_end) detail = `Free trial until ${fmtDate(e.trial_end)}. ${e.cancel_at_period_end ? "It won't renew." : "Then $69/year."}`;
   else if (pro && e.status === "past_due") detail = "Your last payment didn't go through. Update your card to keep Pro.";
   else if (pro && e.current_period_end) detail = `${e.cancel_at_period_end ? "Ends" : "Renews"} on ${fmtDate(e.current_period_end)}.`;
   else if (pro && e.source === "manual") detail = "Granted by the CarvCAM team.";
   $("[data-plan-name]", box).textContent = name;
   $("[data-plan-detail]", box).textContent = detail;
-  $("[data-upgrade]", box).hidden = pro;
+  $("[data-upgrade]", box).hidden = pro && !freeTrial(e);
   const manage = $("[data-manage]", box);
   manage.hidden = !e || e.source === "manual" || (!e.stripe_subscription_id && !e.lifetime);
   manage.onclick = async () => {

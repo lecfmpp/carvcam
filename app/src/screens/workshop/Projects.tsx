@@ -6,6 +6,9 @@ import { useDesign } from "../../state/design";
 import { useProjects, type ProjectStep, type SavedProject } from "../../state/projects";
 import { toast } from "../../state/ui";
 import { JobModal } from "../job/Modal";
+import { isProNow, useAccount } from "../../account/pro";
+import { FREE_PROJECTS } from "../../account/logic";
+import { LIMIT_MESSAGE } from "../../components/Autosave";
 
 const when = (t: number) => {
   const min = Math.round((Date.now() - t) / 60000);
@@ -29,6 +32,7 @@ export function Projects() {
   const projects = useProjects((s) => s.projects);
   const current = useDesign((s) => s.design.savedId);
   const [del, setDel] = useState<SavedProject | null>(null);
+  const pro = useAccount().pro;
 
   // Reopen where the user left off. A carve always restarts at Position: the work zero must be set again.
   const resumeAt = (p: SavedProject) => (p.status === "carved" || !p.step ? "/create" : p.step === "carve" ? "/position" : `/${p.step}`);
@@ -46,7 +50,7 @@ export function Projects() {
       <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 20 }}>
         <div className="ws-head">
           <h1 className="ws-title ws-title--sm">My projects</h1>
-          <p className="ws-lead ws-lead--sm">Every project saves by itself as you work: a draft while you design and prepare it, marked carved once a carve finishes. They're kept in this browser on this computer.</p>
+          <p className="ws-lead ws-lead--sm">Every project saves by itself as you work: a draft while you design and prepare it, marked carved once a carve finishes. They're kept in this browser on this computer.{pro ? "" : ` Free plan: ${Math.min(projects.length, FREE_PROJECTS)} of ${FREE_PROJECTS} projects.`}</p>
         </div>
         <button className="btn btn--primary" onClick={startNew}>
           <Plus size={16} strokeWidth={2} /> New project
@@ -97,6 +101,7 @@ export function Projects() {
                     <button
                       className="btn btn--outline btn--sm"
                       onClick={() => {
+                        if (!isProNow() && useProjects.getState().projects.length >= FREE_PROJECTS) return void toast(LIMIT_MESSAGE.replace("Not saved", "Can't copy"), 8000);
                         useProjects.getState().duplicate(p.id);
                         toast(`Copied “${p.name}”.`);
                       }}
