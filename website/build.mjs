@@ -157,14 +157,14 @@ function htmlToMd(html, path) {
 }
 
 function footer() {
-  const col = (t, items) => `<div><h4>${t}</h4><ul>${items.map(([n, u]) => `<li><a href="${href(u)}">${esc(n)}</a></li>`).join("")}</ul></div>`;
+  const col = (t, items) => `<div><h4>${t}</h4><ul>${items.map(([n, u]) => `<li><a href="${href(u)}">${n}</a></li>`).join("")}</ul></div>`;
   return `<footer class="ftr"><div class="wrap">
 <div class="ftr__top">
 <div class="ftr__brand"><a class="logo" href="${href("/")}"><img src="${asset("/assets/carvcam-icon.svg")}" alt="" width="28" height="28"><span class="wordmark">Carv<span>CAM</span></span></a><p>Design, prepare and carve on your LongMill or AltMill. One app, start to finished piece.</p></div>
 ${col("Product", [["How it works", "/#how"], ["Features", "/features/"], ["Download", "/download/"], ["Pricing", "/pricing/"], ["Docs", "/docs/"], ["Quickstart", "/docs/quickstart/"], ["Best software for LongMill", "/best-cnc-software-for-longmill/"]])}
-${col("Machines", machines.map((m) => [m.name, `/machines/${m.slug}/`]))}
-${col("Compare", comparisons.map((c) => [`CarvCAM vs ${c.name}`, `/compare/carvcam-vs-${c.slug}/`]))}
-${col("Learn", howtos.slice(0, 4).map((h) => [h.short, `/learn/${h.slug}/`]))}
+${col("Machines", machines.map((m) => [esc(m.name), `/machines/${m.slug}/`]))}
+${col("Compare", comparisons.map((c) => [`<span class="ftr__long">CarvCAM </span>vs ${esc(c.name)}`, `/compare/carvcam-vs-${c.slug}/`]))}
+${col("Learn", howtos.slice(0, 4).map((h) => [esc(h.short), `/learn/${h.slug}/`]))}
 </div>
 <div class="ftr__legal"><span>© 2026 CarvCAM · <a href="${href("/privacy/")}">Privacy</a> · <a href="${href("/terms/")}">Terms</a></span><span>LongMill, AltMill, SuperLongBoard, AutoSpin and gSender are trademarks of Sienci Labs. Other names are trademarks of their owners. CarvCAM is an independent product.</span></div>
 </div></footer>`;
