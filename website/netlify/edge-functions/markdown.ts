@@ -28,4 +28,4 @@ export default async (req: Request, context: Context) => {
 };
 
 // Only page URLs (no file extension); assets, .md, .txt, .xml and .well-known files are served as they are.
-export const config = { path: "/*", excludedPath: ["/assets/*", "/.well-known/*", "/*.md", "/*.txt", "/*.xml", "/*.json", "/download/*"] };
+export const config = { path: "/*", excludedPath: ["/assets/*", "/.well-known/*", "/mcp", "/mcp/", "/api", "/api/*", "/*.md", "/*.txt", "/*.xml", "/*.json", "/download/*"] };

@@ -43,13 +43,23 @@
 [[headers]]
   for = "/"
   [headers.values]
-    Link = '''</.well-known/ai-catalog.json>; rel="ai-catalog"; type="application/json", </.well-known/agent-skills/index.json>; rel="agent-skills"; type="application/json", </index.md>; rel="alternate"; type="text/markdown", </llms.txt>; rel="describedby"; type="text/plain", </docs/>; rel="service-doc", </sitemap.xml>; rel="sitemap"; type="application/xml"'''
+    Link = '''</.well-known/api-catalog>; rel="api-catalog"; type="application/linkset+json", </.well-known/mcp/server-card.json>; rel="mcp-server-card"; type="application/json", </.well-known/ai-catalog.json>; rel="ai-catalog"; type="application/json", </.well-known/agent-skills/index.json>; rel="agent-skills"; type="application/json", </index.md>; rel="alternate"; type="text/markdown", </llms.txt>; rel="describedby"; type="text/plain", </docs/>; rel="service-doc", </sitemap.xml>; rel="sitemap"; type="application/xml"'''
 
 [[headers]]
   for = "/.well-known/*"
   [headers.values]
     Access-Control-Allow-Origin = "*"
     Cache-Control = "public, max-age=3600"
+
+[[headers]]
+  for = "/.well-known/api-catalog"
+  [headers.values]
+    Content-Type = "application/linkset+json; charset=utf-8"
+
+[[headers]]
+  for = "/.well-known/mcp/server-card.json"
+  [headers.values]
+    Content-Type = "application/json; charset=utf-8"
 
 [[headers]]
   for = "/.well-known/ai-catalog.json"
