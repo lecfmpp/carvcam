@@ -1032,6 +1032,7 @@ await writeFile(
       target: "node20",
       format: "esm",
       banner: { js: 'import { createRequire } from "node:module"; const require = createRequire(import.meta.url);' },
+      loader: { ".html": "text" },
       logLevel: "warning",
     });
   } else console.warn("MCP server not bundled: run npm ci in ../cam-engine first.");
