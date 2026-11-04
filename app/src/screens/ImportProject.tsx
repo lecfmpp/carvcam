@@ -2,11 +2,14 @@ import { useEffect, useRef } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { MATERIALS } from "../lib/catalog";
 import { defaultTabs, useDesign, type Design } from "../state/design";
+import { useProjects } from "../state/projects";
 import { toast } from "../state/ui";
 
 /** Shape of a project shared by link (the CarvCAM MCP server, netlify/functions/mcp.mts). */
 interface Shared {
   v: 1;
+  /** Project id from the connector: the same id updates the project already in My projects. */
+  pid?: string;
   name: string;
   material: string;
   spec: Design["spec"];
@@ -41,6 +44,11 @@ export default function ImportProject() {
       .then((s) => {
         if (s.v !== 1 || !s.spec || typeof s.spec.width !== "number") throw new Error("bad");
         const mat = MATERIALS.find((m) => m.id === s.material) ?? MATERIALS[0];
+        // Same project id as a saved project (or the open one): update it instead of adding a new one.
+        const pid = typeof s.pid === "string" ? s.pid : undefined;
+        const open = useDesign.getState().design;
+        const saved = pid ? useProjects.getState().projects.find((p) => p.design.externalId === pid) : undefined;
+        const savedId = saved?.id ?? (pid && open.externalId === pid ? open.savedId : undefined);
         const design: Design = {
           name: s.name || "Shared project",
           material: mat.id,
@@ -49,10 +57,12 @@ export default function ImportProject() {
           bit2: s.bit2,
           useBit2: !!s.useBit2,
           preset: s.preset,
-          tabs: defaultTabs(s.spec.thickness),
+          tabs: saved?.design.tabs ?? defaultTabs(s.spec.thickness),
+          externalId: pid,
+          savedId,
         };
         useDesign.getState().setDesign(design);
-        toast(`Opened “${design.name}”. Check the 3D preview, then Prepare.`, 6000);
+        toast(savedId ? `Updated “${design.name}” with the latest changes.` : `Opened “${design.name}”. Check the 3D preview, then Prepare.`, 6000);
         nav("/create", { replace: true });
       })
       .catch(() => {

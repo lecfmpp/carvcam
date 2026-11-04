@@ -3,6 +3,7 @@
 // list the options, build and check a project, export verified G-code, and a link that opens the
 // project in the CarvCAM app. Nothing here moves a machine: carving always happens in the app,
 // after the person's checklist. No auth yet, nothing is stored server side.
+import { randomUUID } from "node:crypto";
 import { deflateRawSync } from "node:zlib";
 // @ts-expect-error: bundled as text by esbuild (loader ".html": "text")
 import APP_HTML from "./app.html";
@@ -86,6 +87,8 @@ const options = () => ({
 });
 
 interface DesignArgs {
+  /** Same id on every change to one project: the app then updates that project instead of adding a new one. */
+  projectId?: string;
   name?: string;
   machine: string;
   head?: string;
@@ -126,10 +129,11 @@ function toSpec(a: DesignArgs): { spec: PlateSpecInput; material: string } {
 }
 
 /** Link that opens the project in the CarvCAM app (the design rides in the URL fragment, compressed). */
-function appLink(a: DesignArgs, spec: PlateSpecInput, material: string) {
+function appLink(a: DesignArgs & { projectId: string }, spec: PlateSpecInput, material: string) {
   const bit = a.bit ?? "flat-1-8-upcut";
   const design = {
     v: 1,
+    pid: a.projectId,
     name: a.name?.trim() || "Project from Claude",
     material,
     spec,
@@ -142,7 +146,9 @@ function appLink(a: DesignArgs, spec: PlateSpecInput, material: string) {
   return `${APP}/#/import?d=${deflateRawSync(Buffer.from(JSON.stringify(design))).toString("base64url")}`;
 }
 
-async function runDesign(origin: string, a: DesignArgs, withGcode: boolean) {
+async function runDesign(origin: string, input: DesignArgs, withGcode: boolean) {
+  const projectId = typeof input.projectId === "string" && /^[A-Za-z0-9-]{6,64}$/.test(input.projectId) ? input.projectId : randomUUID();
+  const a = { ...input, projectId };
   if (!sienci.MACHINES[a.machine as never]) return { error: `Unknown machine "${a.machine}". Call list_design_options for the ids.` };
   const { spec, material } = toSpec(a);
   const parsed = PlateSpecSchema.safeParse(spec);
@@ -155,6 +161,7 @@ async function runDesign(origin: string, a: DesignArgs, withGcode: boolean) {
   const errors = res.warnings.filter((w) => w.severity === "error");
   const st = res.verification?.stats;
   const summary = {
+    projectId,
     name: a.name ?? "Project from Claude",
     status: res.ok ? "Ready to carve" : errors.length ? "Needs changes" : "G-code failed verification",
     ok: res.ok,
@@ -196,6 +203,7 @@ async function runDesign(origin: string, a: DesignArgs, withGcode: boolean) {
 const designSchema = {
   type: "object",
   properties: {
+    projectId: { type: "string", description: "Leave empty for a new project. To change a project, pass the projectId from the previous design_project result: opening the new link then updates that same project in CarvCAM instead of adding another one." },
     name: { type: "string", description: "Project name, e.g. 'The Millers door sign'" },
     machine: { type: "string", description: "Machine id from list_design_options, e.g. longmill-mk3-30x30" },
     head: { type: "string", description: "Router or spindle id (default: the machine's usual one)" },
@@ -289,7 +297,7 @@ export default async (req: Request) => {
           capabilities: { tools: { listChanged: false }, resources: { listChanged: false }, extensions: { "io.modelcontextprotocol/ui": {} } },
           serverInfo: { name: "carvcam", title: "CarvCAM", version: VERSION },
           instructions:
-            "CarvCAM designs and carves signs on Sienci Labs LongMill and AltMill CNC routers. To make a project: call list_design_options, then design_project and fix what it reports until the status is 'Ready to carve'; give the person the openInCarvCAM link (they review the 3D preview, set zero and carve in the app). Use export_gcode only when they want the .nc file. Never claim the machine will move: carving always starts from the CarvCAM app.",
+            "CarvCAM designs and carves signs on Sienci Labs LongMill and AltMill CNC routers. To make a project: call list_design_options, then design_project and fix what it reports until the status is 'Ready to carve'; give the person the openInCarvCAM link (they review the 3D preview, set zero and carve in the app). When the person asks for a change, call design_project again with the same projectId and the full updated design: the new link updates their existing project in the app (it doesn't add a new one). Use export_gcode only when they want the .nc file. Never claim the machine will move: carving always starts from the CarvCAM app.",
         });
       case "ping":
         return ok({});
