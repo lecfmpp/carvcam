@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CarvCAM project</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: var(--color-background-primary, light-dark(#ffffff, #1b1c1f));
+    --bg2: var(--color-background-secondary, light-dark(#f5f3ef, #24262a));
+    --text: var(--color-text-primary, light-dark(#111214, #f4f1ec));
+    --muted: var(--color-text-secondary, light-dark(#5b5853, #b8b4ad));
+    --line: var(--color-border-tertiary, light-dark(#e7e3dc, #34363b));
+    --accent: #ff5b1f;
+    --ok: light-dark(#1f7a4c, #5edab0);
+    --warn: light-dark(#a35b00, #f5b454);
+    --err: light-dark(#b42318, #ff8a80);
+    --radius: var(--border-radius-lg, 12px);
+    --font: var(--font-sans, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif);
+    --mono: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 var(--font); }
+  .wrap { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+  header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .logo { width: 22px; height: 22px; border-radius: 6px; background: var(--accent); flex: none; position: relative; }
+  .logo::after { content: ""; position: absolute; left: 5px; right: 5px; bottom: 5px; height: 4px; border-radius: 1px; background: #111214; }
+  .brand { font-weight: 700; letter-spacing: -0.02em; }
+  .brand span { font-family: var(--mono); font-weight: 600; }
+  h1 { font-size: 16px; margin: 0; font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pill { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+  .pill.ok { color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); }
+  .pill.bad { color: var(--err); background: color-mix(in srgb, var(--err) 14%, transparent); }
+  .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .step { appearance: none; border: 1px solid var(--line); background: var(--bg); color: var(--muted); border-radius: 10px; padding: 8px 6px; font: 500 13px var(--font); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .step b { width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font: 600 11px var(--mono); border: 1px solid var(--line); }
+  .step[aria-selected="true"] { color: var(--text); border-color: var(--accent); box-shadow: inset 0 -2px 0 var(--accent); }
+  .step[aria-selected="true"] b { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .panel { display: none; flex-direction: column; gap: 12px; }
+  .panel.on { display: flex; }
+  .preview { background: #26282c; border-radius: var(--radius); padding: 12px; display: flex; justify-content: center; }
+  .preview img { max-width: 100%; max-height: 360px; border-radius: 4px; image-rendering: auto; box-shadow: 0 8px 22px rgba(0,0,0,.35); }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; }
+  .card { background: var(--bg2); border-radius: 10px; padding: 10px 12px; }
+  .card small { display: block; color: var(--muted); font-size: 12px; }
+  .card strong { font-size: 15px; font-weight: 600; }
+  ul.list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+  ul.list li { background: var(--bg2); border-radius: 10px; padding: 9px 12px; }
+  .w { border-left: 3px solid var(--warn); }
+  .e { border-left: 3px solid var(--err); }
+  .fix { color: var(--muted); font-size: 13px; display: block; margin-top: 2px; }
+  ol.check { margin: 0; padding: 0; list-style: none; counter-reset: c; display: flex; flex-direction: column; gap: 6px; }
+  ol.check li { counter-increment: c; background: var(--bg2); border-radius: 10px; padding: 9px 12px 9px 40px; position: relative; }
+  ol.check li::before { content: counter(c); position: absolute; left: 12px; top: 9px; width: 18px; height: 18px; border-radius: 50%; background: var(--bg); border: 1px solid var(--line); font: 600 11px var(--mono); display: flex; align-items: center; justify-content: center; }
+  .note { font-size: 13px; color: var(--muted); }
+  .warnbox { background: color-mix(in srgb, var(--warn) 12%, transparent); border-radius: 10px; padding: 10px 12px; font-size: 13px; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn { appearance: none; border: 0; border-radius: 10px; padding: 10px 16px; font: 600 14px var(--font); cursor: pointer; }
+  .btn.primary { background: var(--accent); color: #fff; }
+  .btn.ghost { background: var(--bg2); color: var(--text); }
+  .loading { color: var(--muted); padding: 24px 0; text-align: center; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  td { padding: 6px 0; border-bottom: 1px solid var(--line); }
+  td:last-child { text-align: right; font-family: var(--mono); }
+</style>
+</head>
+<body>
+<div class="wrap" id="root">
+  <header><div class="logo" aria-hidden="true"></div><div class="brand">Carv<span>CAM</span></div></header>
+  <div class="loading" id="loading">Checking the design with the CarvCAM engine…</div>
+</div>
+<script>
+(() => {
+  const root = document.getElementById("root");
+  let nextId = 1;
+  const pending = new Map();
+  const send = (msg) => window.parent.postMessage(msg, "*");
+  const request = (method, params) => new Promise((resolve, reject) => {
+    const id = nextId++;
+    pending.set(id, { resolve, reject });
+    send({ jsonrpc: "2.0", id, method, params });
+  });
+  const notify = (method, params) => send({ jsonrpc: "2.0", method, params });
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+
+  let tab = "create";
+  let data = null;
+
+  function render() {
+    if (!data) return;
+    const d = data;
+    const ready = d.ok;
+    const errs = d.warnings.filter((w) => w.severity === "error");
+    const warns = d.warnings.filter((w) => w.severity !== "error");
+    const wlist = (list, cls) => list.map((w) => `<li class="${cls}">${esc(w.message)}${w.fix ? `<span class="fix">→ ${esc(w.fix)}</span>` : ""}</li>`).join("");
+    const steps = [["create", "Create"], ["prepare", "Prepare"], ["position", "Position"], ["carve", "Carve"]];
+    const f = d.feeds?.main;
+    root.innerHTML = `
+      <header><div class="logo" aria-hidden="true"></div><div class="brand">Carv<span>CAM</span></div>
+        <h1 title="${esc(d.name)}">· ${esc(d.name)}</h1>
+        <span class="pill ${ready ? "ok" : "bad"}">${ready ? "Ready to carve" : esc(d.status)}</span></header>
+      <div class="steps" role="tablist">${steps.map(([id, label], i) => `<button class="step" role="tab" data-tab="${id}" aria-selected="${tab === id}"><b>${i + 1}</b>${label}</button>`).join("")}</div>
+
+      <section class="panel ${tab === "create" ? "on" : ""}">
+        ${d.preview ? `<div class="preview"><img alt="Simulated carve of ${esc(d.name)}" src="data:image/png;base64,${d.preview.base64}"></div>` : ""}
+        <div class="cards">
+          <div class="card"><small>Board</small><strong>${d.width} × ${d.height} mm</strong></div>
+          <div class="card"><small>Material</small><strong>${esc(d.material)} · ${d.thickness} mm</strong></div>
+          <div class="card"><small>Machine</small><strong>${esc(d.machine?.name ?? "")}</strong></div>
+        </div>
+        ${errs.length ? `<ul class="list">${wlist(errs, "e")}</ul>` : ""}
+        ${warns.length ? `<ul class="list">${wlist(warns, "w")}</ul>` : ""}
+        ${!errs.length && !warns.length ? `<p class="note">No warnings: every detail is wide enough for the bit.</p>` : ""}
+      </section>
+
+      <section class="panel ${tab === "prepare" ? "on" : ""}">
+        <div class="cards">
+          <div class="card"><small>Bit</small><strong>${esc(d.bit?.name ?? d.bit?.id ?? "")}</strong></div>
+          <div class="card"><small>Speed</small><strong>${esc(({ fast: "Fast", balanced: "Balanced", detailed: "Detailed" })[d.speed] ?? d.speed)}</strong></div>
+          <div class="card"><small>Time</small><strong>${d.estimate ? `≈ ${d.estimate.minutes} min` : "—"}</strong></div>
+          <div class="card"><small>G-code</small><strong>${d.estimate ? `${d.estimate.lines.toLocaleString()} lines` : "—"}</strong></div>
+        </div>
+        ${f ? `<table><tr><td>Spindle / router</td><td>${f.rpm} RPM</td></tr><tr><td>Feed</td><td>${f.feed} mm/min</td></tr><tr><td>Plunge</td><td>${f.plunge} mm/min</td></tr><tr><td>Depth per pass</td><td>${f.stepdown} mm</td></tr></table>` : ""}
+        ${d.operations?.length ? `<ul class="list">${d.operations.map((o) => `<li>${esc(o)}</li>`).join("")}</ul>` : ""}
+        ${d.manualSteps?.length ? `<div class="warnbox">${d.manualSteps.map(esc).join("<br>")}</div>` : ""}
+        <p class="note">Feeds and speeds from Sienci Labs' tables for this machine, bit and material. The G-code is checked line by line before it can be sent.</p>
+      </section>
+
+      <section class="panel ${tab === "position" ? "on" : ""}">
+        <ol class="check">
+          <li>Open the project in CarvCAM and connect your ${esc(d.machine?.name ?? "machine")} (USB or Ethernet).</li>
+          <li><b>Find home</b>, then clamp a ${d.width + (d.margin ?? 0)} × ${d.height + (d.margin ?? 0)} mm board, ${d.thickness} mm thick.</li>
+          <li>Jog to the bottom-left corner of the board.</li>
+          <li>Measure the bit with the touch plate (or by hand) and click <b>Set zero</b>.</li>
+        </ol>
+        <p class="note">Keep clamps away from the cut: CarvCAM shows where the bit will go on a live view of the bed.</p>
+      </section>
+
+      <section class="panel ${tab === "carve" ? "on" : ""}">
+        <div class="warnbox"><b>First carve on this machine?</b> Do an air cut first: set zero about 10 mm above the board and watch the whole path, hand on the E-stop.</div>
+        <ol class="check">
+          <li>Go through the carve checklist in CarvCAM (glasses on, dust collection, path clear).</li>
+          <li>Press <b>Start carving</b>. Pause and Stop are always on screen.</li>
+          <li>When it finishes, the project is marked <b>Carved</b> in My projects.</li>
+        </ol>
+        <div class="actions">
+          <button class="btn primary" data-act="open">Open in CarvCAM</button>
+          <button class="btn ghost" data-act="gcode"${ready ? "" : " disabled"}>Get the G-code file</button>
+        </div>
+        <p class="note">Claude never moves your machine: you start the carve in CarvCAM.</p>
+      </section>`;
+    root.querySelectorAll("[data-tab]").forEach((b) => b.addEventListener("click", () => { tab = b.dataset.tab; render(); }));
+    root.querySelector('[data-act="open"]')?.addEventListener("click", () => request("ui/open-link", { url: d.openInCarvCAM }).catch(() => {}));
+    root.querySelector('[data-act="gcode"]')?.addEventListener("click", () =>
+      request("ui/message", { role: "user", content: { type: "text", text: `Export the G-code for "${d.name}" with CarvCAM.` } }).catch(() => {}));
+    resize();
+  }
+
+  function resize() {
+    notify("ui/notifications/size-changed", { width: document.documentElement.scrollWidth, height: document.documentElement.scrollHeight });
+  }
+  new ResizeObserver(resize).observe(document.documentElement);
+
+  window.addEventListener("message", (e) => {
+    const m = e.data;
+    if (!m || m.jsonrpc !== "2.0") return;
+    if (m.id !== undefined && pending.has(m.id)) {
+      const p = pending.get(m.id);
+      pending.delete(m.id);
+      m.error ? p.reject(m.error) : p.resolve(m.result);
+      return;
+    }
+    if (m.method === "ui/notifications/tool-result") {
+      const sc = m.params?.structuredContent;
+      if (sc && sc.name) {
+        data = sc;
+        tab = m.params?.structuredContent?.focus ?? "create";
+        render();
+      } else {
+        const t = (m.params?.content || []).find((c) => c.type === "text");
+        root.querySelector("#loading") && (root.querySelector("#loading").textContent = t ? t.text : "No project to show.");
+      }
+    }
+    if (m.method === "ui/resource-teardown" && m.id !== undefined) send({ jsonrpc: "2.0", id: m.id, result: {} });
+  });
+
+  request("ui/initialize", {
+    appCapabilities: { availableDisplayModes: ["inline"] },
+    clientInfo: { name: "carvcam-project", version: "1.0.0" },
+    protocolVersion: "2026-01-26",
+  })
+    .then(() => notify("ui/notifications/initialized", {}))
+    .catch(() => notify("ui/notifications/initialized", {}));
+})();
+</script>
+</body>
+</html>

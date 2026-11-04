@@ -4,9 +4,15 @@
 // project in the CarvCAM app. Nothing here moves a machine: carving always happens in the app,
 // after the person's checklist. No auth yet, nothing is stored server side.
 import { deflateRawSync } from "node:zlib";
+// @ts-expect-error: bundled as text by esbuild (loader ".html": "text")
+import APP_HTML from "./app.html";
+import { previewPng } from "./preview.mts";
 import { generatePlate, loadFonts, PlateSpecSchema, sienci, FONT_IDS, ICON_IDS, type PlateSpecInput } from "../../cam-engine/src/index.ts";
 
-const VERSION = "2.0.0";
+const VERSION = "2.1.0";
+/** MCP Apps view that shows a project step by step (Create, Prepare, Position, Carve) inside the chat. */
+const UI_URI = "ui://carvcam/project.html";
+const UI_MIME = "text/html;profile=mcp-app";
 const PROTOCOL = "2025-06-18";
 const APP = "https://app.carvcam.com";
 const CORS = {
@@ -161,7 +167,29 @@ async function runDesign(origin: string, a: DesignArgs, withGcode: boolean) {
     openInCarvCAM: appLink(a, spec, material),
     safety: "Open the project in CarvCAM to see the 3D preview, set zero and carve. The first carve on a machine should be an air cut.",
   };
-  return { summary, gcode: withGcode && res.ok ? res.gcode : undefined };
+  // Picture of the carved board (the engine's simulator), when there is G-code to simulate.
+  let preview: { base64: string; width: number; height: number } | null = null;
+  if (res.gcode) {
+    try {
+      preview = previewPng(res.gcode, res.tools, res.layout.stock, material);
+    } catch (e) {
+      console.error("[mcp] preview", e);
+    }
+  }
+  const bitInfo = (id?: string) => (id ? { id, name: sienci.BITS.find((b) => b.id === id)?.name ?? id } : null);
+  const view = {
+    ...summary,
+    machine: { id: a.machine, name: sienci.MACHINES[a.machine as never]?.name ?? a.machine },
+    material,
+    thickness: spec.thickness,
+    width: res.layout.stock.width,
+    height: res.layout.stock.height,
+    bit: bitInfo(a.bit ?? "flat-1-8-upcut"),
+    cutoutBit: bitInfo(a.cutoutBit),
+    speed: a.speed ?? "balanced",
+    preview,
+  };
+  return { summary, view, gcode: withGcode && res.ok ? res.gcode : undefined };
 }
 
 // ---------------------------------------------------------------- tool list
@@ -195,8 +223,8 @@ const TOOLS = [
   { name: "get_download_links", description: "Links to the latest CarvCAM desktop installers.", inputSchema: { type: "object", properties: {} }, annotations: RO },
   { name: "get_pricing", description: "CarvCAM plans and prices.", inputSchema: { type: "object", properties: {} }, annotations: RO },
   { name: "list_design_options", description: "Machines, routers/spindles, bits, materials, fonts, icons and cut modes you can use in a CarvCAM design, with the coordinate system. Call this before designing.", inputSchema: { type: "object", properties: {} }, annotations: RO },
-  { name: "design_project", description: "Build a CarvCAM sign or lettering project and check it with the real CAM engine: status (Ready to carve or what to fix), warnings with fixes, time estimate, operations and Sienci feeds and speeds, plus a link that opens the project in the CarvCAM app. Iterate until status is 'Ready to carve'.", inputSchema: designSchema, annotations: RO },
-  { name: "export_gcode", description: "Generate the verified G-code (.nc) for a CarvCAM project (same input as design_project). Only returns G-code when the project is ready to carve. The person must still set zero and run it from CarvCAM or their sender, after an air cut on a new machine.", inputSchema: designSchema, annotations: RO },
+  { name: "design_project", _meta: { ui: { resourceUri: UI_URI } }, description: "Build a CarvCAM sign or lettering project and check it with the real CAM engine: status (Ready to carve or what to fix), warnings with fixes, time estimate, operations and Sienci feeds and speeds, plus a link that opens the project in the CarvCAM app. Iterate until status is 'Ready to carve'.", inputSchema: designSchema, annotations: RO },
+  { name: "export_gcode", _meta: { ui: { resourceUri: UI_URI } }, description: "Generate the verified G-code (.nc) for a CarvCAM project (same input as design_project). Only returns G-code when the project is ready to carve. The person must still set zero and run it from CarvCAM or their sender, after an air cut on a new machine.", inputSchema: designSchema, annotations: RO },
 ];
 const text = (t: string) => ({ type: "text", text: t });
 
@@ -226,11 +254,12 @@ async function callTool(origin: string, name: string, args: Record<string, unkno
       const out = await runDesign(origin, args as unknown as DesignArgs, name === "export_gcode");
       if ("error" in out) return { content: [text(out.error!)], isError: true };
       const content: unknown[] = [text(JSON.stringify(out.summary, null, 2))];
+      if (out.view?.preview) content.push({ type: "image", data: out.view.preview.base64, mimeType: "image/png" });
       if (name === "export_gcode") {
         if (out.gcode) content.push({ type: "resource", resource: { uri: `carvcam://gcode/${encodeURIComponent(out.summary.name)}.nc`, mimeType: "text/x-gcode", text: out.gcode } });
         else content.push(text("No G-code: the project isn't ready to carve yet. Fix the errors listed above and try again."));
       }
-      return { content };
+      return { content, structuredContent: { ...out.view, focus: name === "export_gcode" ? "carve" : "create" } };
     }
   }
   return null;
@@ -257,7 +286,7 @@ export default async (req: Request) => {
       case "initialize":
         return ok({
           protocolVersion: typeof params.protocolVersion === "string" ? params.protocolVersion : PROTOCOL,
-          capabilities: { tools: { listChanged: false } },
+          capabilities: { tools: { listChanged: false }, resources: { listChanged: false }, extensions: { "io.modelcontextprotocol/ui": {} } },
           serverInfo: { name: "carvcam", title: "CarvCAM", version: VERSION },
           instructions:
             "CarvCAM designs and carves signs on Sienci Labs LongMill and AltMill CNC routers. To make a project: call list_design_options, then design_project and fix what it reports until the status is 'Ready to carve'; give the person the openInCarvCAM link (they review the 3D preview, set zero and carve in the app). Use export_gcode only when they want the .nc file. Never claim the machine will move: carving always starts from the CarvCAM app.",
@@ -266,6 +295,13 @@ export default async (req: Request) => {
         return ok({});
       case "tools/list":
         return ok({ tools: TOOLS });
+      case "resources/list":
+        return ok({ resources: [{ uri: UI_URI, name: "CarvCAM project", description: "A CarvCAM project step by step: preview, preparation, positioning and carving.", mimeType: UI_MIME }] });
+      case "resources/templates/list":
+        return ok({ resourceTemplates: [] });
+      case "resources/read":
+        if (params.uri !== UI_URI) return fail(-32602, `Unknown resource: ${params.uri}`);
+        return ok({ contents: [{ uri: UI_URI, mimeType: UI_MIME, text: APP_HTML, _meta: { ui: { prefersBorder: true } } }] });
       case "tools/call": {
         const r = await callTool(origin, String(params.name ?? ""), (params.arguments as Record<string, unknown>) ?? {});
         return r ? ok(r) : fail(-32602, `Unknown tool: ${params.name}`);
