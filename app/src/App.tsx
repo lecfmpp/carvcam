@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
 import { HashRouter, Navigate, Route, Routes } from "react-router-dom";
+import { Autosave } from "./components/Autosave";
 import { ConnectWizardHost } from "./components/ConnectWizard";
 import { Toasts } from "./components/ui";
 import { usePanelMode } from "./lib/panel";
@@ -26,6 +27,7 @@ export default function App() {
   usePanelMode();
   return (
     <HashRouter>
+      <Autosave />
       <Suspense fallback={<div className="app" />}>
         <Routes>
           <Route path="/" element={<Home />} />

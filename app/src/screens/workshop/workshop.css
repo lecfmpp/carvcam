@@ -123,3 +123,5 @@ button.ws-card:hover { background: rgba(40, 41, 45, 0.85); }
 .proj-empty { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 56px 24px; border-radius: 16px; border: 1px dashed var(--line-2); }
 .proj-card__pv { border: 0; border-bottom: 1px solid var(--line); width: 100%; cursor: pointer; padding: 0; }
 .proj-card__open { position: absolute; left: 12px; top: 12px; padding: 3px 9px; border-radius: 999px; background: var(--accent); color: #fff; font: 600 11.5px var(--font); }
+.ws-track-next { padding: 1px 8px; border-radius: 999px; font: 500 11px var(--font); background: var(--text); color: var(--graphite); }
+.ws-track--done { flex-direction: row; align-items: center; justify-content: space-between; gap: 16px; font-size: 14px; }

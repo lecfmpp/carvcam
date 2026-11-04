@@ -4,7 +4,9 @@ import { useNavigate } from "react-router-dom";
 import { Banner, Seg, SidePanel } from "../../components/ui";
 import { dialFor, machineName, materialById, TRACK } from "../../lib/catalog";
 import { useMachine, workPos, type AlarmCode } from "../../machine/store";
+import { saveNow } from "../../components/Autosave";
 import { useDesign } from "../../state/design";
+import { useProjects } from "../../state/projects";
 import { toast } from "../../state/ui";
 import { useWorkshop } from "../../state/workshop";
 import { Board, LayoutOverlay, ToolpathOverlay, useSegments } from "../../stage/Board";
@@ -106,6 +108,11 @@ export function CarveStep({ ctx }: { ctx: JobCtx }) {
     if (m.status === "done" && prev.current !== "done") {
       setDoneSpin((n) => n + 1);
       if (design.projectId && TRACK.some((t) => t.id === design.projectId)) markDone(design.projectId);
+      // The project is complete: save it once more and mark it carved in My projects.
+      if (saveNow("carve")) {
+        const id = useDesign.getState().design.savedId;
+        if (id) useProjects.getState().markCarved(id);
+      }
     }
     prev.current = m.status;
     // eslint-disable-next-line react-hooks/exhaustive-deps

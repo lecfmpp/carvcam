@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { materialById } from "../../lib/catalog";
 import { useDesign } from "../../state/design";
-import { useProjects, type SavedProject } from "../../state/projects";
+import { useProjects, type ProjectStep, type SavedProject } from "../../state/projects";
 import { toast } from "../../state/ui";
 import { JobModal } from "../job/Modal";
 
@@ -15,6 +15,8 @@ const when = (t: number) => {
   if (h < 24) return `${h} h ago`;
   return new Date(t).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 };
+
+const STEP_LABEL: Record<ProjectStep, string> = { create: "Create", prepare: "Prepare", position: "Position", carve: "Carve" };
 
 const count = (p: SavedProject) => {
   const s = p.design.spec;
@@ -28,9 +30,11 @@ export function Projects() {
   const current = useDesign((s) => s.design.savedId);
   const [del, setDel] = useState<SavedProject | null>(null);
 
-  const open = (p: SavedProject) => {
+  // Reopen where the user left off. A carve always restarts at Position: the work zero must be set again.
+  const resumeAt = (p: SavedProject) => (p.status === "carved" || !p.step ? "/create" : p.step === "carve" ? "/position" : `/${p.step}`);
+  const open = (p: SavedProject, to = resumeAt(p)) => {
     useDesign.getState().setDesign(structuredClone(p.design));
-    nav("/create");
+    nav(to);
   };
   const startNew = () => {
     useDesign.getState().newBlank();
@@ -42,7 +46,7 @@ export function Projects() {
       <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 20 }}>
         <div className="ws-head">
           <h1 className="ws-title ws-title--sm">My projects</h1>
-          <p className="ws-lead ws-lead--sm">Designs you saved. Once a design is saved, every change saves by itself. They're kept in this browser on this computer.</p>
+          <p className="ws-lead ws-lead--sm">Every project saves by itself as you work: a draft while you design and prepare it, marked carved once a carve finishes. They're kept in this browser on this computer.</p>
         </div>
         <button className="btn btn--primary" onClick={startNew}>
           <Plus size={16} strokeWidth={2} /> New project
@@ -52,9 +56,9 @@ export function Projects() {
       {projects.length === 0 ? (
         <div className="proj-empty">
           <FolderOpen size={28} strokeWidth={1.5} color="var(--text-3)" />
-          <div style={{ font: "600 16px var(--font)" }}>No saved projects yet</div>
+          <div style={{ font: "600 16px var(--font)" }}>No projects yet</div>
           <div className="muted" style={{ maxWidth: 440, textAlign: "center" }}>
-            In Create, press the save button next to the design name (or Ctrl+S). Your project shows up here and keeps saving as you work.
+            Start a project from First cuts or a blank board. It shows up here as a draft as soon as there's something on the board, and keeps saving as you work.
           </div>
           <button className="btn btn--outline" onClick={() => nav("/create")}>
             Go to Create
@@ -77,13 +81,18 @@ export function Projects() {
                   {current === p.id ? <span className="proj-card__open">Open now</span> : null}
                 </button>
                 <div className="ws-proj-body">
-                  <div className="ws-proj-title">{p.name}</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div className="ws-proj-title">{p.name}</div>
+                    <span className={`ws-level ${p.status === "carved" ? "ws-level--first" : ""}`} style={{ marginLeft: "auto" }}>
+                      {p.status === "carved" ? "Carved" : "Draft"}
+                    </span>
+                  </div>
                   <div className="tiny muted">
-                    {s.width} × {s.height} × {s.thickness} mm {mat.id} · {count(p)} element{count(p) === 1 ? "" : "s"} · saved {when(p.updatedAt)}
+                    {s.width} × {s.height} × {s.thickness} mm {mat.id} · {count(p)} element{count(p) === 1 ? "" : "s"} · {p.status === "carved" && p.carvedAt ? `carved ${when(p.carvedAt)}` : `${STEP_LABEL[p.step ?? "create"]} · saved ${when(p.updatedAt)}`}
                   </div>
                   <div style={{ display: "flex", gap: 8, marginTop: "auto" }}>
                     <button className="btn btn--primary btn--sm" onClick={() => open(p)}>
-                      Open
+                      {p.status === "carved" || !p.step || p.step === "create" ? "Open" : `Continue at ${STEP_LABEL[p.step === "carve" ? "position" : p.step]}`}
                     </button>
                     <button
                       className="btn btn--outline btn--sm"

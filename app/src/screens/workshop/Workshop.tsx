@@ -144,6 +144,9 @@ function FirstCuts() {
   };
   const cur = TRACK.findIndex((t) => !trackDone.includes(t.id));
   const doneN = TRACK.filter((t) => trackDone.includes(t.id)).length;
+  const allDone = doneN === TRACK.length;
+  const trackHidden = useWorkshop((s) => s.trackHidden);
+  const setTrackHidden = useWorkshop((s) => s.setTrackHidden);
 
   return (
     <div className="ws-page ws-page--wide" style={{ gap: 28 }}>
@@ -152,6 +155,7 @@ function FirstCuts() {
           <h1 className="ws-title ws-title--sm">First cuts</h1>
           <p className="ws-lead ws-lead--sm">Ready-made projects for your {short(machine)}. Each opens fully set up, and you can change anything.</p>
         </div>
+        <div style={{ display: "flex", gap: 20, alignItems: "baseline" }}>
         <button
           className="link"
           style={{ fontSize: 14, color: "var(--text-2)", whiteSpace: "nowrap" }}
@@ -162,33 +166,61 @@ function FirstCuts() {
         >
           Start from a blank board
         </button>
+        {trackHidden ? (
+          <button className="link" style={{ fontSize: 14, color: "var(--text-2)", whiteSpace: "nowrap" }} onClick={() => setTrackHidden(false)}>
+            Show the beginner path
+          </button>
+        ) : null}
+        </div>
       </div>
 
-      <section aria-label="Start here" className="ws-track">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-          <span style={{ font: "600 16px var(--font)" }}>Start here</span>
-          <span className="small muted">
-            {doneN} of {TRACK.length} done
+      {trackHidden ? null : allDone ? (
+        <section aria-label="Beginner path" className="ws-track ws-track--done">
+          <span>
+            <b>Beginner path complete ✓</b> <span className="muted">You've surfaced the bed and made three cuts. Every project below is yours to try.</span>
           </span>
-        </div>
-        <ol>
-          {TRACK.map((t, i) => {
-            const d = trackDone.includes(t.id);
-            const on = i === cur;
-            return (
-              <li key={t.id} style={{ display: "flex" }}>
-                <button className={`ws-track-item ${d ? "is-done" : ""} ${on ? "is-on" : ""}`} onClick={() => (t.id === "surface" ? nav("/surfacing") : make(t.id))}>
-                  <span className="ws-track-dot">{d ? "✓" : i + 1}</span>
-                  <span style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2, textAlign: "left" }}>
-                    <span style={{ font: "500 14px var(--font)" }}>{t.title}</span>
-                    <span className="tiny muted">{d ? "Done" : on ? (t.sub ?? "Next up") : "Later"}</span>
-                  </span>
-                </button>
-              </li>
-            );
-          })}
-        </ol>
-      </section>
+          <button className="link small" onClick={() => setTrackHidden(true)}>
+            Hide
+          </button>
+        </section>
+      ) : (
+        <section aria-label="Beginner path" className="ws-track">
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 16 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <span style={{ font: "600 16px var(--font)" }}>New to CNC? Follow this path</span>
+              <span className="small muted">Four short cuts that teach the basics, best done in this order. It's optional: open any of them, or pick a project below.</span>
+            </div>
+            <span className="small muted" style={{ whiteSpace: "nowrap", display: "flex", gap: 14 }}>
+              <span>
+                {doneN} of {TRACK.length} done
+              </span>
+              <button className="link small" onClick={() => setTrackHidden(true)} title="Hide the beginner path (bring it back from First cuts)">
+                I know my machine · Hide
+              </button>
+            </span>
+          </div>
+          <ol>
+            {TRACK.map((t, i) => {
+              const d = trackDone.includes(t.id);
+              const on = i === cur;
+              return (
+                <li key={t.id} style={{ display: "flex" }}>
+                  <button className={`ws-track-item ${d ? "is-done" : ""} ${on ? "is-on" : ""}`} onClick={() => (t.id === "surface" ? nav("/surfacing") : make(t.id))}>
+                    <span className="ws-track-dot">{d ? "✓" : i + 1}</span>
+                    <span style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2, textAlign: "left" }}>
+                      <span style={{ font: "500 14px var(--font)", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                        {t.title}
+                        {on ? <span className="ws-track-next">Recommended next</span> : null}
+                      </span>
+                      <span className="tiny muted">{d ? "Done · open again any time" : t.sub}</span>
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+        </section>
+      )}
 
       <div className="ws-projects">
         {PROJECTS.map((p) => (
