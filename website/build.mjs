@@ -248,7 +248,7 @@ ${clip(img, `CarvCAM ${eb}: screen recording`)}
 
 <section class="soft"><div class="wrap">
 <div class="sec-head"><span class="eyebrow">Machines</span><h2>Made for the machine you own</h2><p class="lede">CarvCAM knows your bed size, your controller and what spins the bit, so the numbers are right from the first job.</p></div>
-<div class="mach">${machines.map((m) => `<a class="card" href="${href(`/machines/${m.slug}/`)}"><span class="eyebrow">Sienci Labs</span><h3>${m.name}</h3><dl><dt>Sizes</dt><dd>${m.sizes}</dd><dt>Controller</dt><dd>${m.controller}</dd><dt>Connection</dt><dd>${m.link}</dd></dl><span class="${m.status === "Current model" ? "pill" : "pill pill--muted"}" style="align-self:flex-start;margin-bottom:16px">${m.status}</span><span class="more">${m.name} setup</span></a>`).join("")}</div>
+<div class="mach">${machines.map((m) => `<a class="card" href="${href(`/machines/${m.slug}/`)}"><div class="card__img card__img--photo"><img src="${asset(`/assets/machines/${m.photo}.webp`)}" alt="${m.name} by Sienci Labs" loading="lazy" width="960" height="700"></div><span class="eyebrow">Sienci Labs</span><h3>${m.name}</h3><dl><dt>Sizes</dt><dd>${m.sizes}</dd><dt>Controller</dt><dd>${m.controller}</dd><dt>Connection</dt><dd>${m.link}</dd></dl><span class="${m.status === "Current model" ? "pill" : "pill pill--muted"}" style="align-self:flex-start;margin-bottom:16px">${m.status}</span><span class="more">${m.name} setup</span></a>`).join("")}</div>
 </div></section>
 
 <section><div class="wrap">
@@ -339,7 +339,7 @@ function machinePages() {
     description: "CarvCAM supports Sienci Labs LongMill MK2, LongMill MK3 and AltMill CNC routers, with their controllers, routers and spindle kits.",
     crumbs: [["Home", "/"], ["Machines", "/machines/"]],
     body: `<section class="article"><div class="wrap"><h1>Machines</h1><p class="lede" style="max-width:640px">CarvCAM is made for Sienci Labs CNC routers. Pick yours to see the wiring, the presets and your first project.</p></div></section>
-<section style="padding-top:24px"><div class="wrap"><div class="mach">${machines.map((m) => `<a class="card" href="${href(`/machines/${m.slug}/`)}"><div class="card__img"><img src="${asset(`/assets/screens/${m.shot}-800.webp`)}" alt="" loading="lazy" width="800" height="500"></div><span class="eyebrow">${m.status}</span><h3>${m.name}</h3><p>${m.sizes} · ${m.controller}</p><span class="more">${m.name} software</span></a>`).join("")}</div></div></section>`,
+<section style="padding-top:24px"><div class="wrap"><div class="mach">${machines.map((m) => `<a class="card" href="${href(`/machines/${m.slug}/`)}"><div class="card__img card__img--photo"><img src="${asset(`/assets/machines/${m.photo}.webp`)}" alt="${m.name} by Sienci Labs" loading="lazy" width="960" height="700"></div><span class="eyebrow">${m.status}</span><h3>${m.name}</h3><p>${m.sizes} · ${m.controller}</p><span class="more">${m.name} software</span></a>`).join("")}</div></div></section>`,
   });
   for (const m of machines) {
     const others = machines.filter((x) => x !== m);
