@@ -83,7 +83,7 @@ ${crumbs ? `<div class="wrap" style="padding-top:28px">${crumbHtml}</div>` : ""}
 ${body}
 </main>
 ${footer()}
-<script>try { if (localStorage.getItem("sb-zveqsvizefgbicwvjvdu-auth-token")) { const a = document.querySelector(".hdr__login"); a.href = ${JSON.stringify(href("/account/"))}; a.textContent = "Account"; } } catch {}</script>
+<script>try { if (localStorage.getItem("sb-zveqsvizefgbicwvjvdu-auth-token")) { const a = document.querySelector(".hdr__login:not(.hdr__web)"); a.href = ${JSON.stringify(href("/account/"))}; a.textContent = "Account"; } } catch {}</script>
 <script>(() => {
   // Download buttons: Windows by default; on Linux they become the AppImage (or the Pi .deb on ARM); on Mac the
   // Apple Silicon or Intel .dmg when the browser tells the chip (Chrome, Edge), otherwise the Mac section of the

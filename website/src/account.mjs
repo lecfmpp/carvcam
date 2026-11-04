@@ -1,6 +1,6 @@
 // Account pages: sign up, log in, reset password, onboarding wizard and the account home.
 // Static HTML here; website/assets/js/account.js does the work in the browser through Supabase.
-import { supabase } from "./data.mjs";
+import { site, supabase } from "./data.mjs";
 
 const chip = (name, value, label, type = "checkbox") =>
   `<label class="chip"><input type="${type}" name="${name}" value="${value}"><span>${label}</span></label>`;
@@ -149,6 +149,7 @@ ${msg}
 <div class="plancard__actions"><a class="btn btn--primary" href="${href("/pricing/")}" data-upgrade>Upgrade to Pro</a><button type="button" class="btn" data-manage hidden>Manage billing</button></div></div>
 <div class="acct__grid">
 <a class="card" href="${href("/download/")}"><h3>Download CarvCAM</h3><p>Windows, Mac, Linux and Raspberry Pi.</p><span class="more">Get the app</span></a>
+<a class="card" href="${site.webApp}"><h3>Use CarvCAM online</h3><p>No install. Opens in your browser; carve over USB in Chrome or Edge.</p><span class="more">Open the web app</span></a>
 <a class="card" href="${href("/onboarding/")}" data-onboarding><h3>Finish your shop profile</h3><p>Five quick questions so CarvCAM fits the way you carve.</p><span class="more">Continue</span></a>
 <a class="card" href="${href("/onboarding/")}" data-edit-answers hidden><h3>Your shop profile</h3><p>Change what you carve, your machine or your software.</p><span class="more">Edit answers</span></a>
 <a class="card" href="${href("/docs/")}"><h3>Docs</h3><p>Step-by-step guides from first sign to finished carve.</p><span class="more">Read the docs</span></a>
