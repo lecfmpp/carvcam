@@ -5,11 +5,16 @@ import { useDesign, type Design } from "../../state/design";
 import { captureThumb, isEmptyDesign, useProjects } from "../../state/projects";
 import { toast } from "../../state/ui";
 import { JobModal } from "../job/Modal";
+import { canAddProject, LIMIT_MESSAGE } from "../../components/Autosave";
 
 const isEmpty = isEmptyDesign;
 
 /** Saves the design to My projects now; false (with a message) when the browser storage is full. */
 export function saveDesign(d: Design): boolean {
+  if (!canAddProject()) {
+    toast(LIMIT_MESSAGE, 8000);
+    return false;
+  }
   try {
     const id = useProjects.getState().save(d, captureThumb(), "create");
     if (d.savedId !== id) useDesign.getState().markSaved(id);

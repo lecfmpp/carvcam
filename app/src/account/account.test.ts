@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { entitlementActive, friendlyAuthError, fromCache, GRACE_MS, initials, isNetworkError, planLabel, toAccountState, withForce, type AccountState, type EntitlementRow } from "./logic";
+import { daysLeft, entitlementActive, friendlyAuthError, fromCache, GRACE_MS, initials, isNetworkError, planLabel, toAccountState, withForce, type AccountState, type EntitlementRow } from "./logic";
 
 const NOW = Date.parse("2026-10-27T12:00:00Z");
 const DAY = 86400000;
@@ -116,5 +116,37 @@ describe("friendly errors", () => {
     expect(isNetworkError({ message: "TypeError: Failed to fetch" })).toBe(true);
     expect(isNetworkError({ message: "JWT expired", status: 401 })).toBe(false);
     expect(isNetworkError(null)).toBe(false);
+  });
+});
+
+describe("no-card 7-day trial", () => {
+  const user = { email: "a@b.c" };
+  const NOW = Date.parse("2026-11-04T12:00:00Z");
+  const trial = (end: string): EntitlementRow => ({ plan: "pro", source: "trial", status: "trialing", trial_end: end });
+
+  it("is Pro until trial_end, labelled with the days left", () => {
+    const s = toAccountState(user, null, trial("2026-11-09T12:00:00Z"), NOW);
+    expect(s.pro).toBe(true);
+    expect(s.freeTrial).toBe(true);
+    expect(s.trialEnd).toBe("2026-11-09T12:00:00Z");
+    expect(planLabel(s).startsWith("Pro trial ·")).toBe(true);
+  });
+
+  it("is Free once trial_end has passed", () => {
+    const s = toAccountState(user, null, trial("2026-11-04T11:59:00Z"), NOW);
+    expect(s.pro).toBe(false);
+    expect(s.plan).toBe("free");
+    expect(entitlementActive(trial("2026-11-04T11:59:00Z"), NOW)).toBe(false);
+  });
+
+  it("ends offline too, without waiting for the grace period", () => {
+    const cached = toAccountState(user, null, trial("2026-11-05T12:00:00Z"), NOW);
+    expect(fromCache(cached, NOW + 2 * 86400000).pro).toBe(false);
+    expect(fromCache(cached, NOW + 3600000).pro).toBe(true);
+  });
+
+  it("counts days left", () => {
+    expect(daysLeft("2026-11-09T12:00:00Z", NOW)).toBe("5 days left");
+    expect(daysLeft("2026-11-04T20:00:00Z", NOW)).toBe("last day");
   });
 });

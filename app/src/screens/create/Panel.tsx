@@ -16,6 +16,7 @@ import { ProjectActions } from "./ProjectActions";
 import { addLibraryElement, LibraryDialog } from "./libraryDialog";
 import { tracingFromFile, useTracingUi } from "./tracing";
 import { InlayCard } from "./inlayWizard";
+import { ProBadge, useProGate } from "../../account/ProGate";
 import type { TracingImage } from "../../state/design";
 
 type Mode = "relief" | "engrave" | "cutout" | "part";
@@ -344,8 +345,11 @@ function TracingSection({ n, open, onToggle, spec, onAdded }: { n: number; open:
   const patch = useDesign((s) => s.patch);
   const { moving, setMoving } = useTracingUi();
   const [tracingOpen, setTracingOpen] = useState(false);
+  // Pro: SVG/DXF import and pictures to trace.
+  const gate = useProGate("import");
   const set = (p: Partial<TracingImage>) => t && patch({ tracing: { ...t, ...p } });
   const load = async () => {
+    if (!gate.allowed) return gate.ask();
     const file = await pickImageFile();
     if (!file) return;
     try {
@@ -359,12 +363,13 @@ function TracingSection({ n, open, onToggle, spec, onAdded }: { n: number; open:
       <AccItem n={n} title="Upload design" summary={t ? `SVG or DXF file · tracing ${t.name}` : "SVG or DXF file, or trace a picture"} open={open} onToggle={onToggle}>
         <div className="create-upload">
           <div className="create-upload__title">
-            <FileUp size={16} strokeWidth={1.75} color="var(--accent)" /> Design file
+            <FileUp size={16} strokeWidth={1.75} color="var(--accent)" /> Design file {gate.allowed ? null : <ProBadge />}
           </div>
           <div className="tiny muted">Vector drawings from Inkscape, Illustrator, Affinity, Fusion or LightBurn come in ready to carve. You can also drop the file on the board.</div>
           <button
             className="btn btn--primary"
             onClick={async () => {
+              if (!gate.allowed) return gate.ask();
               const file = await pickSvgFile();
               const out = file ? await importSvgFile(file, useDesign.getState().design.spec) : null;
               if (!out) return;
@@ -413,7 +418,7 @@ function TracingSection({ n, open, onToggle, spec, onAdded }: { n: number; open:
                   Fit to sign
                 </button>
               </div>
-              <button className="btn btn--primary" onClick={() => setTracingOpen(true)}>
+              <button className="btn btn--primary" onClick={() => (gate.allowed ? setTracingOpen(true) : gate.ask())}>
                 <Wand2 size={16} /> Convert to vector…
               </button>
               <div className="create-two">
@@ -434,6 +439,7 @@ function TracingSection({ n, open, onToggle, spec, onAdded }: { n: number; open:
           )}
         </div>
       </AccItem>
+      {gate.dialog}
       {tracingOpen && t ? <TraceDialog tracing={t} onClose={() => setTracingOpen(false)} onAdded={onAdded} /> : null}
     </>
   );

@@ -146,10 +146,11 @@ export const features = [
     description: "Design signs and plaques where you carve them: fonts made for cutting, text on an arc, shapes, frames, a design element library and SVG/DXF import.",
     shot: "design",
     lead: "Design where you carve. The preview shows the wood already cut, so what you see is what comes off the machine.",
-    points: ["Text in fonts made for carving, straight or on an arc", "Rectangles, circles, polygons, stars and free curves with a pen tool", "Frames, ornaments and icons already thick enough for a 1/8 in bit", "Raised, Engraved, Cut through or Part (cut out with holding tabs) for each item", "Rulers in mm from your work zero, and snapping to a grid", "Import SVG and DXF; align, distribute, offset, subtract and mask"],
+    points: ["Text in fonts made for carving, straight or on an arc", "Rectangles, circles, polygons, stars and free curves with a pen tool", "Frames, ornaments and icons already thick enough for a 1/8 in bit", "Raised, Engraved, Cut through or Part (cut out with holding tabs) for each item", "Rulers in mm from your work zero, and snapping to a grid", "Align, distribute, offset, subtract and mask; import SVG and DXF with Pro"],
   },
   {
     slug: "image-to-vector",
+    pro: true,
     name: "Image to vector",
     title: "Image to Vector Trace for CNC Carving",
     description: "Turn a logo or drawing into carvable outlines inside your CNC app. Threshold, invert, smooth and ignore specks, with a live preview over your board.",
@@ -228,6 +229,7 @@ export const features = [
   },
   {
     slug: "copies-and-batch",
+    pro: true,
     name: "Copies and batch",
     title: "Make Name Tags and Batches on Your CNC: Copies, Names and CSV",
     description: "Design one tag and fill the board with linked copies, give each copy its own name, or make one file per row of a spreadsheet. Made for LongMill and AltMill sign sellers.",
@@ -235,7 +237,7 @@ export const features = [
     heading: "One design, a whole board of them",
     lead: "Selling at a craft fair or making gifts for a class? Design one piece, then let CarvCAM repeat it: copies in a grid on one board, a different name on each, or one file per row of a spreadsheet.",
     points: [
-      "Make copies: rows, columns and gaps, with Fill the board and a size check against your machine",
+      "Make copies (Pro): rows, columns and gaps, with Fill the board and a size check against your machine",
       "Copies stay linked: change the original and every copy follows",
       "Text on each copy: one name per line, so six tags get six names",
       "Turn every other copy 180° to nest hearts, triangles and letters tighter",
@@ -368,7 +370,7 @@ export const howtos = [
     tools: ["60° V-bit", "1/8 in flat upcut end mill", "6 mm plywood, at least 170 × 120 mm", "Touch plate"],
     steps: [
       ["Open the example", "In the menu, open First cuts and pick Name tags ×6. One tag is designed; the other five are linked copies in a 3 × 2 grid.", "name-tags"],
-      ["Or make your own copies", "Select your tag (its text, shape and cord hole), then click Make copies on the element row. Set Rows, Columns and the gaps, or click Fill the board.", "copies-panel"],
+      ["Or make your own copies (Pro)", "Select your tag (its text, shape and cord hole), then click Make copies on the element row. Set Rows, Columns and the gaps, or click Fill the board.", "copies-panel"],
       ["Give each tag a name", "Under Text on each copy, type one name per line. An empty line keeps the original text.", "copies-panel"],
       ["Prepare the job", "Continue to Prepare, pick Balanced and check Holding tabs. Every copy is cut with the V-bit first, then the end mill, nearest first, so there is one bit change for the whole job.", "prepare"],
       ["Zero and carve", "Home, clamp the board, measure the V-bit and set zero on the bottom-left corner. Start carving; change to the 1/8 in end mill when CarvCAM asks.", "carving"],
@@ -417,7 +419,7 @@ export const faq = [
   ["Do I still need gSender or another sender?", "No. CarvCAM connects to the controller over USB or Ethernet and runs the job itself. You don't need gSender. If you'd rather use gSender or another sender anyway, download the checked G-code (.nc) in Prepare and open it there."],
   ["Which computers can run it?", "Windows 10 and 11 (64-bit), Mac with Apple Silicon or Intel, Linux (AppImage, or .deb for Ubuntu, Debian and Mint) and Raspberry Pi (64-bit and 32-bit)."],
   ["Does it need internet?", "Only to download it. After that it runs entirely on your computer, workshop Wi-Fi or not. If you have Pro, sign in once; Pro keeps working offline for 30 days after each check."],
-  ["Can I import my own designs?", "Yes: SVG and DXF files, and images you can trace into outlines."],
+  ["Can I import my own designs?", "Yes, with Pro: SVG and DXF files, and images you can trace into outlines. Every new account gets 7 days of Pro free, no card."],
   ["Do I need to pick a post-processor?", "No. There is no post-processor to choose: CarvCAM writes G-code for the controller in your machine profile (LongBoard, SuperLongBoard, SLB-LITE or SLB-EXT) and verifies every line, travel and bit change before you can carve."],
   ["Do I need an account?", "No. Design, prepare and carve work without an account. Sign in with your CarvCAM account only to unlock Pro tools like guided inlays, batch from CSV and the cost and price calculator."],
   ["Do I need to know G-code or feeds and speeds?", "No. Pick Fast, Balanced or Detailed and CarvCAM sets the numbers for your machine, router and bit, then checks the job before you carve."],

@@ -31,7 +31,7 @@ const terms = [
   ]],
   ["Plans and payments", [
     "The Free plan has no time limit. Pro is $69 per year or a one-time $179 for lifetime access; School / Makerspace is $299 per year for up to 10 seats. Prices are in US dollars; tax is added at checkout where it applies.",
-    "Pro yearly starts with a 14-day free trial. You are charged when the trial ends unless you cancel before then.",
+    "Every new account gets 7 days of Pro for free, without a card. Nothing is charged when the trial ends: the account goes back to the Free plan unless you buy Pro.",
     "Subscriptions renew automatically. You can cancel at any time from Account › Manage billing; Pro stays active until the end of the period you paid for.",
     `If something isn't right, write to ${CONTACT} within 30 days of a charge and we'll make it right, including a refund.`,
     "Lifetime means for as long as CarvCAM is offered, including future Pro updates. A refunded or charged-back lifetime purchase ends Pro access.",

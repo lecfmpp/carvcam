@@ -56,6 +56,7 @@ import { IssueCard, IssueTray, useIssueCtx, useIssueRunner } from "./IssueCard";
 import { useCanvasPrefs, useUi } from "../../state/ui";
 import { CreatePanel } from "./Panel";
 import { importSvgFile, isSvgFile, pickSvgFile } from "./svgImport";
+import { useProGate } from "../../account/ProGate";
 import "./create.css";
 
 // The engine's own fonts, for the font picker and on-board editing.
@@ -185,8 +186,12 @@ export default function Create() {
   }, [boxes, sel, extra]);
 
   const [dropping, setDropping] = useState(false);
+  // Pro: bringing in outside artwork (SVG/DXF, pictures to trace) and Make copies.
+  const importGate = useProGate("import");
+  const copiesGate = useProGate("copies");
   const importSvg = async (file: File | null) => {
     if (!file) return;
+    if (!importGate.allowed) return importGate.ask();
     const out = await importSvgFile(file, useDesign.getState().design.spec);
     if (!out) return;
     patchSpec(() => out[0]);
@@ -203,6 +208,7 @@ export default function Create() {
   };
   const forSelection = (id: ElementId) => (selected.includes(id) ? selected : [id]).filter((x) => x !== "holes");
   const openCopies = (id: ElementId) => {
+    if (!copiesGate.allowed) return copiesGate.ask();
     if (!selected.includes(id)) choose(id);
     setInlayFor(null);
     setCopiesFor(forSelection(id));
@@ -285,6 +291,7 @@ export default function Create() {
         const files = [...e.dataTransfer.files];
         const img = files.find(isImageFile);
         if (img && !files.some(isSvgFile)) {
+          if (!importGate.allowed) return importGate.ask();
           // Photo or logo: becomes a tracing image (not cut).
           tracingFromFile(img, useDesign.getState().design.spec).then(
             (t) => {
@@ -441,6 +448,8 @@ export default function Create() {
       />
       {copiesFor ? <CopiesPanel key={copiesFor.join(",")} ids={copiesFor} boxes={boxes} onClose={() => setCopiesFor(null)} /> : null}
       {inlayFor ? <InlayWizard ids={inlayFor} boxes={boxes} result={result} onClose={() => setInlayFor(null)} /> : null}
+      {importGate.dialog}
+      {copiesGate.dialog}
     </div>
   );
 }

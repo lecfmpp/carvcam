@@ -1,6 +1,7 @@
 import { AlertCircle, ArrowUpRight, Check, Loader2, WifiOff, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { TRIAL_DAYS } from "./logic";
 import { FEATURES, initials, planLabel, signIn, signOut, SITE, openSite, refreshAccount, useAccount, type AccountState, type ProFeature } from "./pro";
 import "./account.css";
 
@@ -63,6 +64,7 @@ function planSub(a: AccountState) {
   if (!a.pro) return "Design, prepare and carve are free forever.";
   if (a.plan === "school") return "Pro features through your school.";
   if (a.lifetime) return "Yours for good, including future Pro features.";
+  if (a.freeTrial && a.trialEnd) return `Your free trial ends on ${longDate(a.trialEnd)}. Nothing is charged: after that you're back on Free unless you upgrade.`;
   if (a.trialEnd) return `Your free trial ends on ${longDate(a.trialEnd)}.`;
   if (a.periodEnd) return a.cancels ? `Ends on ${longDate(a.periodEnd)}. You can turn renewal back on anytime.` : `Renews on ${longDate(a.periodEnd)}.`;
   return "";
@@ -237,30 +239,37 @@ export function UpgradeDialog(props: { feature: ProFeature; open: boolean; onClo
       <ul className="acct-perks">
         <li>
           <Check size={16} strokeWidth={2} />
-          14 days free, then $69 a year, or $179 once for lifetime. Cancel anytime.
+          {a.status === "signed-in" ? "$69 a year, or $179 once for lifetime." : `${TRIAL_DAYS} days of Pro free when you create an account. No card needed.`}
         </li>
         <li>
           <Check size={16} strokeWidth={2} />
-          Batch from CSV, guided inlays, and job costs and prices.
+          Import and trace artwork, copies, batch from CSV, inlays, job costs and unlimited projects.
         </li>
         <li>
           <Check size={16} strokeWidth={2} />
-          Design, prepare and carve stay free forever.
+          Design with text and shapes, V-carve, prepare and carve stay free forever.
         </li>
       </ul>
       <OfflineNotes a={a} />
       <div className="acct-stack">
-        <button className="btn btn--primary btn--lg" onClick={() => openSite(SITE.pricing)}>
-          Start 14-day free trial <ArrowUpRight size={18} strokeWidth={1.5} />
-        </button>
         {a.status === "signed-in" ? (
-          <button className="btn btn--outline btn--lg" onClick={() => void refreshAccount()}>
-            I just upgraded · Check again
-          </button>
+          <>
+            <button className="btn btn--primary btn--lg" onClick={() => openSite(SITE.pricing)}>
+              Upgrade to Pro <ArrowUpRight size={18} strokeWidth={1.5} />
+            </button>
+            <button className="btn btn--outline btn--lg" onClick={() => void refreshAccount()}>
+              I just upgraded · Check again
+            </button>
+          </>
         ) : (
-          <button className="btn btn--outline btn--lg" onClick={() => setSigningIn(true)}>
-            I already have Pro · Sign in
-          </button>
+          <>
+            <button className="btn btn--primary btn--lg" onClick={() => openSite(SITE.signup)}>
+              Start {TRIAL_DAYS}-day free trial <ArrowUpRight size={18} strokeWidth={1.5} />
+            </button>
+            <button className="btn btn--outline btn--lg" onClick={() => setSigningIn(true)}>
+              I have an account · Sign in
+            </button>
+          </>
         )}
       </div>
     </Modal>
