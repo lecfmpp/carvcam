@@ -38,6 +38,39 @@
   [headers.values]
     Cache-Control = "public, max-age=86400, stale-while-revalidate=604800"
 
+# Agent discovery (RFC 8288 Link headers): the homepage points agents to the catalog, the skills,
+# the Markdown version, the LLM index, the docs and the sitemap.
+[[headers]]
+  for = "/"
+  [headers.values]
+    Link = '''</.well-known/ai-catalog.json>; rel="ai-catalog"; type="application/json", </.well-known/agent-skills/index.json>; rel="agent-skills"; type="application/json", </index.md>; rel="alternate"; type="text/markdown", </llms.txt>; rel="describedby"; type="text/plain", </docs/>; rel="service-doc", </sitemap.xml>; rel="sitemap"; type="application/xml"'''
+
+[[headers]]
+  for = "/.well-known/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Cache-Control = "public, max-age=3600"
+
+[[headers]]
+  for = "/.well-known/ai-catalog.json"
+  [headers.values]
+    Content-Type = "application/json; charset=utf-8"
+
+[[headers]]
+  for = "/.well-known/agent-skills/index.json"
+  [headers.values]
+    Content-Type = "application/json; charset=utf-8"
+
+[[headers]]
+  for = "/.well-known/agent-skills/*/SKILL.md"
+  [headers.values]
+    Content-Type = "text/markdown; charset=utf-8"
+
+[[headers]]
+  for = "/robots.txt"
+  [headers.values]
+    Content-Type = "text/plain; charset=utf-8"
+
 # Markdown versions and the index for agents (llms.txt)
 [[headers]]
   for = "/*.md"
