@@ -1017,4 +1017,23 @@ await writeFile(
     2,
   ),
 );
+// MCP server: bundle mcp/server.mts with the CAM engine and its dependencies into one file Netlify
+// deploys as a function (netlify/functions/mcp.mjs, git-ignored). Needs cam-engine's node_modules.
+{
+  const esbuildPath = new URL("../cam-engine/node_modules/esbuild/lib/main.js", import.meta.url).pathname;
+  const { build } = await import(esbuildPath).catch(() => ({ build: null }));
+  if (build) {
+    await mkdir(new URL("./netlify/functions/", import.meta.url).pathname, { recursive: true });
+    await build({
+      entryPoints: [new URL("./mcp/server.mts", import.meta.url).pathname],
+      outfile: new URL("./netlify/functions/mcp.mjs", import.meta.url).pathname,
+      bundle: true,
+      platform: "node",
+      target: "node20",
+      format: "esm",
+      banner: { js: 'import { createRequire } from "node:module"; const require = createRequire(import.meta.url);' },
+      logLevel: "warning",
+    });
+  } else console.warn("MCP server not bundled: run npm ci in ../cam-engine first.");
+}
 console.log(`${pages.length} pages → dist/${PREVIEW ? " (preview links)" : ""}`);

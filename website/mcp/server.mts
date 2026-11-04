@@ -4,7 +4,7 @@
 // project in the CarvCAM app. Nothing here moves a machine: carving always happens in the app,
 // after the person's checklist. No auth yet, nothing is stored server side.
 import { deflateRawSync } from "node:zlib";
-import { generatePlate, loadFonts, PlateSpecSchema, sienci, FONT_IDS, ICON_IDS, type PlateSpecInput } from "../../../cam-engine/src/index.ts";
+import { generatePlate, loadFonts, PlateSpecSchema, sienci, FONT_IDS, ICON_IDS, type PlateSpecInput } from "../../cam-engine/src/index.ts";
 
 const VERSION = "2.0.0";
 const PROTOCOL = "2025-06-18";
@@ -279,4 +279,4 @@ export default async (req: Request) => {
   }
 };
 
-export const config = { path: ["/mcp", "/mcp/"] };
+// Reached at /mcp through a rewrite in netlify.toml (the bundled file is netlify/functions/mcp.mjs).
