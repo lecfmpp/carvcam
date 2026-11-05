@@ -1,5 +1,5 @@
 // Privacy policy and terms of service. Plain-language starting points: have them reviewed before launch.
-const UPDATED = "October 27, 2026";
+const UPDATED = "November 5, 2026";
 const CONTACT = "hello@carvcam.com";
 
 const privacy = [
@@ -7,6 +7,7 @@ const privacy = [
     "Account: your name, e-mail address and password (stored as a secure hash by our login provider, Supabase).",
     "Shop profile: the answers you give in onboarding (what you carve, your machine, the software you use and what you want from CarvCAM).",
     "Billing: your plan and its status. Card details are entered on Stripe's checkout page and never reach our servers; Stripe shares with us only what we need to manage your plan (for example the last four digits and the billing country).",
+    "Website visits: the pages you view, clicks, scrolling and a recording of each visit (Visiflow), to see how people use the site and fix what gets in the way. Text you type in forms is masked in the recordings. When you are signed in, the visit is linked to your account ID, name and e-mail address.",
     "The desktop app works offline. Your designs, projects and machine settings stay on your computer unless you turn on a cloud feature.",
   ]],
   ["How we use it", [
@@ -15,13 +16,13 @@ const privacy = [
     "We don't sell personal data and we don't use it for third-party advertising.",
   ]],
   ["Who processes it for us", [
-    "Supabase (accounts and database), Stripe (payments, tax and invoices), Netlify (website hosting) and GitHub (app downloads and updates). Each one handles data only to provide its service to us.",
+    "Supabase (accounts and database), Stripe (payments, tax and invoices), Netlify (website hosting), Visiflow (website visit analytics and session recordings) and GitHub (app downloads and updates). Each one handles data only to provide its service to us.",
   ]],
   ["Your choices", [
     "You can edit your shop profile at any time from your account page.",
     `To get a copy of your data or delete your account, write to ${CONTACT}. Deleting your account removes your profile and onboarding answers; billing records we must keep by law stay with Stripe.`,
   ]],
-  ["Cookies", ["The website stores your login session in your browser so you stay signed in. We don't use advertising cookies."]],
+  ["Cookies", ["The website stores your login session in your browser so you stay signed in, and Visiflow stores a random visitor ID to group your visits. We don't use advertising cookies."]],
 ];
 
 const terms = [

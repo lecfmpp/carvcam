@@ -82,8 +82,13 @@ async function onboardingDone(userId) {
   return !!data?.completed_at;
 }
 
+// Visiflow: links this visitor's sessions to the account (ID, e-mail and name show on the People page).
+function identifyVisitor(user) {
+  window.rastro?.("identify", user.id, { email: user.email || null, name: user.user_metadata?.full_name || null });
+}
+
 async function afterLogin(user) {
-  window.rastro?.("identify", user.id);
+  identifyVisitor(user);
   const next = new URLSearchParams(location.search).get("next");
   if (next && next.startsWith("/") && !next.startsWith("//")) return location.assign(next);
   location.assign(root((await onboardingDone(user.id)) ? "/account/" : "/onboarding/"));
@@ -108,7 +113,7 @@ async function signupPage(form) {
     busy(form, false);
     if (error) return say(form, friendly(error));
     window.rastro?.("track", "conta_criada");
-    if (data.user) window.rastro?.("identify", data.user.id);
+    if (data.user) identifyVisitor(data.user);
     // With e-mail confirmation on, there is no session until the link is opened.
     if (!data.session) {
       form.hidden = true;
