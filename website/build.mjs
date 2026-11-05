@@ -55,7 +55,12 @@ const VISIFLOW_EVENTS = `<script>document.addEventListener("click", (e) => {
   const dl = u.match(/\\/download\\/([a-z0-9-]+)/);
   if (dl) rastro("track", "download_clicado", { sistema: dl[1], botao: a.dataset.dl || "pagina" });
   else if (u.startsWith(${JSON.stringify(site.webApp)})) rastro("track", "usar_online_clicado");
-}, true);</script>`;
+}, true);
+// Signed-in visitors (Supabase session in this browser): identify them on every page.
+try {
+  const u = JSON.parse(localStorage.getItem("sb-zveqsvizefgbicwvjvdu-auth-token") || "null")?.user;
+  if (u?.id && window.rastro) rastro("identify", u.id, { email: u.email || null, name: u.user_metadata?.full_name || null });
+} catch {}</script>`;
 
 function layout({ path, title, description, body, schema = [], crumbs = null, head = "", index = true }) {
   at(path);
