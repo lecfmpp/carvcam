@@ -41,6 +41,22 @@ const ICON_WIN = `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="curren
 const ICON_APPLE = `<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16.4 12.6c0-2.4 2-3.6 2.1-3.7-1.1-1.7-2.9-1.9-3.5-1.9-1.5-.2-2.9.9-3.7.9-.8 0-1.9-.9-3.2-.8-1.6 0-3.1 1-4 2.4-1.7 3-.4 7.4 1.2 9.8.8 1.2 1.8 2.5 3 2.4 1.2 0 1.7-.8 3.1-.8 1.5 0 1.9.8 3.2.8 1.3 0 2.1-1.2 2.9-2.4.9-1.4 1.3-2.7 1.3-2.8 0 0-2.4-1-2.4-3.9ZM14 5.4c.7-.8 1.1-1.9 1-3-1 0-2.1.7-2.8 1.5-.6.7-1.2 1.8-1 2.9 1 .1 2.1-.6 2.8-1.4Z"/></svg>`;
 const cell = (v) => (v === "yes" ? '<span class="yes">✓ Yes</span>' : v === "no" ? '<span class="no">— No</span>' : v === "part" ? '<span class="part">Partly</span>' : esc(v));
 
+// Visiflow (session recordings, heatmaps and funnels) on every page. The key is public, like an analytics ID.
+// Not in --preview builds, which are opened from disk and would only be refused by the domain check.
+const VISIFLOW = PREVIEW
+  ? ""
+  : `<script>window.rastro=window.rastro||function(){(rastro.q=rastro.q||[]).push(arguments)};</script>
+<script async src="https://upgmfqoichsowzqlrive.supabase.co/functions/v1/rastro-ingest/s.js?k=rs_5b3b7960ac48ebac5b"></script>`;
+// Funnel events: download clicks (with the system the button serves at click time) and "Use online" clicks.
+const VISIFLOW_EVENTS = `<script>document.addEventListener("click", (e) => {
+  const a = e.target.closest && e.target.closest("a[href]");
+  if (!a || !window.rastro) return;
+  const u = a.getAttribute("href");
+  const dl = u.match(/\\/download\\/([a-z0-9-]+)/);
+  if (dl) rastro("track", "download_clicado", { sistema: dl[1], botao: a.dataset.dl || "pagina" });
+  else if (u.startsWith(${JSON.stringify(site.webApp)})) rastro("track", "usar_online_clicado");
+}, true);</script>`;
+
 function layout({ path, title, description, body, schema = [], crumbs = null, head = "", index = true }) {
   at(path);
   const canonical = site.url + path;
@@ -67,6 +83,7 @@ function layout({ path, title, description, body, schema = [], crumbs = null, he
 <link rel="icon" type="image/svg+xml" href="${asset("/assets/carvcam-icon.svg")}">
 <link rel="preload" href="${asset("/assets/fonts/geist-sans-latin-600-normal.woff2")}" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="${asset("/assets/site.css")}">${head}
+${VISIFLOW}
 ${path.endsWith(".html") || !index ? "" : `<link rel="alternate" type="text/markdown" href="${site.url}${path}index.md" title="Markdown version">`}
 <link rel="ai-catalog" href="/.well-known/ai-catalog.json" type="application/json">
 <script src="${asset("/assets/js/webmcp.js")}" defer></script>
@@ -119,6 +136,7 @@ ${footer()}
     else if (h.architecture === "x86") set(${JSON.stringify(site.downloads.macIntel)}, ${JSON.stringify(ICON_APPLE)});
   }).catch(() => {});
 })();</script>
+${VISIFLOW_EVENTS}
 </body>
 </html>`;
   pages.push({ path, html, title, description, body, index });

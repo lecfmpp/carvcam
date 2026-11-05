@@ -82,9 +82,9 @@ export function accountPages({ layout, at, href, asset, esc }) {
   page("/signup/", "Create your CarvCAM account", "Create a free CarvCAM account.", () =>
     card(`<h1>Create your account</h1><p class="lede">Free. It takes a minute, then we'll ask a few quick questions about your shop.</p>
 <form class="auth__form" data-account="signup" novalidate>
-${field("Name", `<input name="name" autocomplete="name" required>`)}
-${field("E-mail", `<input name="email" type="email" autocomplete="email" required>`)}
-${field("Password", `<input name="password" type="password" autocomplete="new-password" minlength="8" required>`, "At least 8 characters.")}
+${field("Name", `<input class="rastro-mask" name="name" autocomplete="name" required>`)}
+${field("E-mail", `<input class="rastro-mask" name="email" type="email" autocomplete="email" required>`)}
+${field("Password", `<input class="rastro-mask" name="password" type="password" autocomplete="new-password" minlength="8" required>`, "At least 8 characters.")}
 ${msg}<button class="btn btn--primary btn--block" type="submit">Create account</button>
 <p class="auth__alt">Already have an account? <a href="${href("/login/")}">Log in</a></p>
 <p class="auth__legal">By creating an account you agree to receive e-mails about your account. We never sell your data.</p>
@@ -95,8 +95,8 @@ ${script(base())}`));
   page("/login/", "Log in | CarvCAM", "Log in to your CarvCAM account.", () =>
     card(`<h1>Log in</h1>
 <form class="auth__form" data-account="login" novalidate>
-${field("E-mail", `<input name="email" type="email" autocomplete="email" required>`)}
-${field("Password", `<input name="password" type="password" autocomplete="current-password" required>`)}
+${field("E-mail", `<input class="rastro-mask" name="email" type="email" autocomplete="email" required>`)}
+${field("Password", `<input class="rastro-mask" name="password" type="password" autocomplete="current-password" required>`)}
 ${msg}<button class="btn btn--primary btn--block" type="submit">Log in</button>
 <p class="auth__alt"><button type="button" class="linkbtn" data-forgot>Forgot password?</button> · New here? <a href="${href("/signup/")}">Create an account</a></p>
 </form>${script(base())}`));
@@ -104,7 +104,7 @@ ${msg}<button class="btn btn--primary btn--block" type="submit">Log in</button>
   page("/reset-password/", "Choose a new password | CarvCAM", "Set a new password for your CarvCAM account.", () =>
     card(`<h1>Choose a new password</h1>
 <form class="auth__form" data-account="reset" novalidate>
-${field("New password", `<input name="password" type="password" autocomplete="new-password" minlength="8" required>`, "At least 8 characters.")}
+${field("New password", `<input class="rastro-mask" name="password" type="password" autocomplete="new-password" minlength="8" required>`, "At least 8 characters.")}
 ${msg}<button class="btn btn--primary btn--block" type="submit">Save password</button>
 </form>${script(base())}`));
 
