@@ -83,6 +83,7 @@ async function onboardingDone(userId) {
 }
 
 async function afterLogin(user) {
+  window.rastro?.("identify", user.id);
   const next = new URLSearchParams(location.search).get("next");
   if (next && next.startsWith("/") && !next.startsWith("//")) return location.assign(next);
   location.assign(root((await onboardingDone(user.id)) ? "/account/" : "/onboarding/"));
@@ -106,6 +107,8 @@ async function signupPage(form) {
     });
     busy(form, false);
     if (error) return say(form, friendly(error));
+    window.rastro?.("track", "conta_criada");
+    if (data.user) window.rastro?.("identify", data.user.id);
     // With e-mail confirmation on, there is no session until the link is opened.
     if (!data.session) {
       form.hidden = true;
